@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>2. Explore / Community Gallery - Heritage Album</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Work+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#fdf8f7",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#858480",
+                      "on-background": "#1c1b1b",
+                      "primary": "#000000",
+                      "error": "#ba1a1a",
+                      "inverse-surface": "#313030",
+                      "on-secondary-fixed-variant": "#783200",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#fe8032",
+                      "secondary": "#9d4400",
+                      "surface-container-high": "#ebe7e6",
+                      "surface-container": "#f1edec",
+                      "error-container": "#ffdad6",
+                      "surface-variant": "#e5e2e1",
+                      "on-tertiary-fixed-variant": "#384b3b",
+                      "on-tertiary-container": "#748976",
+                      "on-primary-fixed-variant": "#474744",
+                      "primary-container": "#1c1c19",
+                      "inverse-on-surface": "#f4f0ef",
+                      "outline": "#787770",
+                      "secondary-fixed": "#ffdbca",
+                      "surface-dim": "#ddd9d8",
+                      "on-error": "#ffffff",
+                      "primary-fixed-dim": "#c9c6c2",
+                      "surface-container-low": "#f7f3f2",
+                      "outline-variant": "#c8c7be",
+                      "on-primary-fixed": "#1c1c19",
+                      "tertiary-fixed-dim": "#b6ccb6",
+                      "primary-fixed": "#e5e2de",
+                      "tertiary-fixed": "#d2e8d2",
+                      "on-surface": "#1c1b1b",
+                      "on-surface-variant": "#474741",
+                      "surface-tint": "#5f5e5b",
+                      "inverse-primary": "#c9c6c2",
+                      "secondary-fixed-dim": "#ffb690",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#000000",
+                      "background": "#fdf8f7",
+                      "surface-container-highest": "#e5e2e1",
+                      "tertiary-container": "#0d1f12",
+                      "on-secondary-fixed": "#331100",
+                      "on-tertiary": "#ffffff",
+                      "surface-bright": "#fdf8f7",
+                      "on-tertiary-fixed": "#0d1f12",
+                      "on-secondary-container": "#632800",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-edge": "40px",
+                      "gutter": "24px",
+                      "unit": "4px",
+                      "stack-overlap": "-12px"
+              },
+              "fontFamily": {
+                      "ui-label": [
+                              "Work Sans"
+                      ],
+                      "caption-italic": [
+                              "Newsreader"
+                      ],
+                      "ui-button": [
+                              "Work Sans"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "body-text": [
+                              "Newsreader"
+                      ],
+                      "headline-md": [
+                              "Newsreader"
+                      ]
+              },
+              "fontSize": {
+                      "ui-label": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "caption-italic": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "ui-button": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-text": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+          .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+          }
+          .material-symbols-outlined[data-weight="fill"] {
+              font-variation-settings: 'FILL' 1;
+          }
+          /* Custom textures and tactile feel */
+          .texture-paper {
+              background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.04"/%3E%3C/svg%3E');
+          }
+          .texture-wood {
+              background-color: #ddd9d8;
+              background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="woodNoise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.01 0.1" numOctaves="4" result="noise"/%3E%3CfeColorMatrix type="matrix" values="1 0 0 0 0.8 0 1 0 0 0.8 0 0 1 0 0.7 0 0 0 0.1 0" in="noise" result="coloredNoise"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23woodNoise)"/%3E%3C/svg%3E');
+          }
+          
+          .album-cover {
+              box-shadow: 
+                  -1px 0px 1px rgba(0,0,0,0.1), /* Spine inner highlight */
+                  1px 0px 1px rgba(0,0,0,0.2) inset, /* Spine shadow */
+                  4px 4px 15px rgba(0,0,0,0.15), /* Main shadow */
+                  12px 12px 30px rgba(0,0,0,0.1); /* Ambient drop shadow */
+              position: relative;
+          }
+          .album-cover::before {
+              content: '';
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              width: 12px;
+              background: linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.1) 20%, rgba(0,0,0,0.05) 100%);
+              border-radius: 4px 0 0 4px;
+              z-index: 10;
+          }
+          .album-cover::after {
+              content: '';
+              position: absolute;
+              right: -2px;
+              top: 2px;
+              bottom: 2px;
+              width: 2px;
+              background-color: #e5e2e1;
+              box-shadow: 1px 0 2px rgba(0,0,0,0.1);
+              z-index: -1;
+          }
+
+          .taped-corner-tl {
+              position: absolute;
+              top: -8px;
+              left: -8px;
+              width: 30px;
+              height: 12px;
+              background-color: rgba(157, 68, 0, 0.2);
+              transform: rotate(-45deg);
+              z-index: 20;
+          }
+          .taped-corner-br {
+              position: absolute;
+              bottom: -8px;
+              right: -8px;
+              width: 30px;
+              height: 12px;
+              background-color: rgba(157, 68, 0, 0.2);
+              transform: rotate(-45deg);
+              z-index: 20;
+          }
+          
+          .btn-primary-press:active {
+              box-shadow: inset 0px 2px 4px rgba(0,0,0,0.2);
+              transform: translateY(1px);
+          }
+      </style>
+</head>
+<body class="bg-surface text-on-surface font-body-text antialiased min-h-screen flex flex-col texture-paper">
+<!-- TopAppBar -->
+<header class="bg-[#fdfcf8] dark:bg-[#121210] docked full-width top-0 border-b border-stone-200 dark:border-stone-800 border-b-[0.5px] border-stone-300 dark:border-stone-800 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] sticky z-50">
+<div class="flex justify-between items-center px-10 py-6 w-full max-w-7xl mx-auto">
+<!-- Brand Logo -->
+<div class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210] dark:text-[#fdfcf8] flex items-center gap-2">
+                Heritage Album
+            </div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex gap-8 items-center">
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-[#121210] dark:text-[#fdfcf8] border-b-2 border-[#121210] dark:border-[#fdfcf8] pb-1 hover:opacity-80 transition-opacity duration-300" href="#">2. Explore</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">1. Home Page</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">3. Creation Workspace</a>
+</nav>
+<!-- Trailing Icons / Search -->
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-surface-container rounded-full px-4 py-2 border border-outline-variant focus-within:border-primary transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-ui-label font-ui-label text-on-surface placeholder:text-on-surface-variant/50 w-48" placeholder="Search archives..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:opacity-80 transition-opacity duration-300 p-2">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:opacity-80 transition-opacity duration-300 p-2">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<!-- Profile Avatar -->
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant ml-2 shadow-sm">
+<img alt="User's physical portrait" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQCIRSaIalVRLI4_UIRIkXWbpYeOhVKaCzFtbv1YbfWWQuaEd5DYw99vbbkjUR79DM-ux3gu2WXldvxx6Sk7M7O4-7XGgvKdtNbnt3u2y0du6ersRpOsBhcvQwUGX81MQbay-LMQifEJwxEUBk4O4x_CrS90esjBg4jzzjCnyRfVygFdJYv3brFyhI-LbPqm4q_Z4bMOAtrpOdKdZTnjfpOnEiu8Ajcgyvp_f591RJKigGTh1Pl4GLs00bxD2U3EJq_Fa_ap0Ukic"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area: The Gallery Table -->
+<main class="flex-grow texture-wood py-16 px-4 md:px-margin-edge relative overflow-hidden">
+<!-- Ambient lighting overlay to simulate table depth -->
+<div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-[rgba(0,0,0,0.05)] pointer-events-none"></div>
+<div class="max-w-7xl mx-auto">
+<header class="mb-16 text-center">
+<h1 class="font-headline-md text-headline-md text-on-surface mb-2 tracking-tight">2. Explore / Community Gallery</h1>
+<p class="font-caption-italic text-caption-italic text-on-surface-variant italic">A collection of shared histories and curated moments.</p>
+</header>
+<!-- Grid of Albums laying on the table -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16 md:gap-gutter pb-24">
+<!-- Album Item 1 -->
+<article class="flex flex-col items-center group">
+<!-- The Book -->
+<div class="album-cover w-[280px] h-[360px] bg-surface rounded-sm rounded-r-lg p-6 flex flex-col mb-6 transition-transform duration-500 ease-out group-hover:scale-[1.02] group-hover:-translate-y-2 relative" style="transform: rotate(-1deg);">
+<!-- Cover Content -->
+<div class="flex-grow border border-outline-variant p-4 flex flex-col items-center justify-center text-center relative overflow-hidden bg-surface-container-lowest">
+<div class="taped-corner-tl"></div>
+<img alt="A serene landscape with tall pine trees shrouded in morning mist. Soft, diffuse natural lighting creates a calm, nostalgic mood. The colors are muted earth tones, deeply atmospheric and melancholic, fitting for a vintage nature photography album cover." class="w-full h-40 object-cover mb-4 filter sepia-[0.2] contrast-[0.9]" data-alt="A serene landscape with tall pine trees shrouded in morning mist. Soft, diffuse natural lighting creates a calm, nostalgic mood. The colors are muted earth tones, deeply atmospheric and melancholic, fitting for a vintage nature photography album cover." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDslnY0ZAwIZ2vTkMxcWGTUqr7Q3a61EW4gRKsyM1gxp1Fa_twyn3ZXWVH0RgbQshAgjC_ysf7Toh00oVGsFkd5WLzcbdE5FfdQeJj-jIJj1kMPstiB1pxXpEDTVMdTM3r97qYflBFTuY9L5LgZITbypsUYrp7Pxou1AvnCC3C5f8IP3Dl-Yx9h4LrFzfI_hooxn8qE-R0t-2SzVhTQqsIqpfDpfbeFIehy9IkUjI_ubTuIgYObSTdIMKbRDN0fpwgvvUWVAsYaIcs"/>
+<h2 class="font-display-lg text-[28px] leading-tight text-on-surface mb-2 font-semibold">Summer in the Valley</h2>
+<p class="font-caption-italic text-caption-italic text-on-surface-variant">Est. 1994</p>
+<div class="taped-corner-br"></div>
+</div>
+<!-- Spine Labeling (Visual only) -->
+<div class="absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[10px] font-ui-label text-on-surface-variant tracking-widest opacity-50 whitespace-nowrap">
+                            VOL. IV — 1994
+                        </div>
+</div>
+<!-- Metadata & Actions below the book -->
+<div class="w-[280px] flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<img alt="Curator portrait" class="w-6 h-6 rounded-full object-cover border border-outline" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXssp44C73-V06Rdsq0-2o7CJiwRXvmwukX5TBYsr5Oq12oZu7ws04br6RqPjHP3VPIALFR4fiAqhr-zgeAkD0GKWNfQtx9W3e0Pn3wxmjdUjRcIdUF1GGgUDmFDjUGMqWH1nAQuV1O-peFK1lSnOBSBXbOiS5FVorN2qJvlXyw166J4k-XG5o46qS1U5ChDnau3QD0InCTA70P6-EPiguB3BgnEYC1F-fB2M85ZmHp-8lBkCRI3KUNlyHccn_y5J1J_1XF1Yo-x8"/>
+<span class="font-ui-label text-ui-label text-on-surface-variant">Eleanor Vance</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="favorite">favorite</span>
+<span class="font-ui-label text-[12px]">24</span>
+</div>
+</div>
+<button class="w-full bg-secondary text-on-secondary font-ui-button text-ui-button py-3 rounded border border-[#783200] shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:bg-[#8a3c00] transition-colors btn-primary-press flex items-center justify-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="auto_stories">auto_stories</span>
+</button>
+</div>
+</article>
+<!-- Album Item 2 -->
+<article class="flex flex-col items-center group">
+<div class="album-cover w-[280px] h-[360px] bg-[#f4f0ef] rounded-sm rounded-r-lg p-6 flex flex-col mb-6 transition-transform duration-500 ease-out group-hover:scale-[1.02] group-hover:-translate-y-2 relative" style="transform: rotate(1.5deg);">
+<div class="flex-grow border border-outline-variant p-4 flex flex-col items-center justify-center text-center relative overflow-hidden bg-surface-container-lowest">
+<div class="taped-corner-tl"></div>
+<img alt="A close-up of worn, handwritten letters scattered on a wooden desk next to a vintage brass compass. The lighting is warm and directional, like late afternoon sun filtering through a dusty window. The color palette is rich in amber, sepia, and deep brown, conveying deep nostalgia and tactile history." class="w-full h-40 object-cover mb-4 filter sepia-[0.3]" data-alt="A close-up of worn, handwritten letters scattered on a wooden desk next to a vintage brass compass. The lighting is warm and directional, like late afternoon sun filtering through a dusty window. The color palette is rich in amber, sepia, and deep brown, conveying deep nostalgia and tactile history." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1fkeXT-4MDwMAGzYI5mQ2jQjgdpQ2NZJhaEv82jrORe8wclg30NQ6F70XQseioaee0XqoKkBhakq9uBE5XIh6zj8tFMHb0QicmdLAsFdJsJ7-KqRNGphz2dZbpB3nGbwWtMDCLdYSTai0x0rbIlz0SJCzI3qI4TQmqNE9Zu_15ylXnFN2uRoiyWcjn6InjkiC-JQcbEz0XDk7OZxILhDGw4VJlcRNIG6bI4x3Y15MuVXrgAIYdPGck2NbdNbQgjxBBFULGb_ngxI"/>
+<h2 class="font-display-lg text-[28px] leading-tight text-on-surface mb-2 font-semibold">Letters from Home</h2>
+<p class="font-caption-italic text-caption-italic text-on-surface-variant">Est. 1942</p>
+<div class="taped-corner-br"></div>
+</div>
+<div class="absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[10px] font-ui-label text-on-surface-variant tracking-widest opacity-50 whitespace-nowrap">
+                            LETTERS — ARCHIVE
+                        </div>
+</div>
+<div class="w-[280px] flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<img alt="Curator portrait" class="w-6 h-6 rounded-full object-cover border border-outline" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAITXDaVn7Me1duVls4VLH5KUUDjOGxmxEk9M9Ghk7aVoEpTjH53aRzuCF5_YsRuubIWJjcw8fOA2F-kyOwp1g3QJxz87v0vXkB5M1zqfNWlehnvYSrPOhCXk4S8i2cq13oCbEDYmzhh1Ba31OGkhfhumWTmPYBRWxNvQlMOGwSsnKslvrqs5YBEZ2uUyTbm3WLJmQ--R6C-ykJEoDcZtPRrRFNbpO-zjM7TJKrvJWeV3rNQ-YApEHOWtGMfmAS-3pSjmOMbewVzRI"/>
+<span class="font-ui-label text-ui-label text-on-surface-variant">Arthur Pendelton</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="favorite">favorite</span>
+<span class="font-ui-label text-[12px]">89</span>
+</div>
+</div>
+<button class="w-full bg-secondary text-on-secondary font-ui-button text-ui-button py-3 rounded border border-[#783200] shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:bg-[#8a3c00] transition-colors btn-primary-press flex items-center justify-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="auto_stories">auto_stories</span>
+</button>
+</div>
+</article>
+<!-- Album Item 3 -->
+<article class="flex flex-col items-center group">
+<div class="album-cover w-[280px] h-[360px] bg-[#1c1c19] rounded-sm rounded-r-lg p-6 flex flex-col mb-6 transition-transform duration-500 ease-out group-hover:scale-[1.02] group-hover:-translate-y-2 relative" style="transform: rotate(-0.5deg);">
+<div class="flex-grow border border-[#474744] p-4 flex flex-col items-center justify-center text-center relative overflow-hidden bg-[#313030]">
+<div class="taped-corner-tl" style="background-color: rgba(255,255,255,0.1);"></div>
+<img alt="A high-contrast black and white portrait of a jazz musician playing a saxophone in a dimly lit, smoky club. The light catches the brass of the instrument and the sweat on the performer's brow. The mood is intense, intimate, and raw, classic documentary photography style." class="w-full h-40 object-cover mb-4 grayscale" data-alt="A high-contrast black and white portrait of a jazz musician playing a saxophone in a dimly lit, smoky club. The light catches the brass of the instrument and the sweat on the performer's brow. The mood is intense, intimate, and raw, classic documentary photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBj3kOvy7dkAfpv4_VRika5sM82BRm3mKiDaPYsGaQxMJhA-BOk6OGlP38S8pKerHAgZqB4YZkMU3Ei9ZHURFFL2zhXzz2pJoLiIHVm4f-jKBMIo2F-S_I4FeyKYFw2M48Q6C5IbeJCl0FtrizW0_5yZWMF0aqMcnQI3AUX-R8A4pcBrugWLCnF7rpW4hsovoMYoDBeBCIroqP08-L1hSGRNgilLTNYPaI4-dbkbmedlNPtsgOZ01OOem5z5jSidhKZDYzxvE8sGQs"/>
+<h2 class="font-display-lg text-[28px] leading-tight text-[#fdf8f7] mb-2 font-semibold">The Blue Note Years</h2>
+<p class="font-caption-italic text-caption-italic text-[#c8c7be]">Est. 1968</p>
+<div class="taped-corner-br" style="background-color: rgba(255,255,255,0.1);"></div>
+</div>
+<div class="absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[10px] font-ui-label text-[#c8c7be] tracking-widest opacity-50 whitespace-nowrap">
+                            PORTRAITS — '68
+                        </div>
+</div>
+<div class="w-[280px] flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<img alt="Curator portrait" class="w-6 h-6 rounded-full object-cover border border-outline" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD79xpmXUw5gY0UT73Ni3NDkHBVkRkX4kxo9vACXNfJVXLzngOPI7Lxx6Q5glomcsutrf-y1q0s1jfJPRrwy-P982bZJWzkkzVheY5XYDdEH6ceCkWXoPnBQyHtbsMOMUJOnhML5ebfuPKYcxhk8cyU84bGo4TzCKjxoof1vFiCQ_O1n7Fht0BNza9vKBTiw9Kmve5cjPiaxfVwPL0OC80yjvVD1BD0mPei07k-2jOlDxrWMGKjoqkWcptOkaYwH9eGtj83NALTBpE"/>
+<span class="font-ui-label text-ui-label text-on-surface-variant">Marcus Reed</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="favorite">favorite</span>
+<span class="font-ui-label text-[12px]">112</span>
+</div>
+</div>
+<button class="w-full bg-secondary text-on-secondary font-ui-button text-ui-button py-3 rounded border border-[#783200] shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:bg-[#8a3c00] transition-colors btn-primary-press flex items-center justify-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="auto_stories">auto_stories</span>
+</button>
+</div>
+</article>
+</div>
+</div>
+</main>
+</body></html>

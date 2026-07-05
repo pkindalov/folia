@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album - Home</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400;1,600&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-secondary-fixed": "#410001",
+                    "tertiary": "#735c00",
+                    "on-surface": "#1c1c18",
+                    "outline": "#7d766f",
+                    "secondary": "#a63a2e",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#ffdad5",
+                    "on-secondary-container": "#72140e",
+                    "background": "#fcf9f2",
+                    "error": "#ba1a1a",
+                    "outline-variant": "#cec5bd",
+                    "on-surface-variant": "#4c463f",
+                    "on-error": "#ffffff",
+                    "surface-container": "#f1eee7",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "primary-container": "#2c2926",
+                    "surface-dim": "#dcdad3",
+                    "primary": "#171512",
+                    "on-background": "#1c1c18",
+                    "inverse-surface": "#31312c",
+                    "surface-container-high": "#ebe8e1",
+                    "surface-bright": "#fcf9f2",
+                    "inverse-on-surface": "#f3f0e9",
+                    "secondary-fixed-dim": "#ffb4a9",
+                    "surface-tint": "#625e5a",
+                    "tertiary-container": "#cca830",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "tertiary-fixed": "#ffe088",
+                    "secondary-container": "#ff7c6c",
+                    "on-tertiary-container": "#4f3e00",
+                    "primary-fixed": "#e8e1dc",
+                    "on-primary-fixed": "#1e1b18",
+                    "surface-container-highest": "#e5e2db",
+                    "on-primary-container": "#95908b",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "surface-variant": "#e5e2db",
+                    "inverse-primary": "#ccc5c1",
+                    "surface": "#fcf9f2",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "on-tertiary-fixed": "#241a00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "touch-target-min": "44px",
+                    "margin-mobile": "16px",
+                    "gutter-mobile": "12px",
+                    "stack-sm": "8px",
+                    "stack-lg": "24px",
+                    "section-gap": "40px",
+                    "stack-md": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Newsreader"],
+                    "label-md": ["Public Sans"],
+                    "display-lg": ["Newsreader"],
+                    "headline-lg": ["Newsreader"],
+                    "body-lg": ["Newsreader"],
+                    "body-md": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-md": ["Newsreader"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .paper-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+        }
+        .book-shadow {
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.1), 1px 0px 1px rgba(0,0,0,0.05) inset;
+        }
+        .ink-bleed {
+            filter: contrast(1.1) brightness(0.95);
+        }
+        body {
+            background-color: #fcf9f2;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md selection:bg-secondary-container">
+<!-- Top AppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface border-b border-outline-variant/30 shadow-sm">
+<div class="flex items-center justify-between px-margin-mobile w-full h-16">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 cursor-pointer">menu</span>
+<h1 class="font-headline-md text-headline-md-mobile text-primary italic">Heritage Album</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 cursor-pointer">settings</span>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-28 px-margin-mobile paper-texture min-h-screen">
+<!-- Header Section -->
+<section class="mb-stack-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-1">My Flipbooks</h2>
+<p class="font-body-md text-on-surface-variant">Archiving your legacy, one volume at a time.</p>
+</section>
+<!-- Search & Filter -->
+<div class="mb-stack-lg">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 bg-transparent border-b border-outline-variant focus:border-secondary focus:ring-0 text-on-surface py-2 outline-none" placeholder="Search your library..." type="text"/>
+</div>
+</div>
+<!-- Library Grid -->
+<div class="grid grid-cols-2 gap-gutter-mobile">
+<!-- Start New Volume -->
+<button class="flex flex-col items-center justify-center aspect-[3/4] border-2 border-dashed border-outline-variant rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group active:scale-95">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center mb-4 text-on-secondary-container shadow-sm group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">Start a New Volume</span>
+</button>
+<!-- Album 1: Private -->
+<div class="relative flex flex-col group cursor-pointer active:scale-[0.98] transition-transform">
+<div class="aspect-[3/4] bg-primary relative overflow-hidden rounded-r-lg book-shadow border-l-4 border-black/20">
+<div class="absolute inset-0 bg-cover bg-center opacity-60" data-alt="A macro photograph of an ornate, vintage leather book cover with gold-embossed filigree patterns. The lighting is warm and moody, suggesting a study with mahogany furniture and dust motes dancing in sunbeams. The color palette is rich obsidian and aged gold, evoking a sense of precious heritage and secret history." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDmhhbO8hj0q3Rt22gswZbaB8_MoUzGbq333jdi5QshO_iim1ShFT_3Tos3mGtemHedORjW1pOENpiJmqQJvM2QAusRjYgcUW64ZrMGsJnRekGnM3DfrCaccMgB65JF7G8Dx3rS_xjRAYEOeGT4c0tZUsU1epWqBjnZ7F9yHORiZJoIpu0VFDOxP3cBHIuWmkR5XBLzxTTNkOK1FzhoRHFoWGdPKZQqqEMVZrqXnhVGDNUnH7YCBC8GIYPTq5VBOVLFRNuiW7rHWeE')"></div>
+<div class="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent">
+<span class="font-label-sm text-label-sm text-white/70 uppercase tracking-widest mb-1">Vol. I</span>
+<h3 class="font-headline-md text-white text-[18px] leading-tight mb-2">Ancestral Echoes</h3>
+<div class="flex items-center gap-1 px-2 py-1 bg-black/40 backdrop-blur-md rounded-full w-fit">
+<span class="material-symbols-outlined text-[12px] text-white" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-label-sm text-label-sm text-white">Private</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Album 2: Shared -->
+<div class="relative flex flex-col group cursor-pointer active:scale-[0.98] transition-transform">
+<div class="aspect-[3/4] bg-secondary relative overflow-hidden rounded-r-lg book-shadow border-l-4 border-black/20">
+<div class="absolute inset-0 bg-cover bg-center opacity-70" data-alt="A collection of yellowed, handwritten letters and sepia photographs scattered on a rustic wooden table. The lighting is soft and natural, pouring in from a side window, highlighting the fine texture of the parchment and the ink-bleed of the cursive writing. The palette consists of warm creams, burnt siennas, and deep mahogany, creating a nostalgic family archive atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDp-JTI76NhP1qMiVcxYbFm4qUEoOihzt4VnMxOILvj76To76JV-mBDk_b2NSOot5foiCCNBuybJCYwtlykEvzmUFhchVYyhHFrC8d6etJVhpX4BhWCtsh6mLoQ3iyimR6BeDeDc4tbwGNjJPZot-bc8xBDsds3sBVUDmvoElEzhHT7jTPW-u0DwHKEG7F-RVTEpD1n8ltsSgKRN9nd4nxP0ZH81UpVH6nqpxLnp2DrOSwmuJ18n1tCVN23gEgY68L7VztJC7JlTRk')"></div>
+<div class="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent">
+<span class="font-label-sm text-label-sm text-white/70 uppercase tracking-widest mb-1">Vol. IV</span>
+<h3 class="font-headline-md text-white text-[18px] leading-tight mb-2">The Miller Family</h3>
+<div class="flex items-center gap-1 px-2 py-1 bg-tertiary-container backdrop-blur-md rounded-full w-fit">
+<span class="material-symbols-outlined text-[12px] text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-sm text-label-sm text-on-tertiary-container">Shared</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Album 3: Public -->
+<div class="relative flex flex-col group cursor-pointer active:scale-[0.98] transition-transform">
+<div class="aspect-[3/4] bg-outline-variant relative overflow-hidden rounded-r-lg book-shadow border-l-4 border-black/20">
+<div class="absolute inset-0 bg-cover bg-center opacity-60" data-alt="A minimalist architectural book cover design featuring clean geometric lines and a monochrome photo of a classical European plaza. The lighting is bright and high-contrast, emphasizing the textures of white marble and grey granite. The aesthetic is modern archival, using a sophisticated palette of neutral greys and crisp whites to represent a public legacy collection." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDiNrIO8zbe6UrgEjF4LeQQeBJ0b9uCm_ywoQE3E0rUkUiFUJR3A1ZeJ8VL_p1tLUm33Rmp1me1M8JgQ3CPwXfyKKUmzyGGcAlw4l5-fscvO33hKlAobU5BestL4FQkj7I97VSmVfvH3lmT0KkY2RGpNFzHAMfgVtOAf-QSZ8DcGzTjj32nt57XuE_hyi7Oe2B3uIj8CfOoLUNtSLXbBidaC9Qk2ZG-0E1e1Z36ep2HWjtgTUGe3lti5z-ojcleoq5_UaYF520GZGI')"></div>
+<div class="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent">
+<span class="font-label-sm text-label-sm text-white/70 uppercase tracking-widest mb-1">Public Archive</span>
+<h3 class="font-headline-md text-white text-[18px] leading-tight mb-2">Summer of '74</h3>
+<div class="flex items-center gap-1 px-2 py-1 bg-surface/30 backdrop-blur-md rounded-full w-fit">
+<span class="material-symbols-outlined text-[12px] text-white">public</span>
+<span class="font-label-sm text-label-sm text-white">Public</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Album 4: Private -->
+<div class="relative flex flex-col group cursor-pointer active:scale-[0.98] transition-transform">
+<div class="aspect-[3/4] bg-primary-container relative overflow-hidden rounded-r-lg book-shadow border-l-4 border-black/20">
+<div class="absolute inset-0 bg-cover bg-center opacity-60" data-alt="An close-up of a velvet-bound journal in deep burgundy, sitting on a pile of old maps. The mood is intellectual and scholarly, with soft directional lighting that reveals the plush texture of the fabric and the fine lines of the cartography. The color scheme is oxblood, ochre, and deep charcoal, evoking a sense of private exploration and curated memories." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBMMl4W7lB3kC-hBUSjZ9FCqAjuV9WzJNeHN5bRHYPDlTFfgbXcbU1bvl30SEC18e0nnzlbaQnM2TLNILo7Q-GHBUJy1PRdh6bEw26DUYos2pnukwHtdaMAt2zpU0kB4a4WbvIqBvzhan1DMgWAkjTd4X_nSjveSGZY4W8zgqYYyu9sVoVbqOTAWWFJF2tfyausAhF39poWExprggn82ZngNt-OAFiK-K-GjSdcCNTNuU6h4PXjWnOK02m0QJfFCgvd5GfwPZOnuAE')"></div>
+<div class="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/80 to-transparent">
+<span class="font-label-sm text-label-sm text-white/70 uppercase tracking-widest mb-1">Vol. XI</span>
+<h3 class="font-headline-md text-white text-[18px] leading-tight mb-2">Hidden Gardens</h3>
+<div class="flex items-center gap-1 px-2 py-1 bg-black/40 backdrop-blur-md rounded-full w-fit">
+<span class="material-symbols-outlined text-[12px] text-white" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-label-sm text-label-sm text-white">Private</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity Feed (Bento-like snippet) -->
+<div class="mt-section-gap">
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-md">Journal Feed</h3>
+<div class="space-y-stack-md">
+<div class="bg-surface-container-low p-stack-md rounded border-b border-outline-variant/20 flex gap-4">
+<div class="w-12 h-12 rounded bg-surface-container-highest overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover grayscale opacity-80" data-alt="A portrait of an elderly man with kind eyes, shot in a classic film style with grainy texture. He is wearing a tweed jacket and a newsboy cap. The lighting is golden hour, casting long shadows and a warm, nostalgic glow. The background is a soft-focus library." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM6Bx0phmOkyY8HDN7Cfod_aiTvGcDWkZNdfrxxrcCuKF4ydz9J7dUy85FFw6wi6j7qU2bErSzT0lLAaJpXNyDvuDcT-0ugLMGgnuZCUs94Kp3fE5b_dqcHN2lRcTJ6zaIZ7KFN_-y-w3xWv1oSBi5nNW8-wHPIDDyEqBBx1pOC1I8JVonoOeHVmBjl3CjWRvsQYwNr80VZIa-hu6mmTqUXrubhJNv8rw3LtJ7Tg3YylNtO5Cj210BuFpCtKHCjG9DkVYcaYPaysE"/>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Uncle Arthur added 4 photos to <span class="font-bold italic">The Miller Family</span>.</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 hours ago</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-stack-md rounded border-b border-outline-variant/20 flex gap-4">
+<div class="w-12 h-12 rounded bg-secondary-container flex items-center justify-center text-on-secondary-container flex-shrink-0">
+<span class="material-symbols-outlined">auto_stories</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">You successfully published <span class="font-bold italic">Summer of '74</span>.</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-md rounded-t-full border-t border-outline-variant shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+<div class="flex justify-around items-center h-touch-target-min pb-2 px-margin-mobile">
+<!-- Active: Home -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-spacing-stack-md py-1 active:scale-95 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<!-- Inactive: Explore -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-variant/20 transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<!-- Inactive: Create -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-variant/20 transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-label-md text-label-md">Create</span>
+</a>
+<!-- Inactive: Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-variant/20 transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</div>
+</nav>
+<!-- Floating Action Button (FAB) - For Home Screen Context -->
+<div class="fixed bottom-24 right-margin-mobile z-40">
+<button class="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]">edit_note</span>
+</button>
+</div>
+<script>
+        // Micro-interaction for cards
+        document.querySelectorAll('.aspect-\\[3\\/4\\]').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

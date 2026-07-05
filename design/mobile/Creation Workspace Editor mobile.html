@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>3. Creation Workspace</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-secondary-fixed": "#410001",
+                    "tertiary": "#735c00",
+                    "on-surface": "#1c1c18",
+                    "outline": "#7d766f",
+                    "secondary": "#a63a2e",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#ffdad5",
+                    "on-secondary-container": "#72140e",
+                    "background": "#fcf9f2",
+                    "error": "#ba1a1a",
+                    "outline-variant": "#cec5bd",
+                    "on-surface-variant": "#4c463f",
+                    "on-error": "#ffffff",
+                    "surface-container": "#f1eee7",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "primary-container": "#2c2926",
+                    "surface-dim": "#dcdad3",
+                    "primary": "#171512",
+                    "on-background": "#1c1c18",
+                    "inverse-surface": "#31312c",
+                    "surface-container-high": "#ebe8e1",
+                    "surface-bright": "#fcf9f2",
+                    "inverse-on-surface": "#f3f0e9",
+                    "secondary-fixed-dim": "#ffb4a9",
+                    "surface-tint": "#625e5a",
+                    "tertiary-container": "#cca830",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "tertiary-fixed": "#ffe088",
+                    "secondary-container": "#ff7c6c",
+                    "on-tertiary-container": "#4f3e00",
+                    "primary-fixed": "#e8e1dc",
+                    "on-primary-fixed": "#1e1b18",
+                    "surface-container-highest": "#e5e2db",
+                    "on-primary-container": "#95908b",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "surface-variant": "#e5e2db",
+                    "inverse-primary": "#ccc5c1",
+                    "surface": "#fcf9f2",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "on-tertiary-fixed": "#241a00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "touch-target-min": "44px",
+                    "margin-mobile": "16px",
+                    "gutter-mobile": "12px",
+                    "stack-sm": "8px",
+                    "stack-lg": "24px",
+                    "section-gap": "40px",
+                    "stack-md": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Newsreader"],
+                    "label-md": ["Public Sans"],
+                    "display-lg": ["Newsreader"],
+                    "headline-lg": ["Newsreader"],
+                    "body-lg": ["Newsreader"],
+                    "body-md": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-md": ["Newsreader"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .parchment-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+        }
+        .ink-bleed {
+            filter: drop-shadow(0 0 1px rgba(23, 21, 18, 0.2));
+        }
+        .page-shadow {
+            box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.05), -1px 0 2px rgba(0, 0, 0, 0.02);
+        }
+        .inner-pressed:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen overflow-x-hidden selection:bg-secondary-fixed">
+<!-- Top App Bar (From Shared Components) -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-container-high shadow-sm border-b border-outline-variant/30 flex items-center justify-between px-margin-mobile h-14">
+<button class="text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile italic text-primary dark:text-primary-fixed">Heritage Album</h1>
+<button class="text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-14 pb-24 px-margin-mobile">
+<!-- Screen Identity Label -->
+<div class="py-stack-md">
+<span class="font-label-md text-label-md uppercase tracking-widest text-outline">Section 03</span>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile mt-1">Creation Workspace</h2>
+</div>
+<!-- The "Page" Sheet -->
+<div class="relative bg-surface-container-lowest parchment-texture border border-outline-variant/40 page-shadow rounded-sm min-h-[500px] p-6 flex flex-col gap-stack-lg overflow-hidden">
+<!-- Inked Header Detail -->
+<div class="flex justify-between items-start border-b border-outline-variant/20 pb-4">
+<div class="flex-1 mr-4">
+<input class="w-full bg-transparent border-none focus:ring-0 p-0 font-headline-md text-headline-md placeholder:text-outline-variant italic" placeholder="Entry Title..." type="text"/>
+<div class="h-[1px] w-full bg-outline-variant/30 mt-1"></div>
+</div>
+<div class="text-outline font-label-sm text-right">
+                    PAGE 014<br/>
+                    AUTUMN 1924
+                </div>
+</div>
+<!-- Asymmetric Drop Zone Grid -->
+<div class="grid grid-cols-2 gap-gutter-mobile">
+<!-- Primary Image Zone -->
+<div class="col-span-2 aspect-[4/3] border border-dashed border-outline-variant flex flex-col items-center justify-center bg-surface-container-low group cursor-pointer hover:bg-surface-container transition-colors duration-300">
+<span class="material-symbols-outlined text-outline group-hover:scale-110 transition-transform mb-2">add_a_photo</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Drag photos here</span>
+</div>
+<!-- Secondary Accents -->
+<div class="aspect-square border border-dashed border-outline-variant flex flex-col items-center justify-center bg-surface-container-low/50">
+<span class="material-symbols-outlined text-outline-variant text-sm mb-1">attachment</span>
+<span class="font-label-sm text-label-sm text-outline-variant">Memento</span>
+</div>
+<div class="aspect-square border border-dashed border-outline-variant flex flex-col items-center justify-center bg-surface-container-low/50">
+<span class="material-symbols-outlined text-outline-variant text-sm mb-1">ink_pen</span>
+<span class="font-label-sm text-label-sm text-outline-variant">Sketch</span>
+</div>
+</div>
+<!-- Descriptive Text Area (Ledger Style) -->
+<div class="mt-2 space-y-4">
+<div class="relative">
+<textarea class="w-full bg-transparent border-none focus:ring-0 p-0 font-body-md text-body-md placeholder:text-outline-variant resize-none leading-8" placeholder="Begin your narrative here..." rows="4" style="background-image: linear-gradient(transparent, transparent 31px, rgba(206, 197, 189, 0.4) 31px); background-size: 100% 32px;"></textarea>
+</div>
+</div>
+<!-- Library Label Tag -->
+<div class="flex flex-wrap gap-2 mt-auto pt-6 border-t border-outline-variant/10">
+<div class="inline-flex items-center bg-surface-container px-3 py-1 rounded-full border border-outline-variant/30">
+<span class="font-label-sm text-label-sm text-on-surface-variant">ARCHIVAL</span>
+</div>
+<div class="inline-flex items-center bg-surface-container px-3 py-1 rounded-full border border-outline-variant/30">
+<span class="font-label-sm text-label-sm text-on-surface-variant">GENEALOGY</span>
+</div>
+</div>
+</div>
+<!-- Tactile Controls / Toolbox -->
+<div class="mt-stack-lg space-y-stack-md">
+<p class="font-label-md text-label-md text-outline uppercase tracking-wider text-center">Tools of the Trade</p>
+<div class="flex justify-between items-center bg-primary px-margin-mobile py-4 rounded-xl shadow-lg border border-on-primary-fixed-variant">
+<button class="flex flex-col items-center gap-1 group text-on-primary active:scale-95 transition-all">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-on-primary-container/20 group-hover:bg-on-primary-container/40 transition-colors">
+<span class="material-symbols-outlined">image</span>
+</div>
+<span class="font-label-sm text-label-sm">Photo</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-primary active:scale-95 transition-all">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-on-primary-container/20 group-hover:bg-on-primary-container/40 transition-colors">
+<span class="material-symbols-outlined">format_quote</span>
+</div>
+<span class="font-label-sm text-label-sm">Quote</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-primary active:scale-95 transition-all">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-on-primary-container/20 group-hover:bg-on-primary-container/40 transition-colors">
+<span class="material-symbols-outlined">sticky_note_2</span>
+</div>
+<span class="font-label-sm text-label-sm">Note</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-primary active:scale-95 transition-all">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-on-primary-container/20 group-hover:bg-on-primary-container/40 transition-colors">
+<span class="material-symbols-outlined">palette</span>
+</div>
+<span class="font-label-sm text-label-sm">Style</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar (From Shared Components) -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface/90 dark:bg-surface-container-highest/90 backdrop-blur-md rounded-t-full border-t border-outline-variant shadow-lg flex justify-around items-center h-touch-target-min pb-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 active:inner-shadow-md transition-all duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 active:inner-shadow-md transition-all duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<!-- ACTIVE: Create -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-spacing-stack-md py-1 active:inner-shadow-md transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="font-label-md text-label-md">Create</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 active:inner-shadow-md transition-all duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<!-- Floating Micro-interactions & Visual Effects -->
+<script>
+        // Simple ripple effect for the tactile buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mousedown', function(e) {
+                const x = e.clientX - e.target.offsetLeft;
+                const y = e.clientY - e.target.offsetTop;
+                const ripple = document.createElement('span');
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                ripple.classList.add('absolute', 'w-1', 'h-1', 'bg-white/20', 'rounded-full', 'animate-ping');
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // Basic scroll effect for TopBar elevation
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-md');
+            } else {
+                header.classList.remove('shadow-md');
+            }
+        });
+    </script>
+</body></html>

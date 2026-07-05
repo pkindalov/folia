@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>3. Creation Workspace / Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;family=Work+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#fdf8f7",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#858480",
+                        "on-background": "#1c1b1b",
+                        "primary": "#000000",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#313030",
+                        "on-secondary-fixed-variant": "#783200",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fe8032",
+                        "secondary": "#9d4400",
+                        "surface-container-high": "#ebe7e6",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#384b3b",
+                        "on-tertiary-container": "#748976",
+                        "on-primary-fixed-variant": "#474744",
+                        "primary-container": "#1c1c19",
+                        "inverse-on-surface": "#f4f0ef",
+                        "outline": "#787770",
+                        "secondary-fixed": "#ffdbca",
+                        "surface-dim": "#ddd9d8",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#c9c6c2",
+                        "surface-container-low": "#f7f3f2",
+                        "outline-variant": "#c8c7be",
+                        "on-primary-fixed": "#1c1c19",
+                        "tertiary-fixed-dim": "#b6ccb6",
+                        "primary-fixed": "#e5e2de",
+                        "tertiary-fixed": "#d2e8d2",
+                        "on-surface": "#1c1b1b",
+                        "on-surface-variant": "#474741",
+                        "surface-tint": "#5f5e5b",
+                        "inverse-primary": "#c9c6c2",
+                        "secondary-fixed-dim": "#ffb690",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#000000",
+                        "background": "#fdf8f7",
+                        "surface-container-highest": "#e5e2e1",
+                        "tertiary-container": "#0d1f12",
+                        "on-secondary-fixed": "#331100",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fdf8f7",
+                        "on-tertiary-fixed": "#0d1f12",
+                        "on-secondary-container": "#632800",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-edge": "40px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "stack-overlap": "-12px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Work Sans"],
+                        "caption-italic": ["Newsreader"],
+                        "ui-button": ["Work Sans"],
+                        "display-lg": ["Newsreader"],
+                        "body-text": ["Newsreader"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "caption-italic": ["16px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "ui-button": ["16px", { "lineHeight": "1.0", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-text": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .texture-bg {
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .page-shadow {
+            box-shadow: 0px 4px 20px rgba(0,0,0,0.05);
+        }
+        .photo-shadow {
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.12);
+        }
+        .washi-tape-top-left {
+            position: absolute; top: -10px; left: -10px; width: 40px; height: 15px; background-color: rgba(157, 68, 0, 0.2); transform: rotate(-15deg); z-index: 10;
+        }
+        .washi-tape-bottom-right {
+            position: absolute; bottom: -10px; right: -10px; width: 40px; height: 15px; background-color: rgba(157, 68, 0, 0.2); transform: rotate(-15deg); z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-surface-dim texture-bg text-on-surface font-body-text antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-[#fdfcf8] dark:bg-[#121210] docked full-width top-0 border-b border-stone-200 dark:border-stone-800 border-b-[0.5px] border-stone-300 dark:border-stone-800 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex justify-between items-center px-10 py-6 w-full z-50 relative">
+<div class="flex items-center gap-8">
+<span class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210] dark:text-[#fdfcf8]">Heritage Album</span>
+<nav class="hidden md:flex gap-6 font-['Newsreader'] italic text-lg tracking-tight">
+<a class="text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">2. Explore</a>
+<a class="text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">1. Home Page</a>
+<a class="text-[#121210] dark:text-[#fdfcf8] border-b-2 border-[#121210] dark:border-[#fdfcf8] pb-1 hover:opacity-80 transition-opacity duration-300 Active: translate-y-[1px] transition-all" href="#">3. Creation Workspace</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:opacity-80 transition-opacity duration-300 text-[#121210] dark:text-[#fdfcf8]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu_book</span>
+</button>
+<button class="hover:opacity-80 transition-opacity duration-300 text-[#121210] dark:text-[#fdfcf8]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img alt="User's physical portrait" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3_6HnAMdut_nC0xwiMmlEFSFzi2V8WoojP5UvLu82r_aywDKARpWD0sohvkPlA4uWxGceb-Q-kf6f9_Up3oMljflOipTLjXcaEwvZqr2OR_O7DM-KhOfJnjxikBnL9yH3Q6SndUFe_d_hV2xzQ8x2AEjb8d67jMF6r6lPWQM8x_8FB-jpmg2aE7nTzeVqHpDNcAoj1cI4MNy1n-laoPtOEDQR0O-x1YBxFSTSJNzdPULlfS57mmU7PYhy7iGljG4bvJO_PfdZKvM"/>
+</div>
+</div>
+</header>
+<main class="flex-grow flex w-full max-w-[1600px] mx-auto">
+<!-- SideNav: Tool Palette / Settings -->
+<aside class="w-80 border-r border-outline-variant bg-surface flex flex-col pt-8 pb-12 px-6 overflow-y-auto shrink-0 relative z-10 hidden lg:flex">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-8 border-b border-outline-variant pb-4">Album Settings</h2>
+<div class="space-y-8 flex-grow">
+<!-- Title & Desc -->
+<div class="space-y-4">
+<div class="flex flex-col relative group">
+<label class="font-ui-label text-ui-label text-on-surface-variant mb-1 uppercase tracking-wider">Album Title</label>
+<input class="bg-transparent border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 font-body-text text-body-text text-on-surface w-full transition-colors" type="text" value="Summer at the Lake House"/>
+</div>
+<div class="flex flex-col relative group">
+<label class="font-ui-label text-ui-label text-on-surface-variant mb-1 uppercase tracking-wider mt-4">Description</label>
+<textarea class="bg-transparent border-0 border-b border-outline focus:border-primary focus:ring-0 px-0 py-2 font-body-text text-body-text text-on-surface w-full resize-none transition-colors" rows="3">A collection of memories from August 2024. The light was perfect every evening.</textarea>
+</div>
+</div>
+<!-- Privacy Settings -->
+<div class="space-y-4 pt-4 border-t border-outline-variant">
+<label class="font-ui-label text-ui-label text-on-surface-variant uppercase tracking-wider">Privacy &amp; Access</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center p-3 border border-outline-variant rounded bg-surface hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary mb-2">lock</span>
+<span class="font-ui-label text-[10px] uppercase text-on-surface-variant group-hover:text-primary">Private</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 border border-primary rounded bg-surface-container-lowest shadow-sm relative overflow-hidden group">
+<span class="material-symbols-outlined text-primary mb-2" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-ui-label text-[10px] uppercase text-primary">Shared</span>
+<div class="absolute inset-0 border-2 border-primary rounded opacity-10 pointer-events-none"></div>
+</button>
+<button class="flex flex-col items-center justify-center p-3 border border-outline-variant rounded bg-surface hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary mb-2">public</span>
+<span class="font-ui-label text-[10px] uppercase text-on-surface-variant group-hover:text-primary">Public</span>
+</button>
+</div>
+</div>
+<!-- Tools -->
+<div class="space-y-4 pt-4 border-t border-outline-variant">
+<label class="font-ui-label text-ui-label text-on-surface-variant uppercase tracking-wider">Elements</label>
+<div class="flex flex-wrap gap-2">
+<div class="px-3 py-1 bg-surface-container border border-outline-variant rounded text-sm font-ui-label flex items-center gap-2 cursor-grab active:cursor-grabbing hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-base">image</span> Photo
+                        </div>
+<div class="px-3 py-1 bg-surface-container border border-outline-variant rounded text-sm font-ui-label flex items-center gap-2 cursor-grab active:cursor-grabbing hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-base">format_quote</span> Quote
+                        </div>
+<div class="px-3 py-1 bg-surface-container border border-outline-variant rounded text-sm font-ui-label flex items-center gap-2 cursor-grab active:cursor-grabbing hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-base">sticky_note_2</span> Note
+                        </div>
+</div>
+</div>
+</div>
+<button class="mt-8 bg-secondary text-on-secondary font-ui-button text-ui-button py-4 px-6 rounded hover:bg-secondary-container hover:text-on-secondary-fixed transition-colors shadow-sm active:shadow-inner w-full flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">save</span> Save Spread
+            </button>
+</aside>
+<!-- Central Workspace: The Craft Table -->
+<section class="flex-grow flex items-center justify-center p-gutter relative overflow-hidden"><div class="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none"><div class="bg-secondary/10 border border-secondary/20 px-4 py-1.5 rounded-full shadow-sm flex items-center gap-2">
+<span class="font-headline-md text-sm font-bold text-secondary">3.</span>
+<span class="font-headline-md text-sm italic tracking-tight text-secondary">Creation Workspace / Editor</span>
+</div>
+<p class="font-caption-italic text-on-surface-variant text-center max-w-md mt-1">
+    Drag and drop photos, add descriptions, and set album privacy.
+</p></div>
+<!-- The Album Spread (Two Pages) -->
+<div class="flex max-w-5xl w-full relative z-10 page-shadow">
+<!-- Left Page -->
+<div class="w-1/2 bg-surface-bright border border-outline-variant border-r-0 h-[800px] relative texture-bg" style="border-right: 1px solid rgba(0,0,0,0.05);">
+<!-- Page subtle highlights -->
+<div class="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/5 to-transparent"></div>
+<div class="absolute inset-y-0 left-0 w-[1px] bg-white/50"></div>
+<div class="p-12 h-full flex flex-col relative">
+<!-- Content Area -->
+<div class="flex-grow border-2 border-dashed border-outline-variant/30 rounded flex items-center justify-center relative hover:border-primary/30 transition-colors">
+<!-- Placed Photo -->
+<div class="absolute top-20 left-10 rotate-[-1deg] photo-shadow bg-white p-3 pb-8 w-64 group cursor-pointer">
+<div class="washi-tape-top-left"></div>
+<img alt="Serene view of a calm lake surrounded by dense evergreen forests at twilight. The water reflects the deep blue and purple hues of the sky. The lighting is soft and moody, evoking a sense of peaceful isolation. The image fits perfectly within a nostalgic, slightly desaturated aesthetic." class="w-full h-48 object-cover border border-outline-variant/20" data-alt="Serene view of a calm lake surrounded by dense evergreen forests at twilight. The water reflects the deep blue and purple hues of the sky. The lighting is soft and moody, evoking a sense of peaceful isolation. The image fits perfectly within a nostalgic, slightly desaturated aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3iedxs7eD7sWe0fMJAP8JBRFLLndbP6ns2VQCXGBOleuoHMDoMDwZ7RQKjMIujaP5LTdpgK54Jj21Dzp-xuoS9LNGsmU-1BD72qX9vJ5rT9ytIuzRakmqNZonffyNfuUy8r3dwy_ONh9ok-IfEoo1XOQlt-H7Vc2QTgumqmJWrIHgUayjnMMhbOVhC_oWn1UbS79igvvgQ1QXIVajPyJTr11FhW0_odNHm193DvkwJ5vPlL42Y752CUVpNzvtSC1jkN18VDFkEIY"/>
+<p class="mt-4 font-caption-italic text-caption-italic text-center text-on-surface-variant">Arrival, late August.</p>
+<!-- Hover Actions -->
+<div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+<button class="bg-white/90 p-2 rounded-full shadow hover:bg-white text-on-surface"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="bg-white/90 p-2 rounded-full shadow hover:bg-white text-error"><span class="material-symbols-outlined text-sm">delete</span></button>
+</div>
+</div>
+</div>
+<div class="absolute bottom-6 left-12 font-caption-italic text-on-surface-variant/50">1</div>
+</div>
+</div>
+<!-- Right Page -->
+<div class="w-1/2 bg-surface-bright border border-outline-variant border-l-0 h-[800px] relative texture-bg">
+<!-- Spine subtle highlights -->
+<div class="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/5 to-transparent"></div>
+<div class="absolute inset-y-0 left-0 w-[1px] bg-white/50"></div>
+<div class="p-12 h-full flex flex-col relative">
+<!-- Drop Zone -->
+<div class="flex-grow border-2 border-dashed border-primary/20 rounded bg-primary/5 flex flex-col items-center justify-center text-on-surface-variant gap-4">
+<span class="material-symbols-outlined text-4xl opacity-50">add_photo_alternate</span>
+<span class="font-ui-label text-ui-label uppercase tracking-widest opacity-70">Drag items here</span>
+</div>
+<div class="absolute bottom-6 right-12 font-caption-italic text-on-surface-variant/50">2</div>
+</div>
+</div>
+</div>
+<!-- Background subtle craft elements -->
+<div class="absolute top-10 right-20 rotate-12 opacity-40 pointer-events-none">
+<span class="material-symbols-outlined text-6xl text-outline-variant">content_cut</span>
+</div>
+</section>
+</main>
+</body></html>

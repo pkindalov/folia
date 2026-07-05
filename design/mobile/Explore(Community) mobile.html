@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album - Explore</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-secondary-fixed": "#410001",
+                    "tertiary": "#735c00",
+                    "on-surface": "#1c1c18",
+                    "outline": "#7d766f",
+                    "secondary": "#a63a2e",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#ffdad5",
+                    "on-secondary-container": "#72140e",
+                    "background": "#fcf9f2",
+                    "error": "#ba1a1a",
+                    "outline-variant": "#cec5bd",
+                    "on-surface-variant": "#4c463f",
+                    "on-error": "#ffffff",
+                    "surface-container": "#f1eee7",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "primary-container": "#2c2926",
+                    "surface-dim": "#dcdad3",
+                    "primary": "#171512",
+                    "on-background": "#1c1c18",
+                    "inverse-surface": "#31312c",
+                    "surface-container-high": "#ebe8e1",
+                    "surface-bright": "#fcf9f2",
+                    "inverse-on-surface": "#f3f0e9",
+                    "secondary-fixed-dim": "#ffb4a9",
+                    "surface-tint": "#625e5a",
+                    "tertiary-container": "#cca830",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "tertiary-fixed": "#ffe088",
+                    "secondary-container": "#ff7c6c",
+                    "on-tertiary-container": "#4f3e00",
+                    "primary-fixed": "#e8e1dc",
+                    "on-primary-fixed": "#1e1b18",
+                    "surface-container-highest": "#e5e2db",
+                    "on-primary-container": "#95908b",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "surface-variant": "#e5e2db",
+                    "inverse-primary": "#ccc5c1",
+                    "surface": "#fcf9f2",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "on-tertiary-fixed": "#241a00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "touch-target-min": "44px",
+                    "margin-mobile": "16px",
+                    "gutter-mobile": "12px",
+                    "stack-sm": "8px",
+                    "stack-lg": "24px",
+                    "section-gap": "40px",
+                    "stack-md": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Newsreader"],
+                    "label-md": ["Public Sans"],
+                    "display-lg": ["Newsreader"],
+                    "headline-lg": ["Newsreader"],
+                    "body-lg": ["Newsreader"],
+                    "body-md": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-md": ["Newsreader"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .parchment-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+        }
+        .ink-shadow {
+            box-shadow: 0 2px 4px rgba(23, 21, 18, 0.08);
+        }
+        .book-spine {
+            background: linear-gradient(90deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 10%, rgba(255,255,255,0.05) 15%, rgba(0,0,0,0.15) 100%);
+        }
+        .hairline-rule {
+            height: 0.5px;
+            background-color: rgba(76, 70, 63, 0.2);
+        }
+        .active-stamp {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface parchment-texture min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-container-high shadow-sm border-b border-outline-variant/30 flex items-center justify-between px-margin-mobile h-16">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed cursor-pointer active:scale-95 transition-transform">menu</span>
+</div>
+<h1 class="font-headline-md text-headline-md-mobile md:font-headline-md md:text-headline-md italic text-primary dark:text-primary-fixed">Heritage Album</h1>
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed cursor-pointer active:scale-95 transition-transform">settings</span>
+</div>
+</header>
+<main class="pt-20 px-margin-mobile">
+<!-- Section Header -->
+<div class="mb-stack-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-1">Explore</h2>
+<div class="hairline-rule w-16 mb-4"></div>
+<!-- Search Bar (Vintage Ledger Style) -->
+<div class="relative mt-2">
+<span class="material-symbols-outlined absolute left-0 bottom-2 text-on-surface-variant">search</span>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 pl-8 pb-2 font-body-md text-on-surface placeholder:text-on-surface-variant/50 placeholder:italic transition-colors" placeholder="Find creators or albums..." type="text"/>
+</div>
+</div>
+<!-- Vertical Feed -->
+<div class="space-y-stack-lg">
+<!-- Flipbook Card 1 -->
+<div class="flex flex-col gap-stack-md animate-fade-in">
+<!-- Book Cover Container -->
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden ink-shadow border border-outline-variant/30 group">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A textured, deep navy fabric book cover with ornate gold filigree corners. The center features a sepia-toned vintage photograph of a large family gathering in a sun-drenched orchard. The lighting is nostalgic and warm, echoing a heritage light-mode aesthetic with rich obsidian ink and parchment tones." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAMz-h1nh1STbiDhqcsWSjWMz7GQbFKlbc1UtDpNIVE4lKGKJihIgFCZd5D6W4u30PtKqii3x3OxFYMH4SLz4H9Uha1qmsro5hEWkgBMbhOQHofbyap2E5RJJapW6JMPhCfbFKqh4oiXi-rZfvxDgpOfP8ccsHLyjffFwZCjdabDN0YqK9wXyyzyxw4EtjlfDpsRr5uWC3R9pYoD08SxlVCy7tGqA5HaYddqIObQlFCF8SIiSlDzrx7-wc8ylPjksuJ5EU5vS8bO2I')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent"></div>
+<!-- Book Spine Simulation -->
+<div class="absolute left-0 top-0 bottom-0 w-6 book-spine"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md text-white">
+<h3 class="font-headline-md text-headline-md leading-tight mb-1">The Winter Garden, 1924</h3>
+<p class="font-body-md opacity-90 italic">A collection of botanical memories.</p>
+</div>
+</div>
+<!-- Metadata Row -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-stack-sm">
+<div class="w-10 h-10 rounded-full border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a sophisticated woman with silver hair, wearing a high-collared cream blouse. The background is a soft, out-of-focus archival library. High-key natural lighting, editorial style, consistent with a premium heritage journal aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4P0BTW6i82-RTZw3JI8hvFAbAWAbf-2mhW0kwrcGfUvYAArLO6GBpYuOG3SKd3e1lPb4AahtQ5D8hJMDsPbtCZ4NRF-j84_VNcm_jDuAX8LmGuhqfX3_7YfrYu7mcQL_UpqTIY7VxUyEXgRNnaUReNEF4LZiOtzy2rnrn2QkI5FYzX_aIMLWDNZKO0r-PY5Z8k7iI_hEpKb5Ll6YsgAILorVs4A883FenEsVIq9NtPaDVdWn41LC_vRfmhJfXFZcPm57fW7rwxW0"/>
+</div>
+<div>
+<p class="font-label-md text-on-surface">Eleanor Vance</p>
+<p class="font-label-sm text-on-surface-variant">Curator &amp; Archivist</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-secondary">favorite</span>
+<span class="font-label-md text-on-surface-variant">1.2k</span>
+</div>
+<button class="bg-primary text-on-primary px-spacing-stack-md py-2 rounded-lg font-label-md hover:opacity-90 active:scale-95 transition-all flex items-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+</button>
+</div>
+</div>
+<div class="hairline-rule mt-4 opacity-50"></div>
+</div>
+<!-- Flipbook Card 2 -->
+<div class="flex flex-col gap-stack-md">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden ink-shadow border border-outline-variant/30">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A rich oxblood leather book cover with aged brass clasps on the side. The surface has a realistic pebble grain texture and subtle wear around the edges. In the center, there is an ivory-colored label with hand-lettered calligraphy. Soft directional light from a library window creates long, elegant shadows." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD8VPfbHq_Wy6OazU4BaV97Qzb_bMZ6E7InK40kuue_qm_f1jnOtnyM42I5Wo3_OK0WYDQUEqO7S4Iciwbjr7cPNaFMn-TVAsJtC6mtPP3MoH22eYQKRHVogAXzn2T-0RDlEbsQoHQSxQtYg0gwl3bj6Bkt1bO_aNQwUiUym0cR5sBJPOrKUbyFqI3s5fkx_Y65O3f2205m_aGcrTw2bczMoBcHKZZdhhqaWk5v2uy3EiA56ODQWASQRMvpNQc5SKipk-RcjRBxFSw')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent"></div>
+<div class="absolute left-0 top-0 bottom-0 w-6 book-spine"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md text-white">
+<h3 class="font-headline-md text-headline-md leading-tight mb-1">Parisian Chronicles</h3>
+<p class="font-body-md opacity-90 italic">Street scenes and lost cafes.</p>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-stack-sm">
+<div class="w-10 h-10 rounded-full border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of a male artist in a well-lit studio. He is wearing a dark charcoal turtleneck and classic glasses. The atmosphere is intellectual and serene, with soft-focus painting canvases in the background. Light-mode palette with subtle parchment highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDq34tWR7sryQ-0MXd3co64WD2LgWD2wR6zLRJqtGYvsWhTWO_uhvuuTltzwkLOUhgcQ0HUg_8jfA_5Mkx2iizbB2zYlH7Kjz_flmYL-MeCLulFmpUe4EyjNJ0AtttUmzsAL7--jRrvPWwsH7_gFNm0oIynDpjmQzBRcWNj-0gTJWTQxt_RbSUh4WGhmKshCCPMLfeT6enYj4fkQyggVAtxBZnpU1sZmslwrzUdoD50rQSRlKTdZPlRCRxJwEsCPskaQeYvaEHpxww"/>
+</div>
+<div>
+<p class="font-label-md text-on-surface">Julian Thorne</p>
+<p class="font-label-sm text-on-surface-variant">Documentarian</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">favorite</span>
+<span class="font-label-md text-on-surface-variant">854</span>
+</div>
+<button class="bg-primary text-on-primary px-spacing-stack-md py-2 rounded-lg font-label-md hover:opacity-90 active:scale-95 transition-all flex items-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+</button>
+</div>
+</div>
+<div class="hairline-rule mt-4 opacity-50"></div>
+</div>
+<!-- Flipbook Card 3 -->
+<div class="flex flex-col gap-stack-md pb-12">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden ink-shadow border border-outline-variant/30">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A minimalist grey linen book cover with a simple vertical embossed stripe in the center. The aesthetic is clean and archival, featuring a single black-and-white photograph of a lighthouse on a misty morning. The lighting is high-key and atmospheric, with a soft parchment-like paper texture visible on the image." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC68fWg4UfFmeBNK9048o83MWbkuQO017vKot7u93vgJnxDx_HzIo6SDFuyC3avti-9nWIvvIlhYVHp_D0ORiZp2X1d3znoRgmxJtjWwfG91Uks0CBpKaVUVujNMXG6HscQj4AbfrBc8q3ECWFqWxSgVGNQcWH7ycQcLOQQ-85bGtkzy-UTYUa_GYnxhsJd-jbJbp-a1sBH0DtjZkZtEdcotjelvNPfM9NUgb1FXsUXdgBatatoP5_2q0qe-a3BKzS5-PNcIUyWiIw')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent"></div>
+<div class="absolute left-0 top-0 bottom-0 w-6 book-spine"></div>
+<div class="absolute bottom-0 left-0 right-0 p-stack-md text-white">
+<h3 class="font-headline-md text-headline-md leading-tight mb-1">Coastal Solitude</h3>
+<p class="font-body-md opacity-90 italic">Pacific Northwest coastline studies.</p>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-stack-sm">
+<div class="w-10 h-10 rounded-full border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young woman with a thoughtful expression, set against a background of sheer white linen curtains. She wears a simple black linen dress. The scene is illuminated by diffused, cool morning light, creating a calm, archival aesthetic. High-quality editorial digital photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBckGImuQVo4Ff0KCxaBGTg9YJbAKzWJVz9zNm4oEOfwZIfVUpst9zQP3rZNswf9vQQkxoEo_VxmUkIGzrfjs9EIj2tW79A4fZ4uV3VD97sZd6NisdQkqrJUDywtNlOO7lNVHajQB6N6ID4lSgKTNw9psZVBv_jDr07GEI4xQ-oHoPlpGbhQWjcfG-TRXSWAKS7yQqJZ4zDHuR467FpijLW6ybVLLnsJSTA2aEgMWMLtitYBews-5S2STMqZUsEwD_7ZtI1qEfn2qk"/>
+</div>
+<div>
+<p class="font-label-md text-on-surface">Sana Miller</p>
+<p class="font-label-sm text-on-surface-variant">Visual Poet</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">favorite</span>
+<span class="font-label-md text-on-surface-variant">3.4k</span>
+</div>
+<button class="bg-primary text-on-primary px-spacing-stack-md py-2 rounded-lg font-label-md hover:opacity-90 active:scale-95 transition-all flex items-center gap-2">
+<span>Open &amp; Flip</span>
+<span class="material-symbols-outlined text-[16px]">menu_book</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface/90 dark:bg-surface-container-highest/90 backdrop-blur-md rounded-t-full border-t border-outline-variant shadow-lg flex justify-around items-center h-touch-target-min pb-2">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 px-spacing-stack-md py-1 transition-all" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<!-- Explore (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-spacing-stack-md py-1 active:inner-shadow-md transition-all duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<!-- Create -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 px-spacing-stack-md py-1 transition-all" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-label-md text-label-md">Create</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-variant dark:hover:bg-surface-variant/20 px-spacing-stack-md py-1 transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.add('active-stamp');
+                setTimeout(() => this.classList.remove('active-stamp'), 200);
+            });
+        });
+
+        // Simple scroll appearance for Top Bar
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 20) {
+                header.classList.add('shadow-md');
+                header.classList.add('bg-surface/95');
+            } else {
+                header.classList.remove('shadow-md');
+                header.classList.remove('bg-surface/95');
+            }
+        });
+    </script>
+</body></html>

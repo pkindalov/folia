@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>4. Interactive Flipbook Viewer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&amp;family=Work+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#fdf8f7",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#858480",
+                        "on-background": "#1c1b1b",
+                        "primary": "#000000",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#313030",
+                        "on-secondary-fixed-variant": "#783200",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fe8032",
+                        "secondary": "#9d4400",
+                        "surface-container-high": "#ebe7e6",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#384b3b",
+                        "on-tertiary-container": "#748976",
+                        "on-primary-fixed-variant": "#474744",
+                        "primary-container": "#1c1c19",
+                        "inverse-on-surface": "#f4f0ef",
+                        "outline": "#787770",
+                        "secondary-fixed": "#ffdbca",
+                        "surface-dim": "#ddd9d8",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#c9c6c2",
+                        "surface-container-low": "#f7f3f2",
+                        "outline-variant": "#c8c7be",
+                        "on-primary-fixed": "#1c1c19",
+                        "tertiary-fixed-dim": "#b6ccb6",
+                        "primary-fixed": "#e5e2de",
+                        "tertiary-fixed": "#d2e8d2",
+                        "on-surface": "#1c1b1b",
+                        "on-surface-variant": "#474741",
+                        "surface-tint": "#5f5e5b",
+                        "inverse-primary": "#c9c6c2",
+                        "secondary-fixed-dim": "#ffb690",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#000000",
+                        "background": "#fdf8f7",
+                        "surface-container-highest": "#e5e2e1",
+                        "tertiary-container": "#0d1f12",
+                        "on-secondary-fixed": "#331100",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fdf8f7",
+                        "on-tertiary-fixed": "#0d1f12",
+                        "on-secondary-container": "#632800",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-edge": "40px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "stack-overlap": "-12px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Work Sans"],
+                        "caption-italic": ["Newsreader"],
+                        "ui-button": ["Work Sans"],
+                        "display-lg": ["Newsreader"],
+                        "body-text": ["Newsreader"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "caption-italic": ["16px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "ui-button": ["16px", { "lineHeight": "1.0", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-text": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .texture-bg {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .page-shadow {
+            box-shadow: 0px 4px 20px rgba(0,0,0,0.05);
+        }
+        .photo-shadow {
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.12);
+        }
+        .spine-highlight {
+            box-shadow: inset 1px 0px 0px rgba(255,255,255,0.8), inset -2px 0px 4px rgba(0,0,0,0.03);
+        }
+        .spine-shadow {
+            box-shadow: inset -1px 0px 0px rgba(0,0,0,0.05), inset 2px 0px 4px rgba(0,0,0,0.02);
+        }
+        .taped-corner-tl::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -15px;
+            width: 40px;
+            height: 15px;
+            background-color: rgba(157, 68, 0, 0.2); /* secondary color */
+            transform: rotate(-45deg);
+            z-index: 10;
+        }
+        .taped-corner-br::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: -15px;
+            width: 40px;
+            height: 15px;
+            background-color: rgba(157, 68, 0, 0.2); /* secondary color */
+            transform: rotate(-45deg);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-surface-dim text-on-surface min-h-screen flex flex-col font-body-text">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-10 py-6 w-full docked full-width top-0 border-b border-stone-200 dark:border-stone-800 border-b-[0.5px] border-stone-300 dark:border-stone-800 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] bg-[#fdfcf8] dark:bg-[#121210] z-50">
+<div class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210] dark:text-[#fdfcf8]">Heritage Album</div>
+<!-- Web Nav -->
+<nav class="hidden md:flex gap-8">
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-[#121210] dark:text-[#fdfcf8] border-b-2 border-[#121210] dark:border-[#fdfcf8] pb-1 hover:opacity-80 transition-opacity duration-300" href="#">2. Explore</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">1. Home Page</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">3. Creation Workspace</a>
+</nav>
+<div class="flex items-center gap-4 text-[#121210] dark:text-[#fdfcf8]">
+<button class="hover:opacity-80 transition-opacity duration-300">
+<span class="material-symbols-outlined">menu_book</span>
+</button>
+<button class="hover:opacity-80 transition-opacity duration-300">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="User's physical portrait" class="w-8 h-8 rounded-full border border-stone-300 object-cover" data-alt="A small, circular black and white portrait of a person, framed with a thin white border, sitting against a neutral background. The lighting is soft and natural, suggesting a vintage aesthetic suitable for an archival interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVJre1tLBcijhsncZ31aLe-Ti61izL8ppuprWJwk9s51tAwZBMX6yT6hBgjwUGFupaK0z9CTbO4bBbzDvfDeyZtHFAmSzwI2XIbTSF-o5QHg3mKPZJa7bB9u6NChxqFlyQSdOKFo70fY_8YqaCe_tEgj441MloZv-SxRi6a9gjsDgSEH76T8pbqQ9Whb6FtZX1MQeH3WTHhpSsiHUhhCtZMsazWm4irop2hyW4H3GqecJDKoCaEWrKF69x9BvAdF4TmHk_DPqebFs"/>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow flex items-center justify-center p-8 relative overflow-hidden texture-bg"><div class="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
+<div class="flex items-center gap-3 bg-surface/80 backdrop-blur-sm px-4 py-2 rounded-full border border-outline-variant/30 shadow-sm"><span class="bg-secondary/10 text-secondary px-2 py-0.5 rounded text-[10px] font-ui-label uppercase tracking-widest">Step 4</span><p class="font-['Newsreader'] italic text-sm text-on-surface-variant/80">4. Interactive Viewer</p></div>
+</div>
+<!-- Left Page Turner Arrow -->
+<button class="absolute left-8 top-1/2 -translate-y-1/2 p-4 text-surface-tint hover:text-on-surface transition-colors duration-300 z-40 group">
+<span class="material-symbols-outlined text-4xl group-hover:scale-110 transition-transform">chevron_left</span>
+</button>
+<!-- The Flipbook Container -->
+<div class="flex w-full max-w-6xl aspect-[16/9] md:aspect-[2/1] relative z-10">
+<!-- Left Page (Photo & Description) -->
+<div class="flex-1 bg-surface page-shadow spine-highlight rounded-l-md border-y border-l border-outline-variant relative overflow-hidden flex flex-col p-margin-edge texture-bg">
+<!-- Page Content -->
+<div class="flex-1 flex flex-col justify-center items-center gap-gutter h-full">
+<!-- Mounted Photo -->
+<div class="relative max-w-md w-full bg-surface-container-lowest p-3 pb-8 photo-shadow transform -rotate-1 taped-corner-tl taped-corner-br border border-surface-variant">
+<img alt="Vintage family gathering" class="w-full aspect-[4/3] object-cover border border-outline-variant/30 grayscale sepia-[0.2]" data-alt="A vintage, sepia-toned photograph showing a group of people gathered around a wooden table outdoors in a rustic setting. The sunlight is dappled, filtering through unseen trees above. The subjects are dressed in mid-20th century attire, their expressions candid and joyful. The photo has a slightly worn, grainy texture typical of old film photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUd68VNUY7J4UxWp37P8TxJcZfZR8KZsE0O8rLUYozHeMHFhN0Xv41_YKKdoKr6_E92AQKNFXGfAO5zB_6pLaXKZ4aInGr2OiS33PtiZFmiL8NvQlcpz8iKShIa_coECBlAOXN2s9uwdhdjCXmZ98iDBSGtxlcqqTPw2_2sjUuk-Hk3TO9UWGiBdpZbcXAfdOyqGCu_gxTXiLq1GX6Vvt6ItHAlxYdAEqJTIFf_-S82oJuIgtEOWn0u2vapSIONZHMg_RDG6CPMec"/>
+</div>
+<!-- Handwritten Description -->
+<div class="max-w-md w-full text-center mt-6">
+<p class="font-caption-italic text-caption-italic text-on-surface-variant leading-relaxed">
+                            "Summer afternoon at the old lake house, 1968. Grandpa insisted on taking the picture, almost dropped the camera in the water."
+                        </p>
+</div>
+</div>
+<!-- Page Number -->
+<div class="absolute bottom-6 left-8 font-ui-label text-ui-label text-surface-tint">
+                    14
+                </div>
+</div>
+<!-- The Spine Divider -->
+<div class="w-[2px] bg-outline-variant/40 shadow-[0_0_10px_rgba(0,0,0,0.1)] z-20 relative">
+<!-- Bookmarks/Tabs protruding from spine (optional detail) -->
+<div class="absolute top-24 -left-1 w-2 h-8 bg-secondary-container rounded-l-sm border border-secondary/20"></div>
+<div class="absolute top-48 -left-1 w-2 h-6 bg-tertiary-container rounded-l-sm border border-tertiary/20"></div>
+</div>
+<!-- Right Page (Social Area) -->
+<div class="flex-1 bg-surface page-shadow spine-shadow rounded-r-md border-y border-r border-outline-variant relative overflow-hidden flex flex-col p-margin-edge texture-bg">
+<div class="h-full flex flex-col max-w-md mx-auto w-full">
+<!-- Header -->
+<div class="mb-8 border-b border-outline-variant/30 pb-4">
+<h2 class="font-display-lg text-headline-md text-on-surface mb-2">Reflections</h2>
+<div class="flex items-center justify-between">
+<span class="font-ui-label text-ui-label text-surface-tint">August 12, 1968</span>
+<!-- Reactions Row -->
+<div class="flex gap-4">
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-xl" data-weight="fill">favorite</span>
+<span class="font-ui-label text-sm">12</span>
+</button>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-xl">temp_preferences_custom</span>
+<span class="font-ui-label text-sm">4</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Comments List -->
+<div class="flex-1 overflow-y-auto pr-2 space-y-6 scrollbar-thin">
+<!-- Comment Item -->
+<div class="flex gap-4">
+<img alt="User avatar" class="w-10 h-10 rounded-full border border-outline-variant object-cover grayscale" data-alt="A small, circular black and white portrait of an older woman with a gentle smile. The background is softly blurred, focusing attention on her face. The image has a vintage, archival feel suitable for a heritage platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCl2E7lqLjEiA0nzz3YLET6lwhUAdfSMujh1qDVmAi98l7Oe9f6BBEwmrsGVEiXNApc0jlrWOs_qqk47_6MLVHELp2rmC6ZkICKPT_pSaXEMXp6KqseCAPWv3RH19UtTwg9J7jQ8AZOdIF3Cvy6oMHf9sX0tjyhxnLeZ5lBnTkyEYmch5TVL_5rlZ2qG3lDqhw3-2ai_YO_xztRCw5IvQjpvXtt_51rne2q08QIt9fgusrnX8GWBRIYVk9_zuOBxPuJ52AHw2Mji4E"/>
+<div>
+<div class="flex items-baseline gap-2 mb-1">
+<span class="font-ui-label text-ui-label text-on-surface">Eleanor V.</span>
+<span class="font-caption-italic text-sm text-surface-tint">2 days ago</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant text-base">
+                                    I remember this day perfectly! The water was so cold, but we swam anyway until the sun went down.
+                                </p>
+</div>
+</div>
+<!-- Comment Item -->
+<div class="flex gap-4">
+<img alt="User avatar" class="w-10 h-10 rounded-full border border-outline-variant object-cover grayscale" data-alt="A small, circular black and white portrait of a middle-aged man looking slightly off-camera. The lighting is natural and even, casting soft shadows. The overall tone is reminiscent of classic mid-century portraiture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjjRjCMEVCwdslD8ZWMu1LLLKofelkZ64HWaS8yBYXV1bYXQY8eAI9y6XiR1Tjr2fdd2z4hrp7jt3fjePhXuO_VsRzq_lSwijvAIvCsrZ3VluvV_2TF6CS9pgKzSeWhAioNVwUyLmFb-bHFAccOUJC-3mEXj1hiLswtKEBltOunWR-f8S3guL0zPIisr9hrJWQ_bCumRnKP-G7PwnE0FNbqGitWzH-5c8Q21LmmaiebhvJbhyZfmFVyOZAKqrwwHb5sRVNkGBsJYE"/>
+<div>
+<div class="flex items-baseline gap-2 mb-1">
+<span class="font-ui-label text-ui-label text-on-surface">Arthur H.</span>
+<span class="font-caption-italic text-sm text-surface-tint">1 week ago</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant text-base">
+                                    Look at that old boat in the background. It finally sank two years later. Great memory to have saved here.
+                                </p>
+</div>
+</div>
+<!-- Comment Item -->
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center text-on-surface-variant font-ui-label">
+                                SJ
+                            </div>
+<div>
+<div class="flex items-baseline gap-2 mb-1">
+<span class="font-ui-label text-ui-label text-on-surface">Sarah J.</span>
+<span class="font-caption-italic text-sm text-surface-tint">Just now</span>
+</div>
+<p class="font-body-text text-body-text text-on-surface-variant text-base">
+                                    Was this before or after the famous pie incident?
+                                </p>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="mt-6 pt-6 border-t border-outline-variant/30">
+<div class="flex gap-4 items-start">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-ui-label text-sm flex-shrink-0">
+                                You
+                            </div>
+<div class="flex-1 flex flex-col gap-2">
+<label class="sr-only" for="thought-input">Add a thought</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant focus:ring-0 focus:border-primary font-caption-italic text-body-text text-on-surface placeholder-surface-tint px-0 py-2" id="thought-input" placeholder="Add a thought..." type="text"/>
+<div class="flex justify-end">
+<button class="font-ui-button text-ui-button text-secondary hover:text-secondary-container transition-colors py-1 px-3 border border-transparent hover:border-outline-variant/30 rounded">
+                                        Inscribe
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Page Number -->
+<div class="absolute bottom-6 right-8 font-ui-label text-ui-label text-surface-tint">
+                    15
+                </div>
+<!-- Dog-ear top right (subtle detail) -->
+<div class="absolute top-0 right-0 w-8 h-8 bg-surface-container-high transform rotate-45 translate-x-4 -translate-y-4 border-l border-b border-outline-variant shadow-sm z-20"></div>
+</div>
+</div>
+<!-- Right Page Turner Arrow -->
+<button class="absolute right-8 top-1/2 -translate-y-1/2 p-4 text-surface-tint hover:text-on-surface transition-colors duration-300 z-40 group">
+<span class="material-symbols-outlined text-4xl group-hover:scale-110 transition-transform">chevron_right</span>
+</button>
+</main>
+</body></html>

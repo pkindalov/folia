@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Gallery - Heritage Album</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Work+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#fdf8f7",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#858480",
+                        "on-background": "#1c1b1b",
+                        "primary": "#000000",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#313030",
+                        "on-secondary-fixed-variant": "#783200",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fe8032",
+                        "secondary": "#9d4400",
+                        "surface-container-high": "#ebe7e6",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#384b3b",
+                        "on-tertiary-container": "#748976",
+                        "on-primary-fixed-variant": "#474744",
+                        "primary-container": "#1c1c19",
+                        "inverse-on-surface": "#f4f0ef",
+                        "outline": "#787770",
+                        "secondary-fixed": "#ffdbca",
+                        "surface-dim": "#ddd9d8",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#c9c6c2",
+                        "surface-container-low": "#f7f3f2",
+                        "outline-variant": "#c8c7be",
+                        "on-primary-fixed": "#1c1c19",
+                        "tertiary-fixed-dim": "#b6ccb6",
+                        "primary-fixed": "#e5e2de",
+                        "tertiary-fixed": "#d2e8d2",
+                        "on-surface": "#1c1b1b",
+                        "on-surface-variant": "#474741",
+                        "surface-tint": "#5f5e5b",
+                        "inverse-primary": "#c9c6c2",
+                        "secondary-fixed-dim": "#ffb690",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#000000",
+                        "background": "#fdf8f7",
+                        "surface-container-highest": "#e5e2e1",
+                        "tertiary-container": "#0d1f12",
+                        "on-secondary-fixed": "#331100",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fdf8f7",
+                        "on-tertiary-fixed": "#0d1f12",
+                        "on-secondary-container": "#632800",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-edge": "40px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "stack-overlap": "-12px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Work Sans"],
+                        "caption-italic": ["Newsreader"],
+                        "ui-button": ["Work Sans"],
+                        "display-lg": ["Newsreader"],
+                        "body-text": ["Newsreader"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "caption-italic": ["16px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "ui-button": ["16px", { "lineHeight": "1.0", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-text": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .texture-paper {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .spine-highlight {
+            box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.4), inset -1px 0 0 rgba(0, 0, 0, 0.1);
+        }
+        .page-edge {
+            box-shadow: inset 1px 0 0 rgba(255,255,255,0.8), 2px 0 0 #e5e2e1, 3px 0 0 #d1cdc8, 4px 0 0 #e5e2e1, 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-text antialiased min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="flex justify-between items-center px-10 py-6 w-full md:hidden bg-[#fdfcf8] dark:bg-[#121210] docked full-width top-0 border-b-[0.5px] border-stone-300 dark:border-stone-800 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] z-50 fixed">
+<div class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210] dark:text-[#fdfcf8]">Heritage Album</div>
+<nav class="hidden md:flex gap-8">
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">2. Explore</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-[#121210] dark:text-[#fdfcf8] border-b-2 border-[#121210] dark:border-[#fdfcf8] pb-1 hover:opacity-80 transition-opacity duration-300 translate-y-[1px] transition-all" href="#">1. Home Page</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 hover:opacity-80 transition-opacity duration-300" href="#">3. Creation Workspace</a>
+</nav>
+<div class="flex items-center gap-4 text-[#121210] dark:text-[#fdfcf8]">
+<button class="hover:opacity-80 transition-opacity duration-300 p-2"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span></button>
+<button class="hover:opacity-80 transition-opacity duration-300 p-2"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span></button>
+<img alt="User's physical portrait" class="w-8 h-8 rounded-full border border-stone-300 object-cover" data-alt="A close-up portrait of a user with warm lighting, capturing a natural and nostalgic mood. The photograph has a slight film grain texture, evoking a classic, tactile aesthetic suitable for a high-end heritage album interface. The background is softly blurred." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1RFH6Ek9lWK1fTbyWwoWaV3PKxsIu9D-dtOT5DyDQaNwStS_e-2IXM80-c1SvjnJ2UqJ7QUpmnBl5-D61xnTdmcQQaKYMluw4WOxm92VfF2YZdqi51OdMu8aSpRmA37siSqb7se3_wwHw_h5VCnX5hQFw9PUqcCJI9WVtBpFnRMwVKWRjV2Iu17lCbgOD0iFTI_IGagVbISnpYj5L_yl10-v021BLI2ML297WZYUaIgniQjsnFP-sDgsR7A0eYlUr5rkfFECI94o"/>
+</div>
+</header>
+<!-- SideNavBar (Web Only) -->
+<aside class="hidden md:flex flex-col h-full py-12 px-8 bg-[#fdfcf8] dark:bg-[#1a1a18] fixed left-0 top-0 w-72 border-r-[1px] border-stone-200 dark:border-stone-900 shadow-[10px_0px_30px_rgba(0,0,0,0.03)] z-40">
+<div class="mb-12">
+<h1 class="font-['Newsreader'] font-semibold text-xl text-[#121210]">The Living Archive</h1>
+<p class="font-['Newsreader'] text-sm text-stone-500 mt-1">Est. 2024</p>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-4 px-4 py-3 font-['Newsreader'] text-sm tracking-wide uppercase text-[#121210] dark:text-white font-bold italic underline underline-offset-8 scale-[0.99] transition-transform bg-stone-50 rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+                Current Spread
+            </a>
+<a class="flex items-center gap-4 px-4 py-4 font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg">group</span>
+                Contributors
+            </a>
+<a class="flex items-center gap-4 px-4 py-4 font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg">history_edu</span>
+                Conversations
+            </a>
+<a class="flex items-center gap-4 px-4 py-4 font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg">menu_book</span>
+                Historical Notes
+            </a>
+<a class="flex items-center gap-4 px-4 py-4 font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto pt-8 border-t border-stone-200 dark:border-stone-800">
+<button class="w-full mb-6 py-3 bg-secondary text-on-secondary font-ui-button rounded-DEFAULT shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[inset_0_-1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                Add New Memory
+            </button>
+<a class="flex items-center gap-4 px-4 py-4 font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400 dark:text-stone-600 hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined text-lg">logout</span>
+                Logout
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-72 mt-[88px] md:mt-0 p-gutter md:p-margin-edge bg-surface texture-paper min-h-screen">
+<div class="max-w-6xl mx-auto"><div class="mb-8 p-4 bg-surface-container-low border border-outline-variant/30 rounded-lg flex items-center gap-4 shadow-sm"><div class="flex-shrink-0 bg-secondary/10 border border-secondary/20 px-3 py-1 rounded-full"><span class="font-ui-label text-secondary text-xs tracking-wide uppercase">1. Home Page / My Flipbooks</span></div><div><p class="font-caption-italic text-on-surface-variant text-sm"><span class="font-bold italic text-primary">User Dashboard:</span> View your collection of albums and their privacy status.</p></div></div>
+<!-- Header Section -->
+<div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-6">
+<div>
+<h2 class="font-display-lg text-primary mb-2">The Gallery</h2>
+<p class="font-body-text text-on-surface-variant max-w-2xl">A curated collection of your shared histories, bound in digital cloth and leather. Select a volume to continue the narrative.</p>
+</div>
+<div class="mt-6 md:mt-0 flex gap-4">
+<button class="font-ui-label text-primary border-b border-primary pb-1">All Volumes</button>
+<button class="font-ui-label text-on-surface-variant hover:text-primary transition-colors pb-1">Public</button>
+<button class="font-ui-label text-on-surface-variant hover:text-primary transition-colors pb-1">Shared</button>
+</div>
+</div>
+<!-- Albums Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+<!-- Create New Album (Blank Book) -->
+<button class="group flex flex-col items-center text-left h-[340px]">
+<div class="relative w-full flex-1 bg-surface-container-high rounded-r-lg spine-highlight page-edge shadow-[0_8px_30px_rgba(0,0,0,0.08)] flex items-center justify-center border-l border-outline-variant transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+<div class="absolute inset-0 texture-paper opacity-50"></div>
+<div class="w-16 h-16 rounded-full border-2 border-dashed border-outline text-outline flex items-center justify-center bg-surface-container-lowest">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<!-- Decorative Spine Crease -->
+<div class="absolute left-4 top-0 bottom-0 w-px bg-outline-variant opacity-30"></div>
+<div class="absolute left-5 top-0 bottom-0 w-px bg-surface-container-lowest opacity-50"></div>
+</div>
+<div class="mt-6 w-full px-2">
+<h3 class="font-headline-md text-primary text-xl">Start a New Volume</h3>
+<p class="font-caption-italic text-on-surface-variant mt-1">Empty canvas, ready for memories</p>
+</div>
+</button>
+<!-- Album 1: Leather -->
+<div class="group flex flex-col items-center h-[340px] cursor-pointer">
+<div class="relative w-full flex-1 bg-[#4A3B32] rounded-r-lg spine-highlight page-edge shadow-[0_8px_30px_rgba(0,0,0,0.15)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.2)]">
+<!-- Leather Texture Image -->
+<img alt="Dark brown leather texture" class="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-overlay" data-alt="A highly detailed, close-up photograph of dark, aged brown leather. The texture shows subtle grain, minor imperfections, and a rich, warm patina suggestive of a vintage book cover. The lighting is soft and directional, highlighting the tactile quality of the material in a premium, nostalgic style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBavLqVdtMy4onaiAiM6nS1OaI2pgku-VyfB8dPrEW4wVT_97Ky-FuLGU3dfDFwSZxwTycFhCx4tvTtKQpHAGPl_ibRNEVY60Hwj0MFcVe4__xmQn9IJmQJTXaUQVibutzUSyrTwJyub09CmvVDgmJM4nmi8TaiYpHmnVGLTa_f6AsIMrVEM7yxJ4F7nLKrVkXIijkgXRZW7JdmHe5r9DJYI_BOWoxxSOAijyIEKJW9oJZuljRIOQ4SVguJpXVKQeeBmFrv36x1Q74"/>
+<!-- Debossed Title Area -->
+<div class="absolute inset-x-6 top-12 bottom-12 border border-black/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)] bg-[#4A3B32]/40 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+<span class="font-ui-label text-[#E8DCC4] text-xs tracking-[0.2em] mb-2 opacity-80">VOLUME I</span>
+<h3 class="font-display-lg text-[#E8DCC4] text-2xl text-center leading-tight shadow-sm">Summer at<br/>Lake Como</h3>
+</div>
+<!-- Sticky Note Tag -->
+<div class="absolute top-6 -right-2 bg-secondary-container text-on-secondary-container font-ui-label text-xs py-1 px-3 shadow-[0_2px_4px_rgba(0,0,0,0.2)] rotate-2">
+                            Shared
+                        </div>
+<!-- Spine Creases -->
+<div class="absolute left-6 top-0 bottom-0 w-px bg-black/40"></div>
+<div class="absolute left-[25px] top-0 bottom-0 w-px bg-white/10"></div>
+</div>
+<div class="mt-6 w-full px-2 flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-primary text-lg">Summer at Lake Como</h3>
+<p class="font-caption-italic text-on-surface-variant mt-1">12 Spreads • Last edited 2d ago</p>
+</div>
+</div>
+</div>
+<!-- Album 2: Cloth -->
+<div class="group flex flex-col items-center h-[340px] cursor-pointer">
+<div class="relative w-full flex-1 bg-[#5A6B5D] rounded-r-lg spine-highlight page-edge shadow-[0_8px_30px_rgba(0,0,0,0.1)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)]">
+<!-- Cloth Texture Image -->
+<img alt="Green linen cloth texture" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" data-alt="A macro photograph of coarse, dark green linen fabric. The weave of the cloth is distinct, showing intersecting threads with slight variations in color and thickness. Soft, natural light casts gentle shadows across the textile surface, creating a tactile, organic, and premium book-binding aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_N90BsozdeAYTCbhTL3YPgaeBt550sx62d1Y72Kn2jtM9mORJJoyf7WyEysCtxceixddHJHrRVgTqsqe0p0l8GbUttZJcwqYRjgxdBPf8TeNWNWmVwCIagaXiOafPhx5aOMF-dnG716JybDXRFWm3KDGaG7-L3DdFkLM6hEd8m54fCWewppPqfqbn3YU75wf3tzSyD_aFmMTffkFWLo6k79fcdk_hRl3GWFrHX-qPmvbw9cvQGZhxWTiG1jfN7T8ILfZ1fEJBfWo"/>
+<!-- Foil Stamped Title -->
+<div class="absolute top-16 inset-x-0 flex flex-col items-center justify-center px-6">
+<div class="w-12 h-12 mb-4 border border-[#D4AF37] rounded-full flex items-center justify-center opacity-80">
+<span class="material-symbols-outlined text-[#D4AF37]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+<h3 class="font-display-lg text-[#D4AF37] text-2xl text-center leading-tight">The<br/>Wedding<br/>Archive</h3>
+</div>
+<!-- Sticky Note Tag -->
+<div class="absolute bottom-12 -right-3 bg-surface text-primary font-ui-label text-xs py-1 px-3 shadow-[0_2px_8px_rgba(0,0,0,0.15)] -rotate-3 border border-outline-variant">
+                            Private
+                        </div>
+<!-- Spine Creases -->
+<div class="absolute left-8 top-0 bottom-0 w-px bg-black/20"></div>
+<div class="absolute left-[33px] top-0 bottom-0 w-px bg-white/10"></div>
+</div>
+<div class="mt-6 w-full px-2 flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-primary text-lg">The Wedding Archive</h3>
+<p class="font-caption-italic text-on-surface-variant mt-1">45 Spreads • Locked</p>
+</div>
+</div>
+</div>
+<!-- Album 3: Heavy Paper/Parchment -->
+<div class="group flex flex-col items-center h-[340px] cursor-pointer">
+<div class="relative w-full flex-1 bg-[#E8E4D9] rounded-r-lg spine-highlight page-edge shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+<!-- Paper Texture -->
+<div class="absolute inset-0 texture-paper opacity-60"></div>
+<!-- Inset Photo Cover -->
+<div class="absolute top-10 left-10 right-6 h-40 bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.1)] rotate-1">
+<img alt="Mountain landscape" class="w-full h-full object-cover" data-alt="A vintage-style photograph of a rugged mountain landscape at dawn. The image has faded colors, slightly desaturated, with a warm sepia undertone. The scene shows distant peaks and a misty valley, conveying a sense of adventure and nostalgia fitting for an old travel journal cover." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBazD6C-AJfa2jaE4Kjf09HnO0oCkBljTh2uaIAj6lZF10kB-cCKk1InJvzHml0c27H-yfj49PvMj9917ragCC2i_TuQO-oTn0yxx2xGemAaI9MAur7LiDI7tBvhR12c1qYqkMhV3eoYQml8FBXYM2fBHRX-diZvuSkueKMfH1UlvqGbezcCPLSHJYPygTS7z-EQvnhgudVPBkg2U_Pz_GtOii5F2A9AUZLTNniH7bMc7euoXoKZZ4SMeRSt0zmTEw_9BReN-d4PiY"/>
+</div>
+<!-- Handwritten Title Area -->
+<div class="absolute bottom-12 left-10 right-6 text-center">
+<div class="border-b border-primary/20 pb-1 mb-2">
+<h3 class="font-['Newsreader'] text-primary text-xl italic font-medium">Grand Canyon '23</h3>
+</div>
+<span class="font-ui-label text-on-surface-variant text-xs uppercase tracking-widest">Travel Log</span>
+</div>
+<!-- Sticky Note Tag -->
+<div class="absolute top-1/2 -right-2 bg-primary text-on-primary font-ui-label text-xs py-1 px-3 shadow-[0_2px_4px_rgba(0,0,0,0.3)] rotate-1">
+                            Public
+                        </div>
+<!-- Spine Creases -->
+<div class="absolute left-4 top-0 bottom-0 w-[2px] bg-outline-variant/30"></div>
+</div>
+<div class="mt-6 w-full px-2 flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-primary text-lg">Grand Canyon '23</h3>
+<p class="font-caption-italic text-on-surface-variant mt-1">8 Spreads • 15 Contributors</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
