@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import * as authApi from '../api/auth';
-import { tokenStorage, ApiError } from '../api/client';
+import { tokenStorage, ApiError } from '../../lib/api-client';
+import * as authApi from './api';
 
 export function useMe() {
   return useQuery({

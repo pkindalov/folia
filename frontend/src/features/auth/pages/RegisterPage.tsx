@@ -1,9 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { registerSchema, type RegisterInput } from '../types/auth';
-import { useRegister } from '../hooks/useAuth';
-import FormField from '../components/FormField';
+import { registerSchema, type RegisterInput } from '../schemas';
+import { useRegister } from '../hooks';
+import FormField from '../../../components/FormField';
 import styles from './AuthPage.module.css';
 
 export default function RegisterPage() {

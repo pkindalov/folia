@@ -22,14 +22,27 @@ Opens on http://localhost:5173. The backend must be running (see root README) an
 
 ## Structure
 
+Feature-based: each feature owns its api, schemas, hooks, components and pages, and exposes a public API through its `index.ts`. Cross-feature imports go through that index only.
+
 ```
 src/
-  api/         fetch client + auth service (zod-validated)
-  types/       zod schemas and inferred TS types
-  hooks/       useAuth (TanStack Query hooks: useMe, useLogin, ...)
-  components/  ProtectedRoute, FormField
-  pages/       LoginPage, RegisterPage, HomePage (+ CSS Modules)
+  app/                  App shell (routes)
+  lib/                  shared infrastructure (fetch client, token storage)
+  components/           shared feature-agnostic UI (FormField)
+  features/
+    auth/
+      api.ts            login/register/me service (zod-validated)
+      schemas.ts        zod schemas + inferred types
+      hooks.ts          useMe, useLogin, useRegister, useLogout
+      components/       ProtectedRoute
+      pages/            LoginPage, RegisterPage (+ CSS Modules)
+      index.ts          public API of the feature
+    flipbooks/
+      pages/            HomePage (placeholder)
+      index.ts
 ```
+
+Adding a new feature: create `src/features/<name>/` with the same shape and export its public surface from `index.ts`.
 
 ## Commands
 

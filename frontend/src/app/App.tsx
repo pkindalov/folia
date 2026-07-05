@@ -1,8 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import HomePage from './pages/HomePage';
-import ProtectedRoute from './components/ProtectedRoute';
+import { LoginPage, RegisterPage, ProtectedRoute } from '../features/auth';
+import { HomePage } from '../features/flipbooks';
 
 export default function App() {
   return (

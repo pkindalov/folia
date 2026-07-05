@@ -1,4 +1,4 @@
-import { api, tokenStorage } from './client';
+import { api, tokenStorage } from '../../lib/api-client';
 import {
   authResponseSchema,
   meResponseSchema,
@@ -6,7 +6,7 @@ import {
   type LoginInput,
   type RegisterInput,
   type User,
-} from '../types/auth';
+} from './schemas';
 
 export async function login(input: LoginInput): Promise<AuthResponse> {
   const data = await api('/api/auth/login', {

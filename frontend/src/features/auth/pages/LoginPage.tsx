@@ -1,9 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { loginSchema, type LoginInput } from '../types/auth';
-import { useLogin } from '../hooks/useAuth';
-import FormField from '../components/FormField';
+import { loginSchema, type LoginInput } from '../schemas';
+import { useLogin } from '../hooks';
+import FormField from '../../../components/FormField';
 import styles from './AuthPage.module.css';
 
 export default function LoginPage() {

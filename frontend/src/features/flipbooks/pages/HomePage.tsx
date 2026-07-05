@@ -1,4 +1,4 @@
-import { useMe, useLogout } from '../hooks/useAuth';
+import { useMe, useLogout } from '../../auth';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {
