@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Runtime data (persisted on D:\folia, never commit)
+uploads/
+mongo-data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE / editors
+.idea/
+.vscode/
+*.iml
+
+# Build output
+dist/
+build/

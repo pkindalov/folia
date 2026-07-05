@@ -1,0 +1,36 @@
+services:
+  api:
+    build: ./backend
+    container_name: folia-api
+    ports:
+      - "1337:1337"
+    environment:
+      NODE_ENV: production
+      PORT: 1337
+      DB_URL: mongodb://mongo:27017/folia
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
+      JWT_EXPIRES_IN: 7d
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      # User uploads persist on your D: drive
+      - D:/folia/uploads:/app/uploads
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: folia-mongo
+    # Database files persist on your D: drive
+    volumes:
+      - D:/folia/mongo-data:/data/db
+    # If MongoDB fails to start with a Windows bind mount
+    # (a known Docker Desktop limitation), comment the line above,
+    # uncomment the two lines below, and the named volume at the bottom.
+    #  - folia-mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+
+# volumes:
+#   folia-mongo-data:
