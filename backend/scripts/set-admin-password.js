@@ -12,9 +12,9 @@ const env = process.env.NODE_ENV || 'development';
 const settings = require('../server/config/settings')[env];
 const encryption = require('../server/utilities/encryption');
 
-const password = process.env.ADMIN_PASSWORD;
+const { admin } = settings;
 
-if (!password || password.length < 8) {
+if (!admin.password || admin.password.length < 8) {
   console.error('ADMIN_PASSWORD must be set and at least 8 characters.');
   process.exit(1);
 }
@@ -24,15 +24,15 @@ async function run() {
   const User = require('../server/data/User');
 
   const salt = encryption.generateSalt();
-  const hashedPass = encryption.generateHashedPassword(salt, password);
+  const hashedPass = encryption.generateHashedPassword(salt, admin.password);
 
   const result = await User.findOneAndUpdate(
-    { username: 'Admin' },
+    { username: admin.username },
     {
       $set: { salt, hashedPass, roles: ['Admin'] },
       $setOnInsert: {
-        username: 'Admin',
-        email: process.env.ADMIN_EMAIL || 'admin@folia.local',
+        username: admin.username,
+        email: admin.email,
       },
     },
     { upsert: true, new: true }

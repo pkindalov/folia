@@ -20,6 +20,12 @@ const base = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   uploadsDir: process.env.UPLOADS_DIR || 'uploads',
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  admin: {
+    // Identity may have defaults; the password is a secret and must be explicit
+    username: process.env.ADMIN_USERNAME || 'Admin',
+    email: process.env.ADMIN_EMAIL || 'admin@folia.local',
+    password: process.env.ADMIN_PASSWORD,
+  },
 };
 
 module.exports = {

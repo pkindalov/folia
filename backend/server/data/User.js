@@ -43,13 +43,15 @@ const User = mongoose.model('User', userSchema);
 
 module.exports = User;
 module.exports.seedAdminUser = () => {
-  User.findOne({ username: 'Admin' }).then((existing) => {
+  const env = process.env.NODE_ENV || 'development';
+  const { admin } = require('../config/settings')[env];
+
+  User.findOne({ username: admin.username }).then((existing) => {
     if (existing) return;
 
     // Explicit over implicit: the admin password always comes from the
     // ADMIN_PASSWORD env var. No password, no admin — with a clear warning.
-    const password = process.env.ADMIN_PASSWORD;
-    if (!password) {
+    if (!admin.password) {
       console.warn(
         'ADMIN_PASSWORD is not set — skipping admin seeding. ' +
           'Set it in .env and restart, or run: npm run set-admin-password'
@@ -58,14 +60,14 @@ module.exports.seedAdminUser = () => {
     }
 
     const salt = encryption.generateSalt();
-    const hashedPass = encryption.generateHashedPassword(salt, password);
+    const hashedPass = encryption.generateHashedPassword(salt, admin.password);
 
     User.create({
-      username: 'Admin',
-      email: process.env.ADMIN_EMAIL || 'admin@folia.local',
+      username: admin.username,
+      email: admin.email,
       salt,
       hashedPass,
       roles: ['Admin'],
-    }).then(() => console.log('Admin user seeded (password from ADMIN_PASSWORD)'));
+    }).then(() => console.log(`Admin user "${admin.username}" seeded`));
   });
 };

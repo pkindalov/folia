@@ -13,8 +13,11 @@ services:
       JWT_EXPIRES_IN: 7d
       # Set this to your frontend URL once it exists, e.g. http://localhost:3000
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      # Admin account password — set it in .env. Without it, no admin is seeded.
+      # Admin account — set ADMIN_PASSWORD in .env. Without it, no admin is seeded.
+      # Username and email are optional (defaults: Admin / admin@folia.local).
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@folia.local}
       UPLOADS_DIR: /app/uploads
     volumes:
       # User uploads persist on your D: drive
