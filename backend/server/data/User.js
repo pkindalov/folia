@@ -43,15 +43,18 @@ const User = mongoose.model('User', userSchema);
 
 module.exports = User;
 module.exports.seedAdminUser = () => {
-  User.find({}).then((users) => {
-    if (users.length > 0) return;
+  User.findOne({ username: 'Admin' }).then((existing) => {
+    if (existing) return;
 
-    // No predictable default: use ADMIN_PASSWORD or generate a random one
-    let password = process.env.ADMIN_PASSWORD;
-    let generated = false;
+    // Explicit over implicit: the admin password always comes from the
+    // ADMIN_PASSWORD env var. No password, no admin — with a clear warning.
+    const password = process.env.ADMIN_PASSWORD;
     if (!password) {
-      password = require('crypto').randomBytes(12).toString('base64url');
-      generated = true;
+      console.warn(
+        'ADMIN_PASSWORD is not set — skipping admin seeding. ' +
+          'Set it in .env and restart, or run: npm run set-admin-password'
+      );
+      return;
     }
 
     const salt = encryption.generateSalt();
@@ -63,13 +66,6 @@ module.exports.seedAdminUser = () => {
       salt,
       hashedPass,
       roles: ['Admin'],
-    }).then(() => {
-      if (generated) {
-        console.log(`Admin user seeded with generated password: ${password}`);
-        console.log('(Shown once — save it, or set ADMIN_PASSWORD and reset the DB.)');
-      } else {
-        console.log('Admin user seeded');
-      }
-    });
+    }).then(() => console.log('Admin user seeded (password from ADMIN_PASSWORD)'));
   });
 };

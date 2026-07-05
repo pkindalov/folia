@@ -46,7 +46,16 @@ Requires MongoDB on localhost:27017 (you can run just Mongo via `docker compose 
 
 Register/login return `{ token, user }`. Send the token as `Authorization: Bearer <token>`.
 
-A default `Admin` user is seeded on first run. Password comes from `ADMIN_PASSWORD`; if unset, a random one is generated and printed once in the API logs (`docker compose logs api`).
+### Admin account
+
+An `Admin` user is seeded on startup **only if `ADMIN_PASSWORD` is set** (in the root `.env` for Docker, or `backend/.env` locally). No password, no admin — the API logs a warning instead.
+
+To create the admin later or reset a forgotten password:
+
+```bash
+docker compose exec api npm run set-admin-password   # Docker
+npm run set-admin-password                           # local (reads backend/.env)
+```
 
 ## Structure
 

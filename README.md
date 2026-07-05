@@ -30,9 +30,10 @@ cd folia
 
 ```env
 JWT_SECRET=put-a-long-random-string-here
+ADMIN_PASSWORD=pick-your-admin-password
 ```
 
-Generate a good secret with: `openssl rand -hex 32` (or any long random string). This file is gitignored — every dev creates their own, never commit it.
+Generate a good secret with: `openssl rand -hex 32` (or any long random string). `ADMIN_PASSWORD` becomes the password of the seeded `Admin` account — without it, no admin is created. This file is gitignored — every dev creates their own, never commit it.
 
 **Step 3 — Check the data folders** in `docker-compose.yml`
 
@@ -98,8 +99,13 @@ curl -X POST http://localhost:1337/api/auth/register -H "Content-Type: applicati
 
 Full endpoint list: `backend/README.md`.
 
+## Troubleshooting
+
+- **Forgot/never knew the admin password?** Set `ADMIN_PASSWORD` in `.env`, then run: `docker compose up -d && docker compose exec api npm run set-admin-password`
+- **`docker compose` can't connect to Docker?** Start Docker Desktop and wait for "running" in the tray.
+
 ## Security notes
 
 - `JWT_SECRET` is required — compose refuses to start without it in `.env`
-- Admin password: set `ADMIN_PASSWORD`, or find the generated one in `docker compose logs api` (printed once on first run)
+- `ADMIN_PASSWORD` controls the seeded `Admin` account; reset anytime with `set-admin-password` (see above)
 - Set `CORS_ORIGIN` to your frontend URL once it exists (default allows all origins)

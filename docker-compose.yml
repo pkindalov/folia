@@ -13,6 +13,8 @@ services:
       JWT_EXPIRES_IN: 7d
       # Set this to your frontend URL once it exists, e.g. http://localhost:3000
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Admin account password — set it in .env. Without it, no admin is seeded.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       UPLOADS_DIR: /app/uploads
     volumes:
       # User uploads persist on your D: drive
