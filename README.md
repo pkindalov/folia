@@ -9,6 +9,7 @@ A digital platform for creating and sharing tactile, heritage-inspired digital f
 ```
 folia/
   backend/            Express + MongoDB JSON API (MVC) — see backend/README.md
+  frontend/           React + TypeScript (Vite) — see frontend/README.md
   design/             HTML design mockups (desktop + mobile)
   DESIGN.md           Design system (typography, colors, tokens)
   docker-compose.yml  Runs API + MongoDB
@@ -37,7 +38,7 @@ Generate a good secret with: `openssl rand -hex 32` (or any long random string).
 
 Database and uploads are stored on the host in `D:/folia/mongo-data` and `D:/folia/uploads`. If you don't have a `D:` drive, change these two volume paths to a folder that exists on your machine. Docker creates the folders automatically on first run.
 
-**Step 4 — Build and start**
+**Step 4 — Build and start** (make sure Docker Desktop is running first)
 
 ```bash
 docker compose up -d --build
@@ -74,6 +75,19 @@ copy .env.example .env
 npm install
 npm run dev
 ```
+
+## Run the frontend (dev)
+
+Backend must be running first. Add `CORS_ORIGIN=http://localhost:5173` to the root `.env` (and restart: `docker compose up -d`).
+
+```bash
+cd frontend
+copy .env.example .env
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 — register an account and you land on the (placeholder) home page. Details in `frontend/README.md`.
 
 ## Quick API test
 
