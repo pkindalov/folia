@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album - Sign In</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Work+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#fdf8f7",
+                    "surface": "#fdf8f7",
+                    "tertiary": "#000000",
+                    "surface-tint": "#5f5e5b",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#787770",
+                    "on-tertiary-fixed": "#0d1f12",
+                    "on-primary-container": "#858480",
+                    "secondary-fixed-dim": "#ffb690",
+                    "primary-fixed-dim": "#c9c6c2",
+                    "on-surface-variant": "#474741",
+                    "surface-variant": "#e5e2e1",
+                    "inverse-surface": "#313030",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#384b3b",
+                    "on-primary-fixed": "#1c1c19",
+                    "inverse-on-surface": "#f4f0ef",
+                    "inverse-primary": "#c9c6c2",
+                    "tertiary-container": "#0d1f12",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#b6ccb6",
+                    "surface-container-highest": "#e5e2e1",
+                    "secondary": "#9d4400",
+                    "outline-variant": "#c8c7be",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#ffdbca",
+                    "secondary-container": "#fe8032",
+                    "tertiary-fixed": "#d2e8d2",
+                    "primary-container": "#1c1c19",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#e5e2de",
+                    "background": "#fdf8f7",
+                    "surface-container-low": "#f7f3f2",
+                    "on-tertiary-container": "#748976",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#ddd9d8",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#474744",
+                    "surface-container-high": "#ebe7e6",
+                    "primary": "#000000",
+                    "on-secondary-fixed": "#331100",
+                    "on-surface": "#1c1b1b",
+                    "surface-container": "#f1edec",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-background": "#1c1b1b",
+                    "on-secondary-container": "#632800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "gutter": "24px",
+                    "stack-overlap": "-12px",
+                    "margin-edge": "40px"
+            },
+            "fontFamily": {
+                    "body-text": ["Newsreader"],
+                    "ui-label": ["Work Sans"],
+                    "headline-md": ["Newsreader"],
+                    "ui-button": ["Work Sans"],
+                    "display-lg": ["Newsreader"],
+                    "caption-italic": ["Newsreader"]
+            },
+            "fontSize": {
+                    "body-text": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "ui-label": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["32px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                    "ui-button": ["16px", {"lineHeight": "1.0", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "caption-italic": ["16px", {"lineHeight": "1.4", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .paper-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+            background-repeat: repeat;
+        }
+
+        .album-page-depth {
+            box-shadow: 0px 4px 20px rgba(0,0,0,0.05), inset 1px 0 0 rgba(255,255,255,0.8);
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .input-underline {
+            border: none;
+            border-bottom: 1px solid #787770;
+            background: transparent;
+            padding: 8px 0;
+            border-radius: 0;
+        }
+
+        .input-underline:focus {
+            outline: none;
+            box-shadow: none;
+            border-bottom: 2px solid #9d4400;
+        }
+
+        .washi-tape {
+            background: rgba(254, 128, 50, 0.2);
+            backdrop-filter: blur(1px);
+        }
+
+        .page-turn-animation {
+            transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+
+        /* Micro-interactions */
+        .btn-press:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="bg-surface-dim paper-texture min-h-screen flex items-center justify-center p-6 md:p-12 font-body-text selection:bg-secondary-fixed">
+<main class="relative max-w-4xl w-full flex flex-col md:flex-row bg-surface album-page-depth rounded-lg overflow-hidden page-turn-animation" id="auth-container">
+<!-- Decoration / Left "Page" -->
+<section class="hidden md:flex flex-1 relative bg-surface-container-low border-r border-outline-variant/30 flex-col items-center justify-center p-12 overflow-hidden">
+<div class="absolute inset-0 paper-texture opacity-40"></div>
+<!-- Floating Polaroid Decorative Element -->
+<div class="relative z-10 rotate-[-1deg] bg-white p-4 pb-12 shadow-md transform hover:rotate-0 transition-transform duration-500">
+<div class="absolute top-[-10px] left-1/2 -translate-x-1/2 w-24 h-6 washi-tape"></div>
+<div class="w-64 h-64 bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover grayscale-[0.3]" data-alt="A vintage, sepia-toned photograph of a classic family picnic from the 1950s, laid out on a soft grassy field with a woven basket and antique camera. The lighting is warm and hazy, mimicking a summer afternoon. The entire scene has a soft film grain and tactile texture, perfectly matching the Heritage Album brand aesthetic of curated nostalgia and premium storytelling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDk2r3new872bTHT-HxXvl_LrO5STDJxsQXiU7nJ7ExTzG940ArWZujJlGNbGM-Tb_tupNGkuFtC6dJAwCTJarmpyu-F1zlEy-IzDnhmEH3bksrfKo625IdSaQrPIaWyAG1FsSTZeYsfhTwU53AJsZ7Nik6Y4CATL05Z2M8OeD7nPKWJQGap5hmP9--N__8thVXi9FHrg-Qz8yi22Ms9fI5SlKTfNbh84WcPkx9Ap_2c2DOWgl83ScJCJaqe7UwsGjbEtrrzLQ8-Iw"/>
+</div>
+<p class="mt-6 text-center font-caption-italic text-caption-italic italic text-on-surface-variant">Capture the soul of the moment.</p>
+</div>
+<div class="mt-16 text-center">
+<h1 class="font-display-lg text-display-lg text-primary">Heritage Album</h1>
+<p class="font-ui-label text-ui-label uppercase tracking-[0.2em] text-on-surface-variant/60 mt-2">Preserving Legacy</p>
+</div>
+</section>
+<!-- Right "Page" / Form Content -->
+<section class="flex-1 bg-surface p-8 md:p-16 flex flex-col justify-center relative">
+<div class="absolute inset-0 paper-texture opacity-20 pointer-events-none"></div>
+<div class="relative z-10" id="auth-content">
+<!-- Header -->
+<header class="mb-12">
+<h2 class="font-headline-md text-headline-md text-primary" id="form-title">Welcome back</h2>
+<p class="font-body-text text-body-text text-on-surface-variant mt-2" id="form-subtitle">Enter your credentials to access your archive.</p>
+</header>
+<!-- Auth Forms -->
+<form class="space-y-8" id="login-form">
+<div class="flex flex-col gap-1">
+<label class="font-ui-label text-ui-label text-on-surface-variant" for="email">EMAIL ADDRESS</label>
+<input class="input-underline font-body-text text-body-text" id="email" placeholder="name@legacy.com" required="" type="email"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center">
+<label class="font-ui-label text-ui-label text-on-surface-variant" for="password">PASSWORD</label>
+<a class="font-ui-label text-[12px] text-secondary hover:underline" href="#">Forgot?</a>
+</div>
+<input class="input-underline font-body-text text-body-text" id="password" placeholder="••••••••" required="" type="password"/>
+</div>
+<div class="pt-4">
+<button class="w-full bg-secondary text-on-secondary py-4 font-ui-button text-ui-button rounded-sm btn-press shadow-sm hover:bg-on-secondary-fixed-variant transition-colors" type="submit">
+                            SIGN IN
+                        </button>
+</div>
+</form>
+<!-- Toggle Area -->
+<footer class="mt-12 pt-8 border-t border-outline-variant/30 flex flex-col items-center gap-4">
+<p class="font-ui-label text-ui-label text-on-surface-variant" id="toggle-text">New to Heritage Album?</p>
+<button class="font-ui-button text-ui-button text-primary border border-primary px-8 py-3 rounded-sm hover:bg-surface-variant transition-colors btn-press" id="toggle-auth">
+                        CREATE ACCOUNT
+                    </button>
+</footer>
+</div>
+</section>
+<!-- Decorative Corners (Slotted look) -->
+<div class="absolute top-0 left-0 w-8 h-8 pointer-events-none border-t border-l border-outline-variant/50 m-4"></div>
+<div class="absolute top-0 right-0 w-8 h-8 pointer-events-none border-t border-r border-outline-variant/50 m-4"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 pointer-events-none border-b border-l border-outline-variant/50 m-4"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 pointer-events-none border-b border-r border-outline-variant/50 m-4"></div>
+</main>
+<script>
+        const authContainer = document.getElementById('auth-container');
+        const toggleBtn = document.getElementById('toggle-auth');
+        const formTitle = document.getElementById('form-title');
+        const formSubtitle = document.getElementById('form-subtitle');
+        const submitBtn = document.querySelector('#login-form button[type="submit"]');
+        const toggleText = document.getElementById('toggle-text');
+        
+        let isLogin = true;
+
+        toggleBtn.addEventListener('click', () => {
+            // Slight visual "page turn" flick
+            authContainer.classList.add('scale-[0.98]', 'opacity-80');
+            
+            setTimeout(() => {
+                isLogin = !isLogin;
+                
+                if (isLogin) {
+                    formTitle.innerText = 'Welcome back';
+                    formSubtitle.innerText = 'Enter your credentials to access your archive.';
+                    submitBtn.innerText = 'SIGN IN';
+                    toggleText.innerText = 'New to Heritage Album?';
+                    toggleBtn.innerText = 'CREATE ACCOUNT';
+                } else {
+                    formTitle.innerText = 'Start your legacy';
+                    formSubtitle.innerText = 'Begin curating your personal tactile storytelling experience.';
+                    submitBtn.innerText = 'CREATE ACCOUNT';
+                    toggleText.innerText = 'Already have an album?';
+                    toggleBtn.innerText = 'SIGN IN';
+                }
+                
+                authContainer.classList.remove('scale-[0.98]', 'opacity-80');
+            }, 300);
+        });
+
+        // Form submission micro-interaction
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const originalText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="flex items-center justify-center gap-2">ARCHIVING <span class="animate-pulse w-1 h-1 bg-white rounded-full"></span><span class="animate-pulse delay-75 w-1 h-1 bg-white rounded-full"></span><span class="animate-pulse delay-150 w-1 h-1 bg-white rounded-full"></span></span>';
+            
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+                alert('Authentication successful. Your heritage awaits.');
+            }, 2000);
+        });
+    </script>
+</body></html>

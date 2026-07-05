@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album | Preserve Your Legacy</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#fdf8f7",
+                    "surface": "#fdf8f7",
+                    "tertiary": "#000000",
+                    "surface-tint": "#5f5e5b",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#787770",
+                    "on-tertiary-fixed": "#0d1f12",
+                    "on-primary-container": "#858480",
+                    "secondary-fixed-dim": "#ffb690",
+                    "primary-fixed-dim": "#c9c6c2",
+                    "on-surface-variant": "#474741",
+                    "surface-variant": "#e5e2e1",
+                    "inverse-surface": "#313030",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#384b3b",
+                    "on-primary-fixed": "#1c1c19",
+                    "inverse-on-surface": "#f4f0ef",
+                    "inverse-primary": "#c9c6c2",
+                    "tertiary-container": "#0d1f12",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#b6ccb6",
+                    "surface-container-highest": "#e5e2e1",
+                    "secondary": "#9d4400",
+                    "outline-variant": "#c8c7be",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#ffdbca",
+                    "secondary-container": "#fe8032",
+                    "tertiary-fixed": "#d2e8d2",
+                    "primary-container": "#1c1c19",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#e5e2de",
+                    "background": "#fdf8f7",
+                    "surface-container-low": "#f7f3f2",
+                    "on-tertiary-container": "#748976",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#ddd9d8",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#474744",
+                    "surface-container-high": "#ebe7e6",
+                    "primary": "#000000",
+                    "on-secondary-fixed": "#331100",
+                    "on-surface": "#1c1b1b",
+                    "surface-container": "#f1edec",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-background": "#1c1b1b",
+                    "on-secondary-container": "#632800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "gutter": "24px",
+                    "stack-overlap": "-12px",
+                    "margin-edge": "40px"
+            },
+            "fontFamily": {
+                    "body-text": ["Newsreader"],
+                    "ui-label": ["Work Sans"],
+                    "headline-md": ["Newsreader"],
+                    "ui-button": ["Work Sans"],
+                    "display-lg": ["Newsreader"],
+                    "caption-italic": ["Newsreader"]
+            },
+            "fontSize": {
+                    "body-text": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "ui-label": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["32px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                    "ui-button": ["16px", {"lineHeight": "1.0", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "caption-italic": ["16px", {"lineHeight": "1.4", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fdf8f7;
+            /* Subtle paper texture */
+            background-image: url("https://www.transparenttextures.com/patterns/felt.png");
+        }
+
+        .paper-depth {
+            box-shadow: 0px 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .photo-tape {
+            background-color: rgba(157, 68, 0, 0.15);
+            width: 80px;
+            height: 30px;
+            transform: rotate(-15deg);
+        }
+
+        .stuck-photo {
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.12);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        .nav-item-active {
+            color: #9d4400; /* secondary */
+            border-bottom: 2px solid #9d4400;
+            font-weight: 700;
+            padding-bottom: 4px;
+        }
+
+        .line-input {
+            border: none;
+            border-bottom: 1px solid #787770;
+            background: transparent;
+            font-family: 'Newsreader', serif;
+        }
+
+        .line-input:focus {
+            outline: none;
+            border-bottom: 2px solid #000000;
+            ring: 0;
+        }
+
+        .page-curl-hover:hover {
+            transform: perspective(1000px) rotateY(-5deg);
+            transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body class="font-body-text text-on-background selection:bg-secondary-fixed">
+<!-- TopNavBar -->
+<nav class="w-full top-0 bg-surface shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border-b border-outline-variant/30 z-50 sticky">
+<div class="flex justify-between items-center px-margin-edge py-4 max-w-7xl mx-auto">
+<div class="flex items-center gap-8">
+<a class="font-display-lg text-[32px] font-semibold text-primary" href="#">Heritage Album</a>
+<div class="hidden md:flex gap-6 items-center">
+<a class="nav-item-active font-ui-label text-ui-label" href="#">Home</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label" href="#">Explore</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label" href="#">Create</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label" href="#">Archives</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-on-surface-variant font-ui-label text-ui-label hover:text-secondary transition-colors" href="#">Sign In</a>
+<button class="bg-secondary text-on-secondary px-6 py-3 rounded-DEFAULT font-ui-button text-ui-button shadow-md hover:scale-105 active:scale-95 transition-all duration-200">
+                    Start for Free
+                </button>
+</div>
+</div>
+</nav>
+<main class="max-w-7xl mx-auto px-margin-edge py-12">
+<!-- Hero Section -->
+<section class="grid lg:grid-cols-2 gap-16 items-center mb-24 min-h-[614px]">
+<div class="flex flex-col gap-8 order-2 lg:order-1">
+<h1 class="font-display-lg text-display-lg leading-tight">
+                    Preserve Your Legacy in a <span class="italic">Tactile</span> Digital World.
+                </h1>
+<p class="text-body-text text-on-surface-variant max-w-lg">
+                    More than a gallery. A digital heirloom crafted with the soul of a physical album. Capture social reflections and curate community archives that stand the test of time.
+                </p>
+<div class="flex flex-wrap gap-4 pt-4">
+<button class="bg-secondary text-on-secondary px-8 py-4 rounded-DEFAULT font-ui-button text-ui-button text-lg shadow-lg hover:shadow-xl transition-all">
+                        Begin Your Album
+                    </button>
+<button class="border border-primary text-primary px-8 py-4 rounded-DEFAULT font-ui-button text-ui-button text-lg hover:bg-surface-container transition-all">
+                        View Sample Legacy
+                    </button>
+</div>
+<div class="mt-8 flex items-center gap-4 text-outline">
+<span class="material-symbols-outlined text-secondary">history_edu</span>
+<span class="font-ui-label text-ui-label italic">Join 12,000+ families preserving their story.</span>
+</div>
+</div>
+<!-- Hero Image Frame -->
+<div class="order-1 lg:order-2 flex justify-center items-center relative py-12">
+<div class="absolute inset-0 bg-secondary/5 rounded-full blur-3xl -z-10"></div>
+<div class="relative p-4 bg-white shadow-2xl rotate-2 paper-depth border-r border-outline-variant/20 page-curl-hover cursor-pointer group">
+<div class="absolute -top-4 -left-4 photo-tape opacity-80 z-10"></div>
+<div class="absolute -bottom-4 -right-4 photo-tape opacity-80 z-10 scale-x-[-1] rotate-[15deg]"></div>
+<div class="relative overflow-hidden w-full max-w-md aspect-[4/5] bg-surface-dim">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" data-alt="A macro close-up photograph of a luxury, handcrafted chocolate-brown leather-bound book with gold-embossed filigree on the cover. The book sits on a rustic oak table with a warm, afternoon sunlight streaming across it, highlighting the natural grain and texture of the leather. In the background, a soft-focus library with shelves of old books creates an atmosphere of timeless elegance and nostalgia. The lighting is high-end, high-contrast, and inviting, emphasizing high-quality craftsmanship." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvrutf9azF1pV8s1xhtFbYjW2Y81jQ2xY5c9-iLKGcR2GLK1y0Smjl3TPIYTtTYLYny9jguKMAlhykoCbvGY0Ju4FTrSdwkXc0Vuzl1D0seN6N9Cb2Y3FDBOra-JYwCBStYUEK1k7vj1A0pvCf6_xWh22ZOADdvTIZdWSZC3LWnpYgJaO2clSnfW3B-TG4VfbDMAx7VNE006PpqHt0KcueyBh0ZJ7x9LT2xLCSaj6_HDVdAd0R2Fz4C7UhVAz5AVNEi520NctucrU"/>
+<!-- Edge highlights to simulate paper thickness -->
+<div class="absolute inset-y-0 left-0 w-[1px] bg-white/30"></div>
+<div class="absolute inset-y-0 right-0 w-[1px] bg-black/10"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- The Values Bento -->
+<section class="mb-24">
+<div class="flex flex-col items-center text-center mb-16">
+<h2 class="font-headline-md text-headline-md mb-4">The Craft of Memory</h2>
+<div class="w-24 h-[1px] bg-secondary opacity-30"></div>
+</div>
+<div class="grid md:grid-cols-3 gap-8">
+<!-- Value 1 -->
+<div class="bg-surface p-10 paper-depth border border-outline-variant/10 flex flex-col gap-6 relative overflow-hidden group">
+<div class="text-secondary opacity-20 absolute -right-4 -top-4">
+<span class="material-symbols-outlined !text-[120px]">auto_stories</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-4xl">auto_stories</span>
+<h3 class="font-headline-md text-2xl">Tactile Digital Albums</h3>
+<p class="text-on-surface-variant font-body-text">
+                        Experience the "friction" of discovery. Our interface uses spatial memory and physical metaphors—like paper grain and depth of field—to make browsing feel intentional.
+                    </p>
+</div>
+<!-- Value 2 -->
+<div class="bg-surface p-10 paper-depth border border-outline-variant/10 flex flex-col gap-6 relative overflow-hidden group">
+<div class="text-secondary opacity-20 absolute -right-4 -top-4">
+<span class="material-symbols-outlined !text-[120px]">forum</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-4xl">forum</span>
+<h3 class="font-headline-md text-2xl">Social Reflections</h3>
+<p class="text-on-surface-variant font-body-text">
+                        Photos are just the beginning. Invite loved ones to leave hand-ruled notes, voice memos, and stories, turning a single image into a multi-generational dialogue.
+                    </p>
+</div>
+<!-- Value 3 -->
+<div class="bg-surface p-10 paper-depth border border-outline-variant/10 flex flex-col gap-6 relative overflow-hidden group">
+<div class="text-secondary opacity-20 absolute -right-4 -top-4">
+<span class="material-symbols-outlined !text-[120px]">inventory_2</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-4xl">inventory_2</span>
+<h3 class="font-headline-md text-2xl">Community Archives</h3>
+<p class="text-on-surface-variant font-body-text">
+                        Preserve local history or family branches in collective vaults. High-fidelity archival standards ensure your stories remain accessible for the next century.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Asymmetric Showcase -->
+<section class="grid lg:grid-cols-12 gap-12 items-center mb-32 bg-surface-container/30 p-12 rounded-lg">
+<div class="lg:col-span-5 flex flex-col gap-6">
+<span class="font-ui-label text-ui-label text-secondary uppercase tracking-widest">The Archive Experience</span>
+<h2 class="font-display-lg text-4xl leading-snug">Curated by you, crafted for them.</h2>
+<p class="font-body-text text-on-surface-variant italic">
+                    "We didn't want another cloud folder. We wanted a place that felt like my grandmother's attic—full of surprises and weight."
+                </p>
+<div class="flex flex-col gap-4 mt-4">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<div>
+<h4 class="font-ui-label text-ui-label">Museum-Grade Scanning</h4>
+<p class="text-sm text-on-surface-variant">Digitize physical artifacts with our curated partner network.</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<div>
+<h4 class="font-ui-label text-ui-label">Private Family Circles</h4>
+<p class="text-sm text-on-surface-variant">Your legacy is yours. No ads, no tracking, just preservation.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-7 grid grid-cols-2 gap-4 relative">
+<div class="pt-12">
+<div class="bg-white p-2 stuck-photo rotate-[-2deg] mb-6">
+<img class="w-full aspect-square object-cover" data-alt="A vintage, slightly sepia-toned black and white photograph showing a large family gathering in a lush, 1940s garden. The people are laughing, dressed in mid-century attire, with a large spread of food on a table. The edges of the photo are deckled and slightly worn, giving it an authentic antique feel. The image is presented as if it were a physical print resting on a cream-colored textured paper background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDA7X9uzZfF3wsg-JyfQAlKj0tpNF7jFGgGcozxeY-ewC2PrXmztaHVOL44hwDu33NC1tGndge5Zmu7QSSQu6tHO8yydcioEyH70wYzxtb8a4a1Paq7Wxyo8iWmXpiIip9ESqNXstDuGddFr0tEhMRga82B3tHjj4pK4IsKG7ZTo6ZEzwHrHlual__MHQYctPVRhMM7KjiACLAY1Y3D3ltb76f6e2EbsFeSXEhfOJ8AVYUv3-ERYe98C0e7AREuHiRGs3DdfFqvqgA"/>
+</div>
+<div class="bg-white p-2 stuck-photo rotate-[1deg]">
+<img class="w-full aspect-[3/4] object-cover" data-alt="A close-up high-resolution image of a handwritten letter on aged, yellowed parchment. The ink is a deep sepia with delicate flourishes of cursive handwriting. Next to the letter is a dried, pressed wildflower and an old silver fountain pen. The lighting is soft and warm, capturing the fine texture of the paper and the subtle sheen of the ink." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDChnNqgAyF8wLa4kR0Xl3nGSTcYIxqpV0-jLshZlZUZa4qbOfasfY4lC7KZA4aQ1sxLLnDfGKUAQwozZZBoTciLpCqebp3nKrIkFkVhFhq7rgHKbwNkLXgxdyLrAlT1T4YqLFm5_VeTc_kGAO8-KAhPFYNTcnB_fp-FxuxY-fVaSj4upZPm4IkngBpBNBBBPEJlVYTVGtXZCtYIuCGRI_FTr_60IQ5zOh4lLbMDPjWTPbar7ZCgl9gEe4k-HdQAjW3N-UujtxbsJo"/>
+</div>
+</div>
+<div>
+<div class="bg-white p-2 stuck-photo rotate-[3deg] mb-6">
+<img class="w-full aspect-[4/5] object-cover" data-alt="A beautiful modern portrait of an elderly woman and a young child looking together at a glowing digital tablet that displays a rich, leather-bound digital album. The room is a cozy home office with warm wooden bookshelves in the background. The lighting highlights their expressive faces and the connection between generations. The digital display on the tablet looks like high-quality paper texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3PoRpbcTQhHYG0tw7qOpI4OxKiNsyNQnga7cjBRtzqf4jKfRn9Azf1A5WS1ay9d-drA4MGrs17Dl8ZFmBnedBg2njtMjcAedL_eYOmkjlVdXWOQhJQ9vv7rYwUCh0wC6rSlVTvATrfveAwhDjXHSUVnIWrU9u1tVCKzOxynesafVh5uJyDxwAXkOFZOsRa0KeZQgtxpHrwjB-JgLKxo5EuIRdjVPrOR2WgApcFpI1HpPxkz6cd6pxgvuLMPmJbGUdB7omif805sI"/>
+</div>
+<div class="bg-white p-2 stuck-photo rotate-[-1deg] translate-x-4">
+<img class="w-full aspect-square object-cover" data-alt="A collection of small vintage memorabilia arranged artistically: an old iron key, a black and white passport photo from the 1950s, a folded telegram, and a small lock of hair tied with a silk ribbon. Everything is presented in a flat-lay composition on a dark linen surface, illuminated by a single directional light source creating dramatic, soft shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkjngZ-Z1I0taOI0Z88erLHnQC1AgFu18rwB7K9IJf748RuMj7-mlVYx7ZEKJn3m8qg4x3R00xaxkfvCbR0sr_XrMFpOc27NwiF7FOMqEcWYZ-sw3SMFq5MHqYmGinkUdF46ILgc21a6Q9zZEMoqh7dFMNcV4VWvlC-tda5t1Cj3BJfs_N_Ua3NKUXB40qjhxpvAqim_Btg8WD7kp6V1Z7iQv0GCDXz9YWaRSghhqw20O1DWgBvRnS58GRcmm1JYmDb35BW6-MCWw"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Newsletter / Invitation Section -->
+<section class="max-w-3xl mx-auto text-center py-20 px-8 bg-surface-container-high rounded-full border border-outline-variant/20 paper-depth mb-24">
+<h2 class="font-headline-md text-headline-md mb-6">Receive our 'Curation Guide'</h2>
+<p class="text-on-surface-variant mb-10 px-8">
+                Join our quarterly newsletter on archival standards, legacy storytelling, and the art of the physical-digital bridge.
+            </p>
+<form class="flex flex-col md:flex-row gap-6 justify-center px-8">
+<div class="flex-1 text-left">
+<label class="font-ui-label text-[12px] text-outline ml-1">YOUR EMAIL</label>
+<input class="line-input w-full py-2 text-lg" placeholder="name@archive.com" type="email"/>
+</div>
+<button class="bg-primary text-on-primary px-8 py-4 rounded-DEFAULT font-ui-button text-ui-button hover:opacity-90 transition-all self-end">
+                    Request Invite
+                </button>
+</form>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full mt-auto py-12 px-margin-edge flex flex-col md:flex-row justify-between items-center gap-4 bg-surface-dim border-t border-outline-variant/20">
+<div class="flex flex-col gap-2">
+<span class="font-headline-md text-primary">Heritage Album</span>
+<p class="font-ui-label text-ui-label text-on-surface-variant">© 2024 Heritage Album. Preservation through tactile storytelling.</p>
+</div>
+<div class="flex gap-8">
+<a class="text-on-surface-variant opacity-80 hover:text-secondary underline transition-all font-ui-label text-ui-label" href="#">Legacy Policy</a>
+<a class="text-on-surface-variant opacity-80 hover:text-secondary underline transition-all font-ui-label text-ui-label" href="#">Archival Standards</a>
+<a class="text-on-surface-variant opacity-80 hover:text-secondary underline transition-all font-ui-label text-ui-label" href="#">Curation Guide</a>
+</div>
+</footer>
+<!-- Mobile Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 md:hidden bg-surface-container shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] rounded-t-full">
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-6 py-1 scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-ui-label text-[10px]">My Albums</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-ui-label text-[10px]">Explore</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="font-ui-label text-[10px]">Studio</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-ui-label text-[10px]">Archive</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for the book hover
+        const heroFrame = document.querySelector('.page-curl-hover');
+        if(heroFrame) {
+            heroFrame.addEventListener('mousemove', (e) => {
+                const { left, top, width, height } = heroFrame.getBoundingClientRect();
+                const x = (e.clientX - left) / width - 0.5;
+                const y = (e.clientY - top) / height - 0.5;
+                heroFrame.style.transform = `perspective(1000px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg) translateY(-10px)`;
+            });
+            heroFrame.addEventListener('mouseleave', () => {
+                heroFrame.style.transform = `perspective(1000px) rotateY(0deg) rotateX(0deg) translateY(0)`;
+            });
+        }
+
+        // Simple smooth entrance
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('opacity-0');
+            setTimeout(() => {
+                document.body.classList.remove('opacity-0');
+                document.body.classList.add('transition-opacity', 'duration-1000', 'opacity-100');
+            }, 100);
+        });
+    </script>
+</body></html>

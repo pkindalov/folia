@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album | Archives</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&amp;family=Work+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#fdf8f7",
+                    "surface": "#fdf8f7",
+                    "tertiary": "#000000",
+                    "surface-tint": "#5f5e5b",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#787770",
+                    "on-tertiary-fixed": "#0d1f12",
+                    "on-primary-container": "#858480",
+                    "secondary-fixed-dim": "#ffb690",
+                    "primary-fixed-dim": "#c9c6c2",
+                    "on-surface-variant": "#474741",
+                    "surface-variant": "#e5e2e1",
+                    "inverse-surface": "#313030",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed-variant": "#384b3b",
+                    "on-primary-fixed": "#1c1c19",
+                    "inverse-on-surface": "#f4f0ef",
+                    "inverse-primary": "#c9c6c2",
+                    "tertiary-container": "#0d1f12",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#b6ccb6",
+                    "surface-container-highest": "#e5e2e1",
+                    "secondary": "#9d4400",
+                    "outline-variant": "#c8c7be",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#ffdbca",
+                    "secondary-container": "#fe8032",
+                    "tertiary-fixed": "#d2e8d2",
+                    "primary-container": "#1c1c19",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#e5e2de",
+                    "background": "#fdf8f7",
+                    "surface-container-low": "#f7f3f2",
+                    "on-tertiary-container": "#748976",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#ddd9d8",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#474744",
+                    "surface-container-high": "#ebe7e6",
+                    "primary": "#000000",
+                    "on-secondary-fixed": "#331100",
+                    "on-surface": "#1c1b1b",
+                    "surface-container": "#f1edec",
+                    "on-secondary-fixed-variant": "#783200",
+                    "on-background": "#1c1b1b",
+                    "on-secondary-container": "#632800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "gutter": "24px",
+                    "stack-overlap": "-12px",
+                    "margin-edge": "40px"
+            },
+            "fontFamily": {
+                    "body-text": ["Newsreader"],
+                    "ui-label": ["Work Sans"],
+                    "headline-md": ["Newsreader"],
+                    "ui-button": ["Work Sans"],
+                    "display-lg": ["Newsreader"],
+                    "caption-italic": ["Newsreader"]
+            },
+            "fontSize": {
+                    "body-text": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "ui-label": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["32px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                    "ui-button": ["16px", {"lineHeight": "1.0", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "caption-italic": ["16px", {"lineHeight": "1.4", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .paper-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/felt.png");
+            background-repeat: repeat;
+        }
+        .spine-gradient {
+            background: linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(255,255,255,0.1) 50%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
+        }
+        .shelf-shadow {
+            box-shadow: inset 0 -40px 60px -20px rgba(0,0,0,0.3), 0 10px 30px -5px rgba(0,0,0,0.2);
+        }
+        .book-spine {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+            cursor: pointer;
+        }
+        .book-spine:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+            z-index: 50;
+        }
+        .active-nav-border {
+            border-bottom: 2px solid #9d4400;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for the shelf */
+        .shelf-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .shelf-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        .shelf-scroll::-webkit-scrollbar-thumb {
+            background: #9d4400;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-surface-dim paper-texture min-h-screen flex flex-col font-body-text text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-surface shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border-b border-outline-variant/30 w-full top-0 z-50">
+<nav class="flex justify-between items-center px-margin-edge py-4 max-w-full mx-auto">
+<div class="font-display-lg text-display-lg font-semibold text-primary">Heritage Album</div>
+<!-- Desktop Links -->
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label uppercase" href="#">Home</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label uppercase" href="#">Explore</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary-container transition-colors duration-300 font-ui-label text-ui-label uppercase" href="#">Create</a>
+<a class="text-secondary border-b-2 border-secondary font-bold pb-1 font-ui-label text-ui-label uppercase" href="#">Archives</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:block relative">
+<input class="bg-surface-container-low border-none focus:ring-1 focus:ring-secondary rounded-full px-4 py-1 text-ui-label font-ui-label w-48" placeholder="Search volumes..." type="text"/>
+</div>
+<button class="flex items-center active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</nav>
+</header>
+<!-- Main Vault Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center py-12 px-margin-edge">
+<!-- Header Section -->
+<div class="text-center max-w-2xl mb-16 space-y-4">
+<h1 class="font-display-lg text-display-lg text-on-surface">The Grand Archive</h1>
+<p class="font-body-text text-body-text text-on-surface-variant italic">Every chapter closed, every memory preserved in leather and ink. Your locked legacies await their next reading.</p>
+</div>
+<!-- The Shelf -->
+<div class="w-full max-w-7xl">
+<!-- Shelf Base -->
+<div class="relative bg-[#2d241e] h-[480px] rounded-lg shelf-shadow p-8 flex items-end overflow-hidden group">
+<!-- Lighting Overlay -->
+<div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-black/10"></div>
+<!-- Spines Container -->
+<div class="flex items-end gap-1 w-full shelf-scroll overflow-x-auto pb-4 px-2 scroll-smooth">
+<!-- Book Spine 1: Deep Mahogany -->
+<div class="book-spine flex-shrink-0 w-16 h-[380px] bg-[#3d1a11] rounded-sm relative flex flex-col items-center justify-between py-8 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="w-full px-2">
+<div class="h-1 bg-secondary/30 mb-1"></div>
+<div class="h-1 bg-secondary/30"></div>
+</div>
+<div class="[writing-mode:vertical-rl] text-secondary-fixed-dim font-headline-md text-xl tracking-widest uppercase opacity-80">Summer 1994</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-secondary-fixed-dim/50" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div class="w-10 h-10 border border-secondary-fixed-dim/20 rounded-full flex items-center justify-center text-[10px] text-secondary-fixed-dim/40 font-ui-label">VOL. I</div>
+</div>
+</div>
+<!-- Book Spine 2: Midnight Blue -->
+<div class="book-spine flex-shrink-0 w-20 h-[410px] bg-[#1a1c2c] rounded-sm relative flex flex-col items-center justify-between py-8 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="w-full px-2">
+<div class="h-0.5 bg-on-primary-fixed/20 mb-1"></div>
+<div class="h-0.5 bg-on-primary-fixed/20"></div>
+</div>
+<div class="[writing-mode:vertical-rl] text-surface-variant font-headline-md text-2xl tracking-tight opacity-90">The European Tour</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-surface-variant/40" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div class="w-12 h-12 border-2 border-surface-variant/10 rounded-sm rotate-45 flex items-center justify-center text-[10px] text-surface-variant/40 font-ui-label">
+<span class="-rotate-45">II</span>
+</div>
+</div>
+</div>
+<!-- Book Spine 3: Forest Green -->
+<div class="book-spine flex-shrink-0 w-14 h-[360px] bg-[#1e2d1f] rounded-sm relative flex flex-col items-center justify-between py-6 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="[writing-mode:vertical-rl] text-tertiary-fixed-dim font-headline-md text-lg tracking-normal opacity-80 italic">Wilderness &amp; Pine</div>
+<div class="flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-tertiary-fixed-dim/40 scale-75" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+<!-- Book Spine 4: Burnt Sienna -->
+<div class="book-spine flex-shrink-0 w-24 h-[420px] bg-[#5a2e17] rounded-sm relative flex flex-col items-center justify-between py-10 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="w-full px-3 mb-4">
+<div class="h-4 bg-secondary-container/10 border border-secondary-container/20 flex items-center justify-center text-[8px] text-secondary-fixed-dim">EST. 2012</div>
+</div>
+<div class="[writing-mode:vertical-rl] text-secondary-fixed font-headline-md text-3xl font-bold tracking-tighter uppercase">The Miller Legacy</div>
+<div class="flex flex-col items-center gap-4">
+<span class="material-symbols-outlined text-secondary-fixed/50" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<!-- Book Spine 5: Onyx Black -->
+<div class="book-spine flex-shrink-0 w-18 h-[395px] bg-[#121212] rounded-sm relative flex flex-col items-center justify-between py-8 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="[writing-mode:vertical-rl] text-on-primary-fixed-variant font-headline-md text-xl font-medium tracking-widest opacity-90">Nocturnes</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-8 h-[1px] bg-on-primary-fixed-variant/30"></div>
+<span class="material-symbols-outlined text-on-primary-fixed-variant/40" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div class="w-8 h-[1px] bg-on-primary-fixed-variant/30"></div>
+</div>
+</div>
+<!-- Book Spine 6: Slate Grey -->
+<div class="book-spine flex-shrink-0 w-16 h-[370px] bg-[#343d46] rounded-sm relative flex flex-col items-center justify-between py-6 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="[writing-mode:vertical-rl] text-surface-container-highest font-headline-md text-lg tracking-normal opacity-80 italic">Foundations</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-surface-container-highest/30" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+<!-- Book Spine 7: Deep Burgundy -->
+<div class="book-spine flex-shrink-0 w-22 h-[415px] bg-[#4a0e0e] rounded-sm relative flex flex-col items-center justify-between py-12 border-r border-black/20">
+<div class="spine-gradient absolute inset-0"></div>
+<div class="[writing-mode:vertical-rl] text-error-container font-headline-md text-2xl font-semibold tracking-wide uppercase">Bloodlines</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-error-container/40" data-icon="shield" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+</div>
+</div>
+<!-- Empty Slots / Placeholders -->
+<div class="flex-shrink-0 w-12 h-[340px] bg-black/10 border border-dashed border-white/5 rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white/10" data-icon="add">add</span>
+</div>
+</div>
+</div>
+<!-- Shelf Detail -->
+<div class="h-6 w-full bg-[#1a1411] rounded-b-lg shadow-xl border-t border-white/5 flex justify-center items-center">
+<div class="w-32 h-1 bg-black/40 rounded-full opacity-50"></div>
+</div>
+</div>
+<!-- Archive Stats / Details (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 w-full max-w-5xl">
+<!-- Total Volumes Card -->
+<div class="bg-surface p-8 border border-outline-variant/30 shadow-sm relative group overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-9xl" data-icon="auto_stories">auto_stories</span>
+</div>
+<h3 class="font-ui-label text-ui-label text-on-surface-variant uppercase mb-2">Total Archives</h3>
+<div class="text-display-lg font-display-lg text-primary">07</div>
+<p class="text-caption-italic font-caption-italic mt-4">Locked volumes from 1994 – 2024</p>
+</div>
+<!-- Recently Locked Card -->
+<div class="bg-surface p-8 border border-outline-variant/30 shadow-sm relative col-span-1 md:col-span-2 flex items-center gap-8">
+<div class="w-24 h-32 bg-secondary/5 border border-secondary/20 flex-shrink-0 flex items-center justify-center p-2">
+<div class="w-full h-full border border-secondary/10 flex items-center justify-center bg-white shadow-inner">
+<span class="material-symbols-outlined text-secondary" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+<div>
+<h3 class="font-ui-label text-ui-label text-on-surface-variant uppercase mb-2">Recently Preserved</h3>
+<div class="text-headline-md font-headline-md text-on-surface">The Miller Legacy</div>
+<p class="font-body-text text-body-text text-on-surface-variant">Archived on October 14, 2024. This volume contains 124 curated entries and 312 scanned artifacts.</p>
+<button class="mt-4 text-secondary font-ui-button text-ui-button flex items-center gap-2 hover:gap-3 transition-all">
+                        VIEW MANIFEST <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-dim border-t border-outline-variant/20 w-full mt-auto py-12 px-margin-edge flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="font-headline-md text-headline-md text-primary">Heritage Album</div>
+<div class="font-body-text text-body-text text-on-surface-variant opacity-80">© 2024 Heritage Album. Preservation through tactile storytelling.</div>
+<div class="flex gap-6">
+<a class="text-ui-label font-ui-label text-on-surface-variant hover:text-secondary underline transition-all" href="#">Legacy Policy</a>
+<a class="text-ui-label font-ui-label text-on-surface-variant hover:text-secondary underline transition-all" href="#">Archival Standards</a>
+<a class="text-ui-label font-ui-label text-on-surface-variant hover:text-secondary underline transition-all" href="#">Curation Guide</a>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 md:hidden bg-surface-container shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] rounded-t-full">
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-ui-label text-[10px]">My Albums</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-ui-label text-[10px]">Explore</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="font-ui-label text-[10px]">Studio</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-6 py-1 scale-90 transition-all duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-ui-label text-[10px]">Archive</span>
+</button>
+</nav>
+<script>
+        // Simple hover effect for shelf lighting
+        const shelf = document.querySelector('.shelf-scroll');
+        shelf.addEventListener('mousemove', (e) => {
+            const rect = shelf.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Subtle lighting follow effect could be added here
+        });
+
+        // Click interaction for spines
+        const spines = document.querySelectorAll('.book-spine');
+        spines.forEach(spine => {
+            spine.addEventListener('click', () => {
+                // Mimic opening a vault/book
+                spine.style.transform = 'translateY(-20px) scale(1.05) rotateY(-10deg)';
+                spine.style.boxShadow = '20px 20px 50px -10px rgba(0,0,0,0.6)';
+                
+                setTimeout(() => {
+                    alert("Unlocking Volume Sequence Initiated...");
+                    spine.style.transform = '';
+                    spine.style.boxShadow = '';
+                }, 800);
+            });
+        });
+    </script>
+</body></html>

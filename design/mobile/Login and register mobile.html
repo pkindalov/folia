@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album - Login</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400;1,600&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#e5e2db",
+                    "secondary": "#a63a2e",
+                    "tertiary-container": "#cca830",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#f3f0e9",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "on-primary-fixed": "#1e1b18",
+                    "inverse-primary": "#ccc5c1",
+                    "surface-variant": "#e5e2db",
+                    "on-surface-variant": "#4c463f",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#31312c",
+                    "secondary-fixed-dim": "#ffb4a9",
+                    "on-primary-container": "#95908b",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#7d766f",
+                    "on-tertiary-fixed": "#241a00",
+                    "surface-tint": "#625e5a",
+                    "surface": "#fcf9f2",
+                    "surface-bright": "#fcf9f2",
+                    "tertiary": "#735c00",
+                    "surface-container": "#f1eee7",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-background": "#1c1c18",
+                    "on-secondary-container": "#72140e",
+                    "primary": "#171512",
+                    "on-secondary-fixed": "#410001",
+                    "on-surface": "#1c1c18",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "surface-dim": "#dcdad3",
+                    "surface-container-high": "#ebe8e1",
+                    "primary-fixed": "#e8e1dc",
+                    "background": "#fcf9f2",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "on-tertiary-container": "#4f3e00",
+                    "secondary-container": "#ff7c6c",
+                    "tertiary-fixed": "#ffe088",
+                    "primary-container": "#2c2926",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#ffdad5",
+                    "outline-variant": "#cec5bd",
+                    "error": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "section-gap": "40px",
+                    "stack-lg": "24px",
+                    "touch-target-min": "44px",
+                    "stack-sm": "8px",
+                    "stack-md": "16px",
+                    "margin-mobile": "16px",
+                    "unit": "4px",
+                    "gutter-mobile": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Newsreader"],
+                    "display-lg": ["Newsreader"],
+                    "label-md": ["Public Sans"],
+                    "headline-md": ["Newsreader"],
+                    "headline-lg-mobile": ["Newsreader"],
+                    "body-lg": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-lg": ["Newsreader"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fcf9f2; /* Parchment base */
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+            overflow-x: hidden;
+        }
+
+        .ink-shadow {
+            box-shadow: 0 2px 4px rgba(49, 49, 44, 0.05);
+        }
+
+        .active-inner-shadow:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transform: scale(0.98);
+        }
+
+        input:focus {
+            outline: none;
+            border-bottom-color: #a63a2e !important;
+        }
+
+        .hairline-rule {
+            height: 0.5px;
+            background-color: #cec5bd;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Micro-animation for page feel */
+        .fade-in-up {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col text-on-surface">
+<!-- Top App Bar (Shared Component Pattern) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b-[0.5px] border-outline-variant shadow-sm flex justify-between items-center px-margin-mobile h-14">
+<button class="material-symbols-outlined text-primary hover:opacity-80 transition-opacity active:scale-95 duration-150">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary italic">Heritage Album</h1>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border-[0.5px] border-outline-variant overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">person</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-14 mb-[72px] px-margin-mobile flex flex-col justify-center items-center py-section-gap">
+<div class="w-full max-w-sm fade-in-up">
+<!-- Header Section -->
+<div class="text-center mb-stack-lg">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-2">Welcome Back</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Sign in to your private archive</p>
+</div>
+<!-- Tactile Card (The Page) -->
+<div class="bg-surface-container-low border-[0.5px] border-outline-variant ink-shadow p-stack-lg rounded-sm relative overflow-hidden">
+<!-- Decorative Ink Bleed Corner -->
+<div class="absolute top-0 right-0 w-16 h-16 bg-secondary opacity-5 -mr-8 -mt-8 rotate-45"></div>
+<!-- Form -->
+<form class="space-y-stack-lg">
+<div class="space-y-unit">
+<label class="font-label-md text-label-md text-on-surface-variant block uppercase tracking-widest">Entry Key (Email)</label>
+<input class="w-full bg-transparent border-0 border-b-[0.5px] border-outline-variant py-2 px-0 font-body-md text-body-md placeholder:text-outline-variant/60 focus:ring-0 transition-colors" placeholder="archive@heritage.com" type="email"/>
+</div>
+<div class="space-y-unit">
+<label class="font-label-md text-label-md text-on-surface-variant block uppercase tracking-widest">Passcode</label>
+<input class="w-full bg-transparent border-0 border-b-[0.5px] border-outline-variant py-2 px-0 font-body-md text-body-md placeholder:text-outline-variant/60 focus:ring-0 transition-colors" placeholder="••••••••" type="password"/>
+</div>
+<div class="flex items-center justify-between pt-2">
+<label class="flex items-center space-x-2 cursor-pointer">
+<input class="w-4 h-4 rounded-none border-outline-variant text-secondary focus:ring-0 bg-transparent" type="checkbox"/>
+<span class="font-label-md text-label-md text-on-surface-variant">Remember device</span>
+</label>
+<a class="font-label-md text-label-md text-secondary hover:underline" href="#">Forgot?</a>
+</div>
+<!-- Inked Primary Button -->
+<button class="w-full h-touch-target-min bg-primary text-surface font-label-md text-label-md uppercase tracking-widest border-t-[1px] border-white/10 active-inner-shadow transition-all duration-200" type="submit">
+                        Authorize Access
+                    </button>
+</form>
+<div class="mt-stack-lg flex items-center space-x-2">
+<div class="hairline-rule flex-1"></div>
+<span class="font-label-sm text-label-sm text-outline-variant">OR</span>
+<div class="hairline-rule flex-1"></div>
+</div>
+<!-- Ghosted Secondary Button -->
+<div class="mt-stack-lg grid grid-cols-2 gap-stack-md">
+<button class="h-touch-target-min border-[0.5px] border-outline-variant flex items-center justify-center space-x-2 active:bg-surface-container hover:bg-surface-container transition-colors">
+<img class="w-4 h-4 grayscale opacity-70" data-alt="A small, minimalist rendering of the Google brand logo on a clean white background, styled with a vintage print effect." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfC9bH0BW5AMTK9MHH-_FLJ33GytyMQiFDpcPlxXwHUgMChV77SYRbbqg8A6rqKRfLOzve4Ug-jdFeMXOB8UTtH1HKQ5haCUIrJ6tynY76roUOU4mFKNos-3oxI8JBJ5HoiIvwUiZpQmnE2Ka0pA-ZROF4zgBbiKMg7g_5QTwIL-nFwTzwf1dVDPaPJGYNRB31JMOxoTyLCjJIrY7_ngNYnqj-jTIR2znBq5-dtmgbXmm-habb9-HZtiiucH1jdF9emhPMcqMXkmQ"/>
+<span class="font-label-sm text-label-sm">Google</span>
+</button>
+<button class="h-touch-target-min border-[0.5px] border-outline-variant flex items-center justify-center space-x-2 active:bg-surface-container hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-lg">apps</span>
+<span class="font-label-sm text-label-sm">Apple</span>
+</button>
+</div>
+</div>
+<!-- Footer Link -->
+<p class="text-center mt-stack-lg font-body-md text-body-md">
+                No ledger yet? 
+                <a class="text-secondary font-semibold hover:underline decoration-1 underline-offset-4" href="#">Create Archive</a>
+</p>
+</div>
+<!-- Atmospheric Image Component -->
+<div class="mt-section-gap w-full max-w-sm rounded-lg overflow-hidden border-[0.5px] border-outline-variant ink-shadow opacity-90">
+<div class="w-full h-40 bg-cover bg-center" data-alt="A macro photograph of an antique leather-bound journal resting on a weathered oak desk. Soft morning sunlight filters through a nearby window, casting long, gentle shadows and highlighting the texture of the aged paper and fine gold-leaf lettering on the spine. The scene is quiet, scholarly, and deeply evocative of personal history and careful curation, using a warm, earthy color palette of sepias and deep browns." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAOn6J35g5RU0FreIhwzuIntGrmIuWEYTpWvVYwrxSeV-iWrODLYWBnHLF0ZT3hoBDsn7vvM5igtaWidMvMKqqbbumuVCBSFAgV20gldArt-SjElGBksecxU42Jvy_qA2BptmW2qKJ6N3kBnb6znUahlb1LMp9wvOal-Q_6wagzAzxm-1amyN0d6_-4zk_gJ7f-2IrKmPAXeRJBOYZqBS2fAmFx8Glevqi3cmaalKQpOfGokgAV1fY-ZUiG3ELLgcF-3KSLqkSYz4A')">
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar (Shared Component Pattern) -->
+<nav class="fixed bottom-0 w-full z-50 h-[72px] bg-surface/90 backdrop-blur-md border-t-[0.5px] border-outline-variant shadow-[0_-2px_4px_rgba(0,0,0,0.05)] flex justify-around items-center px-4 pb-safe">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors active:inner-shadow duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<!-- Explore -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors active:inner-shadow duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm">Explore</span>
+</a>
+<!-- Create -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors active:inner-shadow duration-200" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-label-sm text-label-sm">Create</span>
+</a>
+<!-- Profile (ACTIVE since Login context) -->
+<a class="flex flex-col items-center justify-center text-secondary font-bold hover:text-primary transition-colors active:inner-shadow duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for form focus
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.querySelector('label').classList.replace('text-on-surface-variant', 'text-secondary');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.querySelector('label').classList.replace('text-secondary', 'text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album | Archival Digital Memories</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#e5e2db",
+                    "secondary": "#a63a2e",
+                    "tertiary-container": "#cca830",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#f3f0e9",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "on-primary-fixed": "#1e1b18",
+                    "inverse-primary": "#ccc5c1",
+                    "surface-variant": "#e5e2db",
+                    "on-surface-variant": "#4c463f",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#31312c",
+                    "secondary-fixed-dim": "#ffb4a9",
+                    "on-primary-container": "#95908b",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#7d766f",
+                    "on-tertiary-fixed": "#241a00",
+                    "surface-tint": "#625e5a",
+                    "surface": "#fcf9f2",
+                    "surface-bright": "#fcf9f2",
+                    "tertiary": "#735c00",
+                    "surface-container": "#f1eee7",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-background": "#1c1c18",
+                    "on-secondary-container": "#72140e",
+                    "primary": "#171512",
+                    "on-secondary-fixed": "#410001",
+                    "on-surface": "#1c1c18",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "surface-dim": "#dcdad3",
+                    "surface-container-high": "#ebe8e1",
+                    "primary-fixed": "#e8e1dc",
+                    "background": "#fcf9f2",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "on-tertiary-container": "#4f3e00",
+                    "secondary-container": "#ff7c6c",
+                    "tertiary-fixed": "#ffe088",
+                    "primary-container": "#2c2926",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#ffdad5",
+                    "outline-variant": "#cec5bd",
+                    "error": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "section-gap": "40px",
+                    "stack-lg": "24px",
+                    "touch-target-min": "44px",
+                    "stack-sm": "8px",
+                    "stack-md": "16px",
+                    "margin-mobile": "16px",
+                    "unit": "4px",
+                    "gutter-mobile": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Newsreader"],
+                    "display-lg": ["Newsreader"],
+                    "label-md": ["Public Sans"],
+                    "headline-md": ["Newsreader"],
+                    "headline-lg-mobile": ["Newsreader"],
+                    "body-lg": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-lg": ["Newsreader"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .parchment-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+            background-repeat: repeat;
+        }
+        .ink-bleed {
+            filter: contrast(1.1) brightness(0.95) sepia(0.1);
+        }
+        .tactile-shadow {
+            box-shadow: 0 2px 4px rgba(76, 70, 63, 0.05), 0 1px 2px rgba(76, 70, 63, 0.1);
+        }
+        .pressed-state:active {
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+            transform: scale(0.98);
+        }
+        .hairline-rule {
+            height: 0.5px;
+            background-color: rgba(125, 118, 111, 0.3);
+            border: none;
+        }
+        .page-turn-animation {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden selection:bg-secondary/20 selection:text-secondary">
+<!-- Header Shell (Asymmetric / Minimal Landing State) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md px-margin-mobile h-14 flex justify-between items-center border-b-[0.5px] border-outline-variant">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary italic tracking-tight">Heritage Album</h1>
+<div class="flex gap-stack-md items-center">
+<button class="font-label-md text-label-md text-on-surface-variant style_universal_hover">Sign In</button>
+</div>
+</header>
+<main class="pt-14 pb-12 parchment-texture min-h-screen ink-bleed">
+<!-- Hero Section -->
+<section class="px-margin-mobile pt-stack-lg pb-section-gap flex flex-col items-center text-center">
+<div class="relative w-full aspect-[4/5] mb-stack-lg group">
+<!-- Decorative Layering to simulate a physical book -->
+<div class="absolute inset-0 bg-surface-dim translate-x-1 translate-y-1 rounded-lg"></div>
+<div class="absolute inset-0 bg-outline-variant -translate-x-0.5 -translate-y-0.5 rounded-lg opacity-20"></div>
+<!-- Main Hero Image -->
+<div class="relative w-full h-full overflow-hidden rounded-lg tactile-shadow border-[0.5px] border-outline/20">
+<img class="w-full h-full object-cover" data-alt="A high-fidelity, macro photography shot of a luxury vintage flipbook lying open on a dark oak desk. The book has thick, textured parchment pages with slightly yellowed edges and elegant handwritten ink annotations. Soft, warm morning sunlight streams across the page, highlighting the tactile paper grain and the deep obsidian ink of a printed family portrait from the 1920s. The overall aesthetic is archival, intellectual, and deeply curated with a rich, premium color palette of creams and deep browns." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvkyMrwobIdYp9qIH2UmkydG8LGd89bXeCcNxArWueqKcX0ozXb0GTqUarmR2APiYlMUtdbY5eq6i03QqRHNPTCYuQhSDjQ-oVkCPKIHjUPVoDC_R4ShQA_rRjaeXCmNmtlmAjzWuKFsHxJ38ybkYkCKx7ceeXd6K4KMkI-wtzNmhpkMqksyXST1WKQPYEahoMjYC6M4imzFy0iKxy2drxeGWNl8BGMJ5TnucbiV-942U5ZMNhD7cZPJzJI9q11wPx7Zsy5yUsaAM"/>
+<!-- Decorative Inset -->
+<div class="absolute inset-0 border-[8px] border-surface/10 pointer-events-none"></div>
+</div>
+</div>
+<h2 class="font-display-lg text-display-lg text-primary mb-stack-sm">The slow preservation of your legacy.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xs mx-auto mb-stack-lg leading-relaxed">
+                Transform your digital fragments into a curated, tactile journal that feels like history in your hands.
+            </p>
+<button class="w-full py-4 bg-primary text-on-primary font-label-md text-label-md rounded-lg tactile-shadow pressed-state flex justify-center items-center gap-unit transition-all duration-200">
+                Get Started
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</section>
+<!-- Divider -->
+<div class="px-margin-mobile mb-section-gap">
+<hr class="hairline-rule"/>
+</div>
+<!-- Bento Grid Features -->
+<section class="px-margin-mobile grid grid-cols-2 gap-stack-md mb-section-gap">
+<!-- Large Feature Card -->
+<div class="col-span-2 p-stack-md bg-surface-container-low rounded-lg border-[0.5px] border-outline-variant tactile-shadow">
+<span class="material-symbols-outlined text-secondary mb-stack-sm">history_edu</span>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit">Archival Ink Aesthetic</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Every photo is automatically processed to mimic the depth of 19th-century photogravure and ink-wash tones.</p>
+</div>
+<!-- Small Square Card 1 -->
+<div class="p-stack-md bg-surface-container-high rounded-lg border-[0.5px] border-outline-variant tactile-shadow flex flex-col">
+<span class="material-symbols-outlined text-tertiary mb-stack-sm">menu_book</span>
+<h4 class="font-label-md text-label-md text-primary uppercase tracking-widest mb-unit">Tactile</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Skeuomorphic gestures feel like paper.</p>
+</div>
+<!-- Small Square Card 2 -->
+<div class="p-stack-md bg-surface-container-high rounded-lg border-[0.5px] border-outline-variant tactile-shadow flex flex-col">
+<span class="material-symbols-outlined text-secondary mb-stack-sm">private_connectivity</span>
+<h4 class="font-label-md text-label-md text-primary uppercase tracking-widest mb-unit">Private</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Your legacy is yours alone to share.</p>
+</div>
+</section>
+<!-- Animated Section -->
+<section class="relative h-72 mb-section-gap overflow-hidden bg-primary-container">
+
+<div class="absolute inset-0 flex flex-col justify-center items-center p-margin-mobile text-center z-10">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-surface italic">The Living Page</h3>
+<p class="font-body-md text-body-md text-on-primary-container max-w-[240px]">Memories that don't just sit there—they breathe with subtle grain and motion.</p>
+</div>
+</section>
+<!-- Testimonial Quote -->
+<section class="px-margin-mobile mb-section-gap text-center">
+<div class="mb-stack-md flex justify-center">
+<span class="material-symbols-outlined text-secondary text-[32px]">format_quote</span>
+</div>
+<blockquote class="font-display-lg text-headline-md text-primary italic mb-stack-sm">
+                "It feels like I'm finally holding my father's stories, not just swiping past them."
+            </blockquote>
+<cite class="font-label-md text-label-md text-on-surface-variant not-italic uppercase tracking-widest">— Julian V., Curator</cite>
+</section>
+<!-- Final CTA -->
+<section class="px-margin-mobile pb-section-gap">
+<div class="bg-surface-variant p-stack-lg rounded-lg border-[0.5px] border-outline text-center">
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-md">Begin your first chapter.</h3>
+<div class="space-y-stack-sm">
+<button class="w-full py-3 bg-secondary text-on-secondary font-label-md text-label-md rounded-lg pressed-state uppercase tracking-widest">
+                        Create Your Album
+                    </button>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Free to curate. Premium to preserve.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer / Minimal Info -->
+<footer class="bg-surface-dim px-margin-mobile py-stack-lg text-center border-t-[0.5px] border-outline-variant">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-unit">© 2024 Heritage Album Inc.</p>
+<div class="flex justify-center gap-stack-md">
+<a class="font-label-sm text-label-sm text-on-surface-variant underline" href="#">Privacy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant underline" href="#">Terms</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant underline" href="#">Contact</a>
+</div>
+</footer>
+<!-- Interactive script for paper-like feel -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('.pressed-state');
+            buttons.forEach(btn => {
+                btn.addEventListener('touchstart', () => {
+                    btn.classList.add('scale-95');
+                });
+                btn.addEventListener('touchend', () => {
+                    btn.classList.remove('scale-95');
+                });
+            });
+
+            // Parallax-ish effect for hero image on scroll
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const heroImage = document.querySelector('img');
+                if (heroImage) {
+                    heroImage.style.transform = `translateY(${scrolled * 0.05}px)`;
+                }
+            });
+        });
+    </script>
+</body></html>
