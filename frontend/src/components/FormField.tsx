@@ -1,6 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
 import { forwardRef } from 'react';
-import styles from './FormField.module.css';
 
 type Props = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -10,20 +9,23 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
 const FormField = forwardRef<HTMLInputElement, Props>(({ label, error, id, ...rest }, ref) => {
   const inputId = id ?? rest.name;
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor={inputId}>
+    <div className="flex flex-col gap-1 mb-8">
+      <label
+        className="font-ui text-ui-label uppercase tracking-[0.05em] text-on-surface-variant"
+        htmlFor={inputId}
+      >
         {label}
       </label>
       <input
         ref={ref}
         id={inputId}
-        className={styles.input}
+        className="line-input w-full py-2 text-body-text font-body"
         aria-invalid={!!error}
         aria-describedby={error ? `${inputId}-error` : undefined}
         {...rest}
       />
       {error && (
-        <span id={`${inputId}-error`} className={styles.error} role="alert">
+        <span id={`${inputId}-error`} className="text-sm text-error mt-1 font-ui" role="alert">
           {error}
         </span>
       )}

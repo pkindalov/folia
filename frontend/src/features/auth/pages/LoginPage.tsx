@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { loginSchema, type LoginInput } from '../schemas';
 import { useLogin } from '../hooks';
 import FormField from '../../../components/FormField';
-import styles from './AuthPage.module.css';
+import AuthLayout from './AuthLayout';
 
 export default function LoginPage() {
   const login = useLogin();
@@ -15,36 +15,55 @@ export default function LoginPage() {
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
   return (
-    <main className={styles.wrapper}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Folia</h1>
-        <p className={styles.subtitle}>Sign in to your library</p>
+    <AuthLayout>
+      <header className="mb-12">
+        <h2 className="font-display text-headline-md text-primary">Welcome back</h2>
+        <p className="font-body text-body-text text-on-surface-variant mt-2">
+          Enter your credentials to access your archive.
+        </p>
+      </header>
 
-        {login.isError && <p className={styles.apiError}>{login.error.message}</p>}
+      {login.isError && (
+        <p className="mb-8 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
+          {login.error.message}
+        </p>
+      )}
 
-        <form onSubmit={handleSubmit((data) => login.mutate(data))} noValidate>
-          <FormField
-            label="Username"
-            autoComplete="username"
-            error={errors.username?.message}
-            {...register('username')}
-          />
-          <FormField
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <button className={styles.button} type="submit" disabled={login.isPending}>
+      <form onSubmit={handleSubmit((data) => login.mutate(data))} noValidate>
+        <FormField
+          label="Username"
+          autoComplete="username"
+          error={errors.username?.message}
+          {...register('username')}
+        />
+        <FormField
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <div className="pt-4">
+          <button
+            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-[1px] transition-all disabled:opacity-60"
+            type="submit"
+            disabled={login.isPending}
+          >
             {login.isPending ? 'Signing in…' : 'Sign in'}
           </button>
-        </form>
+        </div>
+      </form>
 
-        <p className={styles.switch}>
-          No account yet? <Link to="/register">Create one</Link>
-        </p>
-      </div>
-    </main>
+      <footer className="mt-12 pt-8 border-t border-outline-variant/30 flex flex-col items-center gap-4">
+        <p className="font-ui text-ui-label uppercase text-on-surface-variant">New to Folia?</p>
+        <Link
+          to="/register"
+          className="font-ui text-ui-button uppercase text-primary border border-primary px-8 py-3 rounded-paper hover:bg-surface-variant transition-colors"
+        >
+          Create one
+        </Link>
+      </footer>
+    </AuthLayout>
   );
 }

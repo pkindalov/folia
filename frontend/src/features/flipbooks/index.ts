@@ -1,1 +1,1 @@
-export { default as HomePage } from './pages/HomePage';
+export { default as MyFlipbooksPage } from './pages/MyFlipbooksPage';

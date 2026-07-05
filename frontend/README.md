@@ -1,6 +1,20 @@
 # Folia Frontend
 
-React + TypeScript (Vite) with TanStack Query, React Router, React Hook Form and Zod. Styled with CSS Modules using the tokens from `../DESIGN.md`.
+React + TypeScript (Vite) with TanStack Query, React Router, React Hook Form and Zod. Styled with Tailwind CSS v4 using design tokens from the `../design` HTML exports (see also `../DESIGN.md`).
+
+## Routes
+
+| Route | Page | Auth |
+|---|---|---|
+| `/` | Landing (redirects to `/flipbooks` when signed in) | – |
+| `/login`, `/register` | Auth pages | – |
+| `/flipbooks` | My Flipbooks gallery | ✓ |
+| `/explore` | Community albums | ✓ |
+| `/archive` | Archived volumes shelf | ✓ |
+| `/editor`, `/editor/:id` | Creation workspace | ✓ |
+| `/book/:id` | Interactive flipbook viewer | ✓ |
+
+Pages beyond auth use mock data (`features/*/mock.ts`) shaped like future API responses — swap the mocks for TanStack Query calls once the backend endpoints exist.
 
 ## Run
 

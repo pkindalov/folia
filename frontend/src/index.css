@@ -1,26 +1,109 @@
-/* Folia design tokens — see DESIGN.md */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
+@import 'tailwindcss';
 
-:root {
-  --color-surface: #fcf9f2;
-  --color-surface-dim: #dcdad3;
-  --color-surface-container: #f6f3ec;
-  --color-surface-bright: #ffffff;
-  --color-primary: #2c2926;
-  --color-secondary: #8c4b1d;
-  --color-outline: #c4c2bc;
-  --radius: 0.25rem;
-}
+/* Folia design tokens — from design/ exports (see also DESIGN.md) */
+@theme {
+  --color-surface: #fdf8f7;
+  --color-surface-bright: #fdf8f7;
+  --color-surface-dim: #ddd9d8;
+  --color-surface-variant: #e5e2e1;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f7f3f2;
+  --color-surface-container: #f1edec;
+  --color-surface-container-high: #ebe7e6;
+  --color-surface-container-highest: #e5e2e1;
+  --color-background: #fdf8f7;
+  --color-on-background: #1c1b1b;
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #474741;
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1c1c19;
+  --color-on-primary-container: #858480;
+  --color-secondary: #9d4400;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #fe8032;
+  --color-on-secondary-container: #632800;
+  --color-secondary-fixed: #ffdbca;
+  --color-outline: #787770;
+  --color-outline-variant: #c8c7be;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-inverse-surface: #313030;
+  --color-inverse-on-surface: #f4f0ef;
 
-* {
-  box-sizing: border-box;
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-body: 'Newsreader', Georgia, serif;
+  --font-ui: 'Work Sans', system-ui, sans-serif;
+
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 600;
+  --text-headline-md: 32px;
+  --text-headline-md--line-height: 1.2;
+  --text-headline-md--font-weight: 500;
+  --text-body-text: 18px;
+  --text-body-text--line-height: 1.6;
+  --text-ui-label: 14px;
+  --text-ui-label--line-height: 1.2;
+  --text-ui-label--letter-spacing: 0.05em;
+  --text-ui-label--font-weight: 600;
+  --text-ui-button: 16px;
+  --text-ui-button--line-height: 1;
+  --text-ui-button--font-weight: 500;
+
+  --spacing-gutter: 24px;
+  --spacing-margin-edge: 40px;
+
+  --radius-paper: 2px;
+  --radius-card: 4px;
+  --radius-panel: 8px;
+  --radius-pill: 12px;
 }
 
 body {
   margin: 0;
-  font-family: 'Newsreader', Georgia, serif;
-  font-size: 1rem;
-  line-height: 1.6;
-  background: var(--color-surface);
-  color: var(--color-primary);
+  font-family: var(--font-body);
+  background-color: var(--color-surface);
+  background-image: url('https://www.transparenttextures.com/patterns/felt.png');
+  color: var(--color-on-background);
+}
+
+/* Shared craft utilities from the design system */
+.paper-depth {
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.stuck-photo {
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.photo-tape {
+  background-color: rgba(157, 68, 0, 0.15);
+  width: 80px;
+  height: 30px;
+  transform: rotate(-15deg);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.line-input {
+  border: none;
+  border-bottom: 1px solid var(--color-outline);
+  background: transparent;
+  font-family: var(--font-body);
+}
+
+.line-input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.page-curl-hover:hover {
+  transform: perspective(1000px) rotateY(-5deg);
+  transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
 }

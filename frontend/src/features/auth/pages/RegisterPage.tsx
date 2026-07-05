@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { registerSchema, type RegisterInput } from '../schemas';
 import { useRegister } from '../hooks';
 import FormField from '../../../components/FormField';
-import styles from './AuthPage.module.css';
+import AuthLayout from './AuthLayout';
 
 export default function RegisterPage() {
   const registerMutation = useRegister();
@@ -15,45 +15,65 @@ export default function RegisterPage() {
   } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
 
   return (
-    <main className={styles.wrapper}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Folia</h1>
-        <p className={styles.subtitle}>Create your account</p>
+    <AuthLayout>
+      <header className="mb-12">
+        <h2 className="font-display text-headline-md text-primary">Begin your archive</h2>
+        <p className="font-body text-body-text text-on-surface-variant mt-2">
+          Create an account to start preserving memories.
+        </p>
+      </header>
 
-        {registerMutation.isError && (
-          <p className={styles.apiError}>{registerMutation.error.message}</p>
-        )}
+      {registerMutation.isError && (
+        <p className="mb-8 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
+          {registerMutation.error.message}
+        </p>
+      )}
 
-        <form onSubmit={handleSubmit((data) => registerMutation.mutate(data))} noValidate>
-          <FormField
-            label="Username"
-            autoComplete="username"
-            error={errors.username?.message}
-            {...register('username')}
-          />
-          <FormField
-            label="Email"
-            type="email"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <FormField
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <button className={styles.button} type="submit" disabled={registerMutation.isPending}>
+      <form onSubmit={handleSubmit((data) => registerMutation.mutate(data))} noValidate>
+        <FormField
+          label="Username"
+          autoComplete="username"
+          error={errors.username?.message}
+          {...register('username')}
+        />
+        <FormField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="name@legacy.com"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <FormField
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <div className="pt-4">
+          <button
+            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-[1px] transition-all disabled:opacity-60"
+            type="submit"
+            disabled={registerMutation.isPending}
+          >
             {registerMutation.isPending ? 'Creating…' : 'Create account'}
           </button>
-        </form>
+        </div>
+      </form>
 
-        <p className={styles.switch}>
-          Already have an account? <Link to="/login">Sign in</Link>
+      <footer className="mt-12 pt-8 border-t border-outline-variant/30 flex flex-col items-center gap-4">
+        <p className="font-ui text-ui-label uppercase text-on-surface-variant">
+          Already have an account?
         </p>
-      </div>
-    </main>
+        <Link
+          to="/login"
+          className="font-ui text-ui-button uppercase text-primary border border-primary px-8 py-3 rounded-paper hover:bg-surface-variant transition-colors"
+        >
+          Sign in
+        </Link>
+      </footer>
+    </AuthLayout>
   );
 }
