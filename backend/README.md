@@ -57,6 +57,18 @@ docker compose exec api npm run set-admin-password   # Docker
 npm run set-admin-password                           # local (reads backend/.env)
 ```
 
+## Tests
+
+Jest + Supertest — no database needed (the model layer is mocked), so they run fast anywhere:
+
+```bash
+npm install        # once, to get dev dependencies
+npm test           # run all tests
+npm run test:watch # watch mode
+```
+
+Coverage: unit tests for encryption (scrypt/timing-safe), error mapping, settings/env handling, JWT middleware, controller validation (incl. NoSQL-injection and boundary cases), model serialization and admin seeding; integration tests for security headers, CORS, 404s, malformed/oversized JSON bodies, the login→me flow over HTTP, and rate limiting.
+
 ## Structure
 
 ```

@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "set-admin-password": "node scripts/set-admin-password.js"
   },
   "author": "Panayot",
@@ -23,6 +25,8 @@
     "mongoose": "^8.4.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.0.0"
   }
 }

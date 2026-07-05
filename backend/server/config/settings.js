@@ -30,5 +30,6 @@ const base = {
 
 module.exports = {
   development: { ...base },
+  test: { ...base },
   production: { ...base },
 };
