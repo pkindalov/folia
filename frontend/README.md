@@ -44,10 +44,22 @@ src/
 
 Adding a new feature: create `src/features/<name>/` with the same shape and export its public surface from `index.ts`.
 
+## Tests
+
+Vitest + React Testing Library, colocated with each feature (`*.test.ts(x)` next to the code). `fetch` is mocked — no backend needed.
+
+```bash
+npm test           # run all tests
+npm run test:watch # watch mode
+```
+
+Coverage: zod schemas (boundaries mirroring backend rules), API client (headers, token, error mapping), auth service (token storage, zod response guards), FormField accessibility, ProtectedRoute redirects, and full user flows on the Login/Register/Home pages (validation, API errors, success navigation).
+
 ## Commands
 
 ```bash
 npm run dev      # dev server with HMR
 npm run build    # type-check + production build (dist/)
-npm run lint     # eslint
+npm run lint     # lint
+npm test         # run tests
 ```
