@@ -8,6 +8,10 @@ RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY . .
 
+# Run as non-root user (built into the node image)
+RUN mkdir -p /app/uploads && chown -R node:node /app
+USER node
+
 ENV NODE_ENV=production
 EXPOSE 1337
 

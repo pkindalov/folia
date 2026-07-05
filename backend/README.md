@@ -46,7 +46,7 @@ Requires MongoDB on localhost:27017 (you can run just Mongo via `docker compose 
 
 Register/login return `{ token, user }`. Send the token as `Authorization: Bearer <token>`.
 
-A default `Admin` user is seeded on first run (password from `ADMIN_PASSWORD`, default `admin1234` — change it).
+A default `Admin` user is seeded on first run. Password comes from `ADMIN_PASSWORD`; if unset, a random one is generated and printed once in the API logs (`docker compose logs api`).
 
 ## Structure
 

@@ -84,7 +84,8 @@ curl -X POST http://localhost:1337/api/auth/register -H "Content-Type: applicati
 
 Full endpoint list: `backend/README.md`.
 
-## Before going public
+## Security notes
 
-- Set a strong `JWT_SECRET` (env var or `.env`)
-- Change the seeded Admin password (`ADMIN_PASSWORD`, default `admin1234`)
+- `JWT_SECRET` is required — compose refuses to start without it in `.env`
+- Admin password: set `ADMIN_PASSWORD`, or find the generated one in `docker compose logs api` (printed once on first run)
+- Set `CORS_ORIGIN` to your frontend URL once it exists (default allows all origins)

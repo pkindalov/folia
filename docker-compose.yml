@@ -8,8 +8,11 @@ services:
       NODE_ENV: production
       PORT: 1337
       DB_URL: mongodb://mongo:27017/folia
-      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
+      # No insecure fallback: compose fails fast if .env is missing JWT_SECRET
+      JWT_SECRET: ${JWT_SECRET:?Create a .env file with JWT_SECRET (openssl rand -hex 32)}
       JWT_EXPIRES_IN: 7d
+      # Set this to your frontend URL once it exists, e.g. http://localhost:3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
       UPLOADS_DIR: /app/uploads
     volumes:
       # User uploads persist on your D: drive
@@ -29,7 +32,9 @@ services:
     # uncomment the two lines below, and the named volume at the bottom.
     #  - folia-mongo-data:/data/db
     ports:
-      - "27017:27017"
+      # Bound to localhost only — Mongo is not reachable from your network.
+      # Remove this mapping entirely if you only access Mongo from the API container.
+      - "127.0.0.1:27017:27017"
     restart: unless-stopped
 
 # volumes:

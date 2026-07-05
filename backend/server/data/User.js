@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
 
 userSchema.method({
   authenticate: function (password) {
-    return encryption.generateHashedPassword(this.salt, password) === this.hashedPass;
+    return encryption.verifyPassword(this.salt, password, this.hashedPass);
   },
   toJSON: function () {
     const obj = this.toObject();
@@ -46,8 +46,15 @@ module.exports.seedAdminUser = () => {
   User.find({}).then((users) => {
     if (users.length > 0) return;
 
+    // No predictable default: use ADMIN_PASSWORD or generate a random one
+    let password = process.env.ADMIN_PASSWORD;
+    let generated = false;
+    if (!password) {
+      password = require('crypto').randomBytes(12).toString('base64url');
+      generated = true;
+    }
+
     const salt = encryption.generateSalt();
-    const password = process.env.ADMIN_PASSWORD || 'admin1234';
     const hashedPass = encryption.generateHashedPassword(salt, password);
 
     User.create({
@@ -56,6 +63,13 @@ module.exports.seedAdminUser = () => {
       salt,
       hashedPass,
       roles: ['Admin'],
-    }).then(() => console.log('Admin user seeded'));
+    }).then(() => {
+      if (generated) {
+        console.log(`Admin user seeded with generated password: ${password}`);
+        console.log('(Shown once — save it, or set ADMIN_PASSWORD and reset the DB.)');
+      } else {
+        console.log('Admin user seeded');
+      }
+    });
   });
 };

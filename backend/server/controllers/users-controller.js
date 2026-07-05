@@ -3,15 +3,26 @@ const encryption = require('../utilities/encryption');
 const errorHandler = require('../utilities/error-handler');
 const auth = require('../config/auth');
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Reject objects like {"$gt": ""} — prevents NoSQL injection via JSON body
+const isNonEmptyString = (v) => typeof v === 'string' && v.length > 0;
+
 module.exports = {
   register: (req, res) => {
     const { username, email, password } = req.body || {};
 
-    if (!username || !email || !password) {
+    if (!isNonEmptyString(username) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
       return res.status(400).json({ error: 'username, email and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'password must be at least 6 characters' });
+    if (username.length < 3 || username.length > 30) {
+      return res.status(400).json({ error: 'username must be 3-30 characters' });
+    }
+    if (!EMAIL_RE.test(email) || email.length > 254) {
+      return res.status(400).json({ error: 'invalid email address' });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ error: 'password must be at least 8 characters' });
     }
 
     const salt = encryption.generateSalt();
@@ -29,13 +40,14 @@ module.exports = {
   login: (req, res) => {
     const { username, password } = req.body || {};
 
-    if (!username || !password) {
+    if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
       return res.status(400).json({ error: 'username and password are required' });
     }
 
     User.findOne({ username })
       .then((user) => {
         if (!user || !user.authenticate(password)) {
+          // Same message for both cases — no user enumeration
           return res.status(401).json({ error: 'Invalid username or password' });
         }
         res.json({ token: auth.signToken(user), user });
