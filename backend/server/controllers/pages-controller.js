@@ -68,7 +68,7 @@ module.exports = {
             res.json({
               pages: pages.map((page) => ({
                 ...page.toJSON(),
-                url: `/uploads/${album.owner}/${album._id}/${page.filename}`,
+                url: storage.photoUrl(album.owner, album._id, page.filename),
               })),
             });
           });
@@ -109,7 +109,7 @@ module.exports = {
               res.status(201).json({
                 pages: pages.map((page) => ({
                   ...page.toJSON(),
-                  url: `/uploads/${album.owner}/${album._id}/${page.filename}`,
+                  url: storage.photoUrl(album.owner, album._id, page.filename),
                 })),
                 pageCount,
               });
@@ -146,12 +146,35 @@ module.exports = {
           res.json({
             page: {
               ...saved.toJSON(),
-              url: `/uploads/${album.owner}/${album._id}/${saved.filename}`,
+              url: storage.photoUrl(album.owner, album._id, saved.filename),
             },
           });
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to update caption' }));
+  },
+
+  setCover: (req, res) => {
+    const album = req.album;
+    const { pageId } = req.params;
+    if (!mongoose.isValidObjectId(pageId)) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+        album.coverPage = page._id;
+        return album.save().then((saved) => {
+          res.json({
+            album: {
+              ...saved.toJSON(),
+              coverImage: storage.photoUrl(album.owner, album._id, page.filename),
+            },
+          });
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to set cover photo' }));
   },
 
   remove: (req, res) => {
@@ -174,6 +197,13 @@ module.exports = {
             fs.rm(filePath, { force: true }, (err) => {
               if (err) console.error(`Failed to remove deleted photo ${filePath}:`, err);
             });
+          })
+          .then(() => {
+            // The deleted photo can no longer be the cover — clear it so
+            // reads fall back to the (new) earliest remaining photo.
+            if (album.coverPage && album.coverPage.toString() === page._id.toString()) {
+              album.coverPage = null;
+            }
           })
           .then(() => syncPageCount(album))
           .then((pageCount) => res.json({ deleted: true, pageCount }));

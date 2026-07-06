@@ -47,6 +47,12 @@ module.exports = (app) => {
     controllers.pages.requireOwnedAlbum,
     controllers.pages.updateCaption
   );
+  app.put(
+    '/api/albums/:id/pages/:pageId/cover',
+    auth.isAuthenticated,
+    controllers.pages.requireOwnedAlbum,
+    controllers.pages.setCover
+  );
   app.delete(
     '/api/albums/:id/pages/:pageId',
     auth.isAuthenticated,

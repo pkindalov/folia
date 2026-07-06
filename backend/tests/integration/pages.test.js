@@ -49,7 +49,14 @@ describe('album pages routes (integration)', () => {
     visibility: 'private',
     owner: OWNER_ID,
     pageCount: 0,
-    save: jest.fn().mockResolvedValue(undefined),
+    coverPage: null,
+    save: jest.fn().mockImplementation(function () {
+      return Promise.resolve(this);
+    }),
+    toJSON: function () {
+      const { toJSON: _drop, save: _drop2, ...rest } = this;
+      return rest;
+    },
     ...overrides,
   });
 
@@ -251,6 +258,42 @@ describe('album pages routes (integration)', () => {
       expect(res.status).toBe(200);
       expect(res.body.page.caption).toBe('A day at the lake');
       expect(res.body.page.url).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
+    });
+  });
+
+  describe('PUT /api/albums/:id/pages/:pageId/cover', () => {
+    test('403 when a stranger tries to set the cover', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/cover`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/cover`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    test('200 sets the cover and returns the updated album with its url', async () => {
+      authAs(OWNER_ID);
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/cover`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.album.coverPage).toBe(PAGE_ID);
+      expect(res.body.album.coverImage).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
     });
   });
 

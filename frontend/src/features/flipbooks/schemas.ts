@@ -8,6 +8,8 @@ export const albumSchema = z
     visibility: z.enum(['private', 'shared', 'public']),
     owner: z.string(),
     pageCount: z.number().default(0),
+    coverPage: z.string().nullable().optional(),
+    coverImage: z.string().nullable().optional(),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -55,6 +57,7 @@ export const deletePageResponseSchema = z.object({
   pageCount: z.number(),
 });
 export const updatePageCaptionResponseSchema = z.object({ page: pageSchema });
+export const setCoverResponseSchema = z.object({ album: albumSchema });
 
 export const MAX_CAPTION_LENGTH = 500;
 

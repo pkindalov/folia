@@ -6,6 +6,7 @@ import {
   uploadPagesResponseSchema,
   deletePageResponseSchema,
   updatePageCaptionResponseSchema,
+  setCoverResponseSchema,
   type Album,
   type AlbumFormInput,
   type Page,
@@ -65,4 +66,9 @@ export async function updatePageCaption(
     body: JSON.stringify({ caption }),
   });
   return updatePageCaptionResponseSchema.parse(data).page;
+}
+
+export async function setCoverPhoto(albumId: string, pageId: string): Promise<Album> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/cover`, { method: 'PUT' });
+  return setCoverResponseSchema.parse(data).album;
 }

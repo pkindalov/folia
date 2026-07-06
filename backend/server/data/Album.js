@@ -30,6 +30,13 @@ const albumSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    // Explicit cover choice. When null, the earliest-uploaded page is used —
+    // see resolveCoverImage in albums-controller.js.
+    coverPage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Page',
+      default: null,
+    },
   },
   { timestamps: true }
 );

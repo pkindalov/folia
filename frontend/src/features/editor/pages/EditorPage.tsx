@@ -16,6 +16,7 @@ import {
   useUploadPages,
   useDeletePage,
   useUpdatePageCaption,
+  useSetCoverPhoto,
   ALLOWED_PHOTO_MIME_TYPES,
   MAX_PHOTO_SIZE_BYTES,
 } from '../../flipbooks';
@@ -68,8 +69,14 @@ export default function EditorPage() {
   const uploadPages = useUploadPages(id ?? '');
   const deletePage = useDeletePage(id ?? '');
   const updateCaption = useUpdatePageCaption(id ?? '');
+  const setCoverPhoto = useSetCoverPhoto(id ?? '');
   const [rejections, setRejections] = useState<string[]>([]);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string>();
+  const [settingCoverPhotoId, setSettingCoverPhotoId] = useState<string>();
+
+  // The cover is whichever photo was explicitly chosen; absent that, the
+  // earliest-uploaded one — pagesQuery is already sorted oldest-first.
+  const coverPhotoId = albumQuery.data?.coverPage ?? pagesQuery.data?.[0]?._id;
 
   const mutation = isEdit ? updateAlbum : createAlbum;
 
@@ -128,6 +135,11 @@ export default function EditorPage() {
 
   const onCaptionChange = (photoId: string, caption: string) => {
     updateCaption.mutate({ pageId: photoId, caption });
+  };
+
+  const onSetCoverPhoto = (photoId: string) => {
+    setSettingCoverPhotoId(photoId);
+    setCoverPhoto.mutate(photoId, { onSettled: () => setSettingCoverPhotoId(undefined) });
   };
 
   return (
@@ -236,22 +248,38 @@ export default function EditorPage() {
         <section className="flex-1 p-gutter md:p-margin-edge flex items-center justify-center bg-surface-dim/40">
           <div className="w-full max-w-4xl">
             <div className="grid md:grid-cols-2 bg-surface rounded-card paper-depth overflow-hidden border border-outline-variant/30 min-h-120">
-              <div className="relative p-8 md:p-12 border-b md:border-b-0 md:border-r border-outline-variant/40 flex items-center justify-center">
+              <div className="relative p-8 md:p-12 border-b md:border-b-0 md:border-r border-outline-variant/40 flex items-center justify-center overflow-hidden">
+                {albumQuery.data?.coverImage && (
+                  <>
+                    <img
+                      src={albumQuery.data.coverImage}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40" />
+                  </>
+                )}
                 <div className="absolute inset-y-0 right-0 w-2 bg-linear-to-l from-black/5 to-transparent hidden md:block" />
-                <div className="text-center max-w-xs">
-                  <h3 className="font-display text-2xl text-primary italic">
-                    {watch('title') || 'Untitled Volume'}
-                  </h3>
+                <div
+                  className={`relative text-center max-w-xs ${albumQuery.data?.coverImage ? 'text-white' : 'text-primary'}`}
+                >
+                  <h3 className="font-display text-2xl italic">{watch('title') || 'Untitled Volume'}</h3>
                   {watch('description') && (
-                    <p className="font-body italic text-on-surface-variant mt-4">
+                    <p
+                      className={`font-body italic mt-4 ${albumQuery.data?.coverImage ? 'text-white/80' : 'text-on-surface-variant'}`}
+                    >
                       {watch('description')}
                     </p>
                   )}
-                  <p className="font-ui text-ui-label uppercase text-on-surface-variant/60 mt-8">
-                    Cover preview
-                  </p>
+                  {!albumQuery.data?.coverImage && (
+                    <p className="font-ui text-ui-label uppercase text-on-surface-variant/60 mt-8">
+                      Cover preview
+                    </p>
+                  )}
                 </div>
-                <span className="absolute bottom-4 left-8 font-body italic text-xs text-on-surface-variant/60">
+                <span
+                  className={`absolute bottom-4 left-8 font-body italic text-xs ${albumQuery.data?.coverImage ? 'text-white/70' : 'text-on-surface-variant/60'}`}
+                >
                   cover
                 </span>
               </div>
@@ -269,12 +297,17 @@ export default function EditorPage() {
                         ? deletePage.error.message
                         : updateCaption.isError
                           ? updateCaption.error.message
-                          : undefined
+                          : setCoverPhoto.isError
+                            ? setCoverPhoto.error.message
+                            : undefined
                   }
                   rejections={rejections}
                   deletingPhotoId={deletingPhotoId}
+                  coverPhotoId={coverPhotoId}
+                  settingCoverPhotoId={settingCoverPhotoId}
                   onFilesSelected={onFilesSelected}
                   onRemovePhoto={onRemovePhoto}
+                  onSetCoverPhoto={onSetCoverPhoto}
                   onDismissRejections={() => setRejections([])}
                   onCaptionChange={onCaptionChange}
                 />

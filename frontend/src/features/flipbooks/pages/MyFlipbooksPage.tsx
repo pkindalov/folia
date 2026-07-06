@@ -94,6 +94,16 @@ export default function MyFlipbooksPage() {
                     className="relative w-full flex-1 rounded-r-card shadow-[0_8px_30px_rgba(0,0,0,0.15)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.2)] block"
                     style={{ backgroundColor: coverColor(album._id) }}
                   >
+                    {album.coverImage && (
+                      <>
+                        <img
+                          src={album.coverImage}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30" />
+                      </>
+                    )}
                     <div className="absolute inset-0 flex flex-col justify-between p-6">
                       <span className="self-end text-white/80">
                         <Icon name={VISIBILITY_ICON[album.visibility]} className="text-lg" />

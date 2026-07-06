@@ -18,8 +18,11 @@ type PagesPanelProps = {
   uploadError?: string;
   rejections: string[];
   deletingPhotoId?: string;
+  coverPhotoId?: string;
+  settingCoverPhotoId?: string;
   onFilesSelected: (files: File[]) => void;
   onRemovePhoto: (photoId: string) => void;
+  onSetCoverPhoto: (photoId: string) => void;
   onDismissRejections: () => void;
   onCaptionChange: (photoId: string, caption: string) => void;
 };
@@ -40,8 +43,11 @@ export default function PagesPanel({
   uploadError,
   rejections,
   deletingPhotoId,
+  coverPhotoId,
+  settingCoverPhotoId,
   onFilesSelected,
   onRemovePhoto,
+  onSetCoverPhoto,
   onDismissRejections,
   onCaptionChange,
 }: PagesPanelProps) {
@@ -178,7 +184,10 @@ export default function PagesPanel({
               photo={photo}
               index={index}
               isDeleting={deletingPhotoId === photo._id}
+              isCover={photo._id === coverPhotoId}
+              isSettingCover={settingCoverPhotoId === photo._id}
               onRemove={() => onRemovePhoto(photo._id)}
+              onSetCover={() => onSetCoverPhoto(photo._id)}
               onCaptionChange={(caption) => onCaptionChange(photo._id, caption)}
             />
           ))}

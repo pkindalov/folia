@@ -31,10 +31,32 @@ function canModify(album, user) {
   return album.owner.toString() === user._id.toString() || user.roles.includes('Admin');
 }
 
+// The cover is whichever page the user explicitly picked; absent that,
+// it's the earliest-uploaded page. Falls back to null for an empty album.
+function resolveCoverImage(album) {
+  const explicit = album.coverPage
+    ? Page.findOne({ _id: album.coverPage, album: album._id })
+    : Promise.resolve(null);
+
+  return explicit.then((page) => {
+    if (page) return storage.photoUrl(album.owner, album._id, page.filename);
+    return Page.findOne({ album: album._id })
+      .sort('createdAt')
+      .then((firstPage) =>
+        firstPage ? storage.photoUrl(album.owner, album._id, firstPage.filename) : null
+      );
+  });
+}
+
+function withCoverImage(album) {
+  return resolveCoverImage(album).then((coverImage) => ({ ...album.toJSON(), coverImage }));
+}
+
 module.exports = {
   list: (req, res) => {
     Album.find({ owner: req.user._id })
       .sort('-updatedAt')
+      .then((albums) => Promise.all(albums.map(withCoverImage)))
       .then((albums) => res.json({ albums }))
       .catch(() => res.status(500).json({ error: 'Failed to load albums' }));
   },
@@ -51,7 +73,7 @@ module.exports = {
         if (album.visibility === 'private' && !canModify(album, req.user)) {
           return res.status(403).json({ error: 'This album is private' });
         }
-        res.json({ album });
+        return withCoverImage(album).then((album) => res.json({ album }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to load album' }));
   },
@@ -71,7 +93,8 @@ module.exports = {
       .then((album) => {
         // Every user gets their own folder under uploads/, one subfolder per album
         storage.ensureAlbumDir(req.user._id, album._id);
-        res.status(201).json({ album });
+        // A brand-new album can't have any pages yet, so its cover is always null.
+        res.status(201).json({ album: { ...album.toJSON(), coverImage: null } });
       })
       .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
   },
@@ -99,7 +122,7 @@ module.exports = {
 
         return album
           .save()
-          .then((saved) => res.json({ album: saved }))
+          .then((saved) => withCoverImage(saved).then((album) => res.json({ album })))
           .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to update album' }));

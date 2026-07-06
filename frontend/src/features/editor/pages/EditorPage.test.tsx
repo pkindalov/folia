@@ -28,6 +28,15 @@ const PAGE = {
   url: '/uploads/id1/a1/photo1.jpg',
 };
 
+const PAGE_2 = {
+  _id: 'p2',
+  album: 'a1',
+  filename: 'photo2.jpg',
+  mimeType: 'image/jpeg',
+  size: 1024,
+  url: '/uploads/id1/a1/photo2.jpg',
+};
+
 type Call = { url: string; options?: RequestInit };
 const calls: Call[] = [];
 
@@ -324,5 +333,50 @@ describe('EditorPage — pages panel', () => {
     expect(calls.some((c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT')).toBe(
       false
     );
+  });
+
+  test('marks the earliest-uploaded photo as the cover by default', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderEdit();
+    const coverButton = await screen.findByRole('button', { name: 'This is the cover photo' });
+    expect(coverButton).toBeDisabled();
+  });
+
+  test('sets a different photo as the cover', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'PUT /api/albums/a1/pages/p2/cover': {
+        body: { album: { ...ALBUM.album, coverPage: 'p2', coverImage: PAGE_2.url } },
+      },
+    });
+    const user = userEvent.setup();
+    renderEdit();
+
+    await user.click(await screen.findByRole('button', { name: /set photo2\.jpg as the cover/i }));
+
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (c) => c.url.includes('/api/albums/a1/pages/p2/cover') && c.options?.method === 'PUT'
+        )
+      ).toBe(true);
+    });
+  });
+
+  test('renders the chosen cover photo in the preview panel', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: { album: { ...ALBUM.album, coverImage: PAGE.url } } },
+    });
+    renderEdit();
+    const previewImage = await screen.findAllByRole('presentation', { hidden: true });
+    expect(previewImage.some((img) => img.getAttribute('src') === PAGE.url)).toBe(true);
   });
 });

@@ -97,6 +97,17 @@ export function useUpdatePageCaption(albumId: string) {
   });
 }
 
+export function useSetCoverPhoto(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pageId: string) => albumsApi.setCoverPhoto(albumId, pageId),
+    onSuccess: (album) => {
+      queryClient.setQueryData(['albums', albumId], album);
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
+    },
+  });
+}
+
 /** Stable "book cloth" color derived from the album id. */
 const COVER_COLORS = ['#4A3B32', '#5B6650', '#37414F', '#1F2933', '#6E3B2C', '#5a2331', '#2C4A5A'];
 export function coverColor(id: string): string {

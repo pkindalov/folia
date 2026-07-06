@@ -13,7 +13,10 @@ type PageThumbnailProps = {
   photo: Photo;
   index: number;
   isDeleting: boolean;
+  isCover: boolean;
+  isSettingCover: boolean;
   onRemove: () => void;
+  onSetCover: () => void;
   onCaptionChange: (caption: string) => void;
 };
 
@@ -23,7 +26,10 @@ export default function PageThumbnail({
   photo,
   index,
   isDeleting,
+  isCover,
+  isSettingCover,
   onRemove,
+  onSetCover,
   onCaptionChange,
 }: PageThumbnailProps) {
   const rotationClass = ROTATION_CLASSES[index % ROTATION_CLASSES.length];
@@ -50,6 +56,24 @@ export default function PageThumbnail({
         alt={photo.filename || 'Volume page photo'}
         className="aspect-square object-cover w-full rounded-[1px]"
       />
+      <button
+        type="button"
+        onClick={onSetCover}
+        disabled={isCover || isSettingCover}
+        aria-label={isCover ? 'This is the cover photo' : `Set ${photo.filename || 'this photo'} as the cover`}
+        title={isCover ? 'Cover photo' : 'Set as cover'}
+        className={`absolute -top-2 -left-2 w-7 h-7 rounded-full bg-surface-container-lowest border shadow-md flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
+          isCover
+            ? 'border-secondary text-secondary'
+            : 'border-outline-variant/50 text-on-surface-variant hover:text-secondary hover:border-secondary/50'
+        }`}
+      >
+        {isSettingCover ? (
+          <Icon name="progress_activity" className="text-sm animate-spin" />
+        ) : (
+          <Icon name="star" className="text-sm" filled={isCover} />
+        )}
+      </button>
       <textarea
         value={caption}
         onChange={(event) => setCaption(event.target.value)}

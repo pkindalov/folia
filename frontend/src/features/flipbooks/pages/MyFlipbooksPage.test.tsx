@@ -101,6 +101,27 @@ describe('MyFlipbooksPage', () => {
     expect(await screen.findByText('Editor new')).toBeInTheDocument();
   });
 
+  test('renders the album cover photo when one is set', async () => {
+    const albumsWithCover = {
+      albums: [
+        { ...ALBUMS.albums[0], coverImage: '/uploads/id1/a1/cover.jpg' },
+        ALBUMS.albums[1],
+      ],
+    };
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: albumsWithCover } });
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    const coverImages = document.querySelectorAll('img[src="/uploads/id1/a1/cover.jpg"]');
+    expect(coverImages).toHaveLength(1);
+  });
+
+  test('falls back to the placeholder color when an album has no cover photo', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
+    renderPage();
+    await screen.findByText('Letters from Home');
+    expect(document.querySelectorAll('img').length).toBe(0);
+  });
+
   test('sign out clears the token and redirects to login', async () => {
     mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
     const user = userEvent.setup();

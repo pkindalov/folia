@@ -1,6 +1,7 @@
 jest.mock('../../server/utilities/storage', () => ({
   albumDir: jest.fn(),
   photoPath: jest.fn((ownerId, albumId, filename) => `/uploads/${ownerId}/${albumId}/${filename}`),
+  photoUrl: jest.fn((ownerId, albumId, filename) => `/uploads/${ownerId}/${albumId}/${filename}`),
   ensureAlbumDir: jest.fn(),
   removeAlbumDir: jest.fn(),
 }));
@@ -38,9 +39,14 @@ const fakeAlbum = (overrides = {}) => ({
   visibility: 'private',
   owner: { toString: () => OWNER_ID },
   pageCount: 0,
+  coverPage: null,
   save: jest.fn().mockImplementation(function () {
     return Promise.resolve(this);
   }),
+  toJSON: function () {
+    const { toJSON: _drop, save: _drop2, ...rest } = this;
+    return rest;
+  },
   ...overrides,
 });
 
@@ -336,10 +342,75 @@ describe('pages-controller', () => {
       expect(res.json).toHaveBeenCalledWith({ deleted: true, pageCount: 0 });
     });
 
+    test('clears the album cover when the deleted photo was the cover', async () => {
+      const album = fakeAlbum({ coverPage: PAGE_ID });
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(album.coverPage).toBeNull();
+    });
+
+    test('leaves the cover alone when a different photo is deleted', async () => {
+      const album = fakeAlbum({ coverPage: 'some-other-page-id' });
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(album.coverPage).toBe('some-other-page-id');
+    });
+
     test('500 when the lookup fails', async () => {
       jest.spyOn(Page, 'findOne').mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.remove({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('setCover', () => {
+    test('404 for a malformed page id', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.setCover({ album: fakeAlbum(), params: { pageId: 'nope' } }, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('404 when the page does not belong to this album', async () => {
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = mockRes();
+      controller.setCover({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('sets the cover and returns the updated album with its url', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.setCover({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(album.coverPage).toBe(PAGE_ID);
+      expect(album.save).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        album: expect.objectContaining({
+          coverPage: PAGE_ID,
+          coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+        }),
+      });
+    });
+
+    test('500 when the lookup fails', async () => {
+      jest.spyOn(Page, 'findOne').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.setCover({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
