@@ -158,4 +158,25 @@ describe('ViewerPage', () => {
     await user.click(screen.getByRole('button', { name: /previous photo/i }));
     expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
   });
+
+  test('shows the photo\'s caption when it has one', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, caption: 'A day at the lake' }] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderViewer();
+    expect(await screen.findByText('"A day at the lake"')).toBeInTheDocument();
+  });
+
+  test('shows no caption text when the photo has none', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderViewer();
+    await screen.findByAltText('photo1.jpg');
+    expect(screen.queryByText(/^"/)).not.toBeInTheDocument();
+  });
 });

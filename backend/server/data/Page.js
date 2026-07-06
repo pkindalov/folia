@@ -21,6 +21,12 @@ const pageSchema = new mongoose.Schema(
       required: '{PATH} is required',
       min: 0,
     },
+    caption: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: [500, 'caption must be at most 500 characters'],
+    },
   },
   { timestamps: true }
 );

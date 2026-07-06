@@ -89,6 +89,11 @@ export default function ViewerPage() {
                         className="w-full aspect-square object-cover"
                       />
                     </div>
+                    {currentPhoto.caption && (
+                      <p className="max-w-sm mx-auto font-body italic text-on-surface-variant text-center">
+                        "{currentPhoto.caption}"
+                      </p>
+                    )}
                     {pages.length > 1 && (
                       <div className="flex items-center gap-6">
                         <button

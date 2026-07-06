@@ -8,6 +8,7 @@ type Photo = {
   filename?: string;
   mimeType?: string;
   size?: number;
+  caption?: string;
 };
 
 type PagesPanelProps = {
@@ -20,6 +21,7 @@ type PagesPanelProps = {
   onFilesSelected: (files: File[]) => void;
   onRemovePhoto: (photoId: string) => void;
   onDismissRejections: () => void;
+  onCaptionChange: (photoId: string, caption: string) => void;
 };
 
 const ACCEPTED_FILE_TYPES = 'image/jpeg,image/png,image/webp,image/gif';
@@ -41,6 +43,7 @@ export default function PagesPanel({
   onFilesSelected,
   onRemovePhoto,
   onDismissRejections,
+  onCaptionChange,
 }: PagesPanelProps) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
@@ -168,7 +171,7 @@ export default function PagesPanel({
       )}
 
       {hasPhotos && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto flex-1">
+        <div className="grid grid-cols-1 gap-3 overflow-y-auto flex-1">
           {photos.map((photo, index) => (
             <PageThumbnail
               key={photo._id}
@@ -176,6 +179,7 @@ export default function PagesPanel({
               index={index}
               isDeleting={deletingPhotoId === photo._id}
               onRemove={() => onRemovePhoto(photo._id)}
+              onCaptionChange={(caption) => onCaptionChange(photo._id, caption)}
             />
           ))}
         </div>

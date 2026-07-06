@@ -5,6 +5,7 @@ import {
   pagesResponseSchema,
   uploadPagesResponseSchema,
   deletePageResponseSchema,
+  updatePageCaptionResponseSchema,
   type Album,
   type AlbumFormInput,
   type Page,
@@ -52,4 +53,16 @@ export async function uploadPages(
 export async function deletePage(albumId: string, pageId: string): Promise<{ pageCount: number }> {
   const data = await api(`/api/albums/${albumId}/pages/${pageId}`, { method: 'DELETE' });
   return deletePageResponseSchema.parse(data);
+}
+
+export async function updatePageCaption(
+  albumId: string,
+  pageId: string,
+  caption: string
+): Promise<Page> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ caption }),
+  });
+  return updatePageCaptionResponseSchema.parse(data).page;
 }

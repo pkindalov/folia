@@ -39,6 +39,7 @@ export const pageSchema = z
     mimeType: z.string(),
     size: z.number(),
     url: z.string(),
+    caption: z.string().default(''),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -53,6 +54,9 @@ export const deletePageResponseSchema = z.object({
   deleted: z.boolean(),
   pageCount: z.number(),
 });
+export const updatePageCaptionResponseSchema = z.object({ page: pageSchema });
+
+export const MAX_CAPTION_LENGTH = 500;
 
 export type Page = z.infer<typeof pageSchema>;
 

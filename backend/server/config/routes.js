@@ -41,6 +41,12 @@ module.exports = (app) => {
     upload.array('photos'),
     controllers.pages.upload
   );
+  app.put(
+    '/api/albums/:id/pages/:pageId',
+    auth.isAuthenticated,
+    controllers.pages.requireOwnedAlbum,
+    controllers.pages.updateCaption
+  );
   app.delete(
     '/api/albums/:id/pages/:pageId',
     auth.isAuthenticated,

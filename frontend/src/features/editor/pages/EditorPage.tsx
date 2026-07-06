@@ -15,6 +15,7 @@ import {
   usePages,
   useUploadPages,
   useDeletePage,
+  useUpdatePageCaption,
   ALLOWED_PHOTO_MIME_TYPES,
   MAX_PHOTO_SIZE_BYTES,
 } from '../../flipbooks';
@@ -66,6 +67,7 @@ export default function EditorPage() {
   const pagesQuery = usePages(id);
   const uploadPages = useUploadPages(id ?? '');
   const deletePage = useDeletePage(id ?? '');
+  const updateCaption = useUpdatePageCaption(id ?? '');
   const [rejections, setRejections] = useState<string[]>([]);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string>();
 
@@ -122,6 +124,10 @@ export default function EditorPage() {
     if (!window.confirm("Remove this photo from the volume? This can't be undone.")) return;
     setDeletingPhotoId(photoId);
     deletePage.mutate(photoId, { onSettled: () => setDeletingPhotoId(undefined) });
+  };
+
+  const onCaptionChange = (photoId: string, caption: string) => {
+    updateCaption.mutate({ pageId: photoId, caption });
   };
 
   return (
@@ -261,13 +267,16 @@ export default function EditorPage() {
                       ? uploadPages.error.message
                       : deletePage.isError
                         ? deletePage.error.message
-                        : undefined
+                        : updateCaption.isError
+                          ? updateCaption.error.message
+                          : undefined
                   }
                   rejections={rejections}
                   deletingPhotoId={deletingPhotoId}
                   onFilesSelected={onFilesSelected}
                   onRemovePhoto={onRemovePhoto}
                   onDismissRejections={() => setRejections([])}
+                  onCaptionChange={onCaptionChange}
                 />
               </div>
             </div>

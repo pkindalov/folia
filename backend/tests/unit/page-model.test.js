@@ -29,6 +29,38 @@ describe('Page model', () => {
       }).validateSync();
       expect(err).toBeUndefined();
     });
+
+    test('caption defaults to an empty string', () => {
+      const page = new Page({
+        album: '507f1f77bcf86cd799439011',
+        filename: 'a.jpg',
+        mimeType: 'image/jpeg',
+        size: 1024,
+      });
+      expect(page.caption).toBe('');
+    });
+
+    test('trims the caption', () => {
+      const page = new Page({
+        album: '507f1f77bcf86cd799439011',
+        filename: 'a.jpg',
+        mimeType: 'image/jpeg',
+        size: 1024,
+        caption: '  a story  ',
+      });
+      expect(page.caption).toBe('a story');
+    });
+
+    test('rejects a caption over 500 characters', () => {
+      const err = new Page({
+        album: '507f1f77bcf86cd799439011',
+        filename: 'a.jpg',
+        mimeType: 'image/jpeg',
+        size: 1024,
+        caption: 'x'.repeat(501),
+      }).validateSync();
+      expect(err.errors.caption).toBeDefined();
+    });
   });
 
   describe('toJSON', () => {

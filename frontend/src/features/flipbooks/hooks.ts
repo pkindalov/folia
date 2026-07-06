@@ -86,6 +86,17 @@ export function useDeletePage(albumId: string) {
   });
 }
 
+export function useUpdatePageCaption(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, caption }: { pageId: string; caption: string }) =>
+      albumsApi.updatePageCaption(albumId, pageId, caption),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+    },
+  });
+}
+
 /** Stable "book cloth" color derived from the album id. */
 const COVER_COLORS = ['#4A3B32', '#5B6650', '#37414F', '#1F2933', '#6E3B2C', '#5a2331', '#2C4A5A'];
 export function coverColor(id: string): string {

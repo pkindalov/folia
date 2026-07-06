@@ -196,6 +196,64 @@ describe('album pages routes (integration)', () => {
     });
   });
 
+  describe('PUT /api/albums/:id/pages/:pageId', () => {
+    test('403 when a stranger tries to set a caption', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ caption: 'A day at the lake' });
+      expect(res.status).toBe(403);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ caption: 'A day at the lake' });
+      expect(res.status).toBe(404);
+    });
+
+    test('400 for a caption over 500 characters', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ caption: 'x'.repeat(501) });
+      expect(res.status).toBe(400);
+    });
+
+    test('200 saves the caption and returns the updated page', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({
+        filename: 'a.jpg',
+        caption: '',
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+        toJSON() {
+          const { toJSON: _drop, save: _drop2, ...rest } = this;
+          return rest;
+        },
+      });
+
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ caption: 'A day at the lake' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.page.caption).toBe('A day at the lake');
+      expect(res.body.page.url).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
+    });
+  });
+
   describe('DELETE /api/albums/:id/pages/:pageId', () => {
     test('404 when the photo does not belong to the album', async () => {
       authAs(OWNER_ID);

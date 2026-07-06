@@ -282,4 +282,47 @@ describe('EditorPage — pages panel', () => {
     await user.click(await screen.findByRole('button', { name: /remove photo1\.jpg/i }));
     expect(await screen.findByText('Photo not found')).toBeInTheDocument();
   });
+
+  test('saves a caption when the field loses focus', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'PUT /api/albums/a1/pages/p1': {
+        body: { page: { ...PAGE, caption: 'A day at the lake' } },
+      },
+    });
+    const user = userEvent.setup();
+    renderEdit();
+
+    const captionField = await screen.findByLabelText(/caption for photo1\.jpg/i);
+    await user.type(captionField, 'A day at the lake');
+    await user.tab();
+
+    await waitFor(() => {
+      const put = calls.find(
+        (c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT'
+      );
+      expect(put).toBeDefined();
+      expect(JSON.parse(put!.options!.body as string)).toEqual({ caption: 'A day at the lake' });
+    });
+  });
+
+  test('does not save the caption when it is unchanged', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderEdit();
+
+    const captionField = await screen.findByLabelText(/caption for photo1\.jpg/i);
+    await user.click(captionField);
+    await user.tab();
+
+    expect(calls.some((c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT')).toBe(
+      false
+    );
+  });
 });

@@ -50,11 +50,15 @@ const fakePage = (overrides = {}) => ({
   filename: 'abc.jpg',
   mimeType: 'image/jpeg',
   size: 1024,
+  caption: '',
   toJSON: function () {
-    const { toJSON: _drop, deleteOne: _drop2, ...rest } = this;
+    const { toJSON: _drop, deleteOne: _drop2, save: _drop3, ...rest } = this;
     return rest;
   },
   deleteOne: jest.fn().mockResolvedValue({}),
+  save: jest.fn().mockImplementation(function () {
+    return Promise.resolve(this);
+  }),
   ...overrides,
 });
 
@@ -208,6 +212,91 @@ describe('pages-controller', () => {
       controller.upload({ album, files }, res);
       await flush();
       expect(fs.rm).toHaveBeenCalledTimes(1);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('updateCaption', () => {
+    test('404 for a malformed page id', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: 'nope' }, body: { caption: 'x' } },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('404 when the page does not belong to this album', async () => {
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 'x' } },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('400 when caption is not a string', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 42 } },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('400 when caption is over 500 characters', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 'x'.repeat(501) } },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('sets the caption and returns the page with its url', async () => {
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 'A day at the lake' } },
+        res
+      );
+      await flush();
+      expect(page.caption).toBe('A day at the lake');
+      expect(page.save).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        page: expect.objectContaining({
+          caption: 'A day at the lake',
+          url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+        }),
+      });
+    });
+
+    test('an absent caption clears it to an empty string', async () => {
+      const page = fakePage({ caption: 'old story' });
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption({ album: fakeAlbum(), params: { pageId: PAGE_ID }, body: {} }, res);
+      await flush();
+      expect(page.caption).toBe('');
+    });
+
+    test('500 when the lookup fails', async () => {
+      jest.spyOn(Page, 'findOne').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.updateCaption(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 'x' } },
+        res
+      );
+      await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
   });

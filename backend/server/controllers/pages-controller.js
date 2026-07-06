@@ -123,6 +123,37 @@ module.exports = {
       .catch(() => res.status(500).json({ error: 'Failed to save photos' }));
   },
 
+  updateCaption: (req, res) => {
+    const album = req.album;
+    const { pageId } = req.params;
+    if (!mongoose.isValidObjectId(pageId)) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    const { caption } = req.body || {};
+    if (caption !== undefined && typeof caption !== 'string') {
+      return res.status(400).json({ error: 'caption must be a string' });
+    }
+    if (typeof caption === 'string' && caption.length > 500) {
+      return res.status(400).json({ error: 'caption must be at most 500 characters' });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+        page.caption = caption ?? '';
+        return page.save().then((saved) => {
+          res.json({
+            page: {
+              ...saved.toJSON(),
+              url: `/uploads/${album.owner}/${album._id}/${saved.filename}`,
+            },
+          });
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to update caption' }));
+  },
+
   remove: (req, res) => {
     const album = req.album;
     const { pageId } = req.params;
