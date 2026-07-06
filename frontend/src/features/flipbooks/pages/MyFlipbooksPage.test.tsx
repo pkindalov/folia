@@ -5,54 +5,68 @@ import { Route } from 'react-router-dom';
 import MyFlipbooksPage from './MyFlipbooksPage';
 import { tokenStorage } from '../../../lib/api-client';
 import { renderWithProviders } from '../../../tests/test-utils';
-import { mockFlipbooks } from '../mock';
-
-const jsonResponse = (body: unknown, status = 200) =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  }) as Response;
 
 const ME = { user: { _id: 'id1', username: 'pan', email: 'pan@test.com', roles: ['User'] } };
+
+const ALBUMS = {
+  albums: [
+    { _id: 'a1', title: 'Summer in the Valley', description: 'Holidays', visibility: 'public', owner: 'id1', pageCount: 4 },
+    { _id: 'a2', title: 'Letters from Home', description: '', visibility: 'private', owner: 'id1', pageCount: 0 },
+  ],
+};
+
+/** fetch mock that routes by URL. */
+function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
+  vi.mocked(fetch).mockImplementation((url) => {
+    const path = String(url);
+    const match = Object.entries(routes).find(([suffix]) => path.includes(suffix));
+    const { body, status = 200 } = match?.[1] ?? { body: { error: 'Not found' }, status: 404 };
+    return Promise.resolve({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(body),
+    } as Response);
+  });
+}
 
 const renderPage = () =>
   renderWithProviders(<MyFlipbooksPage />, {
     route: '/flipbooks',
     path: '/flipbooks',
-    extraRoutes: <Route path="/login" element={<div>Login screen</div>} />,
+    extraRoutes: (
+      <>
+        <Route path="/login" element={<div>Login screen</div>} />
+        <Route path="/editor" element={<div>Editor new</div>} />
+        <Route path="/editor/:id" element={<div>Editor edit</div>} />
+      </>
+    ),
   });
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
+  tokenStorage.set('jwt-ok');
 });
 
 describe('MyFlipbooksPage', () => {
-  test('shows the signed-in user in the shell', async () => {
-    tokenStorage.set('jwt-ok');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(ME));
+  test('lists albums from the API', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
     renderPage();
-    expect(await screen.findByText('pan')).toBeInTheDocument();
-    expect(screen.getByText(/pan@test\.com/)).toBeInTheDocument();
-  });
-
-  test('renders the gallery with all mock volumes', async () => {
-    tokenStorage.set('jwt-ok');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(ME));
-    renderPage();
-    expect(await screen.findByText('The Gallery')).toBeInTheDocument();
-    for (const book of mockFlipbooks) {
-      expect(screen.getByText(book.title)).toBeInTheDocument();
-    }
+    expect(await screen.findByText('Summer in the Valley')).toBeInTheDocument();
+    expect(screen.getByText('Letters from Home')).toBeInTheDocument();
     expect(screen.getByText('Start a New Volume')).toBeInTheDocument();
   });
 
-  test('filters volumes by visibility', async () => {
-    tokenStorage.set('jwt-ok');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(ME));
+  test('shows an empty-state invitation when there are no albums', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: { albums: [] } } });
+    renderPage();
+    expect(await screen.findByText(/Your shelf is empty/)).toBeInTheDocument();
+  });
+
+  test('filters albums by visibility', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText('The Gallery');
+    await screen.findByText('Summer in the Valley');
 
     await user.click(screen.getByRole('button', { name: 'Public' }));
     expect(screen.getByText('Summer in the Valley')).toBeInTheDocument();
@@ -62,16 +76,33 @@ describe('MyFlipbooksPage', () => {
     expect(screen.getByText('Letters from Home')).toBeInTheDocument();
   });
 
-  test('shows session-expired state when the token is rejected', async () => {
-    tokenStorage.set('stale-jwt');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'Invalid or expired token' }, 401));
+  test('shows the API error when albums fail to load', async () => {
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums': { body: { error: 'Failed to load albums' }, status: 500 },
+    });
     renderPage();
-    expect(await screen.findByText('Session expired.')).toBeInTheDocument();
+    expect(await screen.findByText('Failed to load albums')).toBeInTheDocument();
+  });
+
+  test('edit button navigates to the album editor', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Edit Summer in the Valley' }));
+    expect(await screen.findByText('Editor edit')).toBeInTheDocument();
+  });
+
+  test('create card navigates to the blank editor', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByText('Start a New Volume'));
+    expect(await screen.findByText('Editor new')).toBeInTheDocument();
   });
 
   test('sign out clears the token and redirects to login', async () => {
-    tokenStorage.set('jwt-ok');
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(ME));
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByRole('button', { name: /sign out/i }));

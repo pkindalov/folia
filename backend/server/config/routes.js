@@ -23,6 +23,13 @@ module.exports = (app) => {
   app.get('/api/users/me', auth.isAuthenticated, controllers.users.me);
   app.get('/api/users/:username', auth.isAuthenticated, controllers.users.profile);
 
+  // Albums
+  app.get('/api/albums', auth.isAuthenticated, controllers.albums.list);
+  app.post('/api/albums', auth.isAuthenticated, controllers.albums.create);
+  app.get('/api/albums/:id', auth.isAuthenticated, controllers.albums.getOne);
+  app.put('/api/albums/:id', auth.isAuthenticated, controllers.albums.update);
+  app.delete('/api/albums/:id', auth.isAuthenticated, controllers.albums.remove);
+
   // 404 for unknown routes
   app.all('*', (req, res) => {
     res.status(404).json({ error: 'Not found' });

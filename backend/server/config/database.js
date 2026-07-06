@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../data/User');
+require('../data/Album');
 
 module.exports = (settings) => {
   mongoose.connect(settings.db);
