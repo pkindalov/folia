@@ -41,12 +41,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="md:hidden fixed top-0 inset-x-0 z-50 flex justify-between items-center px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/40 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
         <span className="font-display font-bold text-2xl tracking-tighter">Folia</span>
-        <span
-          className="w-8 h-8 rounded-full bg-secondary text-on-secondary font-ui text-sm flex items-center justify-center"
-          aria-hidden="true"
-        >
-          {user.username.charAt(0).toUpperCase()}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="font-body text-sm text-on-surface-variant">{user.username}</span>
+          <span
+            className="w-8 h-8 rounded-full bg-secondary text-on-secondary font-ui text-sm flex items-center justify-center"
+            aria-hidden="true"
+          >
+            {user.username.charAt(0).toUpperCase()}
+          </span>
+          <button
+            onClick={logout}
+            className="text-on-surface-variant hover:text-secondary transition-colors"
+            aria-label="Sign out"
+          >
+            <Icon name="logout" className="text-xl" />
+          </button>
+        </div>
       </header>
 
       {/* Desktop sidebar */}

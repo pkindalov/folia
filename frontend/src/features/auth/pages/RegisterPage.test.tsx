@@ -37,6 +37,7 @@ describe('RegisterPage', () => {
     expect(screen.getByLabelText('Username')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm password')).toBeInTheDocument();
   });
 
   test('validates all fields client-side before hitting the API', async () => {
@@ -60,6 +61,7 @@ describe('RegisterPage', () => {
     await user.type(screen.getByLabelText('Username'), 'pan');
     await user.type(screen.getByLabelText('Email'), 'pan@test.com');
     await user.type(screen.getByLabelText('Password'), 'secret123');
+    await user.type(screen.getByLabelText('Confirm password'), 'secret123');
     await user.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText('username already exists')).toBeInTheDocument();
   });
@@ -71,6 +73,7 @@ describe('RegisterPage', () => {
     await user.type(screen.getByLabelText('Username'), 'pan');
     await user.type(screen.getByLabelText('Email'), 'pan@test.com');
     await user.type(screen.getByLabelText('Password'), 'secret123');
+    await user.type(screen.getByLabelText('Confirm password'), 'secret123');
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(await screen.findByText('Home reached')).toBeInTheDocument();

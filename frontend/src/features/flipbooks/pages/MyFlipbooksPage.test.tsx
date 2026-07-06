@@ -105,7 +105,8 @@ describe('MyFlipbooksPage', () => {
     mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
     const user = userEvent.setup();
     renderPage();
-    await user.click(await screen.findByRole('button', { name: /sign out/i }));
+    const [signOutButton] = await screen.findAllByRole('button', { name: /sign out/i });
+    await user.click(signOutButton);
     expect(tokenStorage.get()).toBeNull();
     expect(await screen.findByText('Login screen')).toBeInTheDocument();
   });

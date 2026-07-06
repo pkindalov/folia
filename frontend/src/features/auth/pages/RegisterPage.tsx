@@ -52,6 +52,14 @@ export default function RegisterPage() {
           error={errors.password?.message}
           {...register('password')}
         />
+        <FormField
+          label="Confirm password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
         <div className="pt-4">
           <button
             className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-px transition-all disabled:opacity-60"

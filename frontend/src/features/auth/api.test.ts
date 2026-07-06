@@ -57,7 +57,12 @@ describe('auth api service', () => {
 
   test('register stores the token on success', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'jwt-2', user: VALID_USER }, 201));
-    await register({ username: 'pan', email: 'pan@test.com', password: 'secret123' });
+    await register({
+      username: 'pan',
+      email: 'pan@test.com',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    });
     expect(tokenStorage.get()).toBe('jwt-2');
   });
 

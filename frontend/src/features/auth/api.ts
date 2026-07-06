@@ -19,9 +19,10 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
 }
 
 export async function register(input: RegisterInput): Promise<AuthResponse> {
+  const { username, email, password } = input;
   const data = await api('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify({ username, email, password }),
   });
   const parsed = authResponseSchema.parse(data);
   tokenStorage.set(parsed.token);

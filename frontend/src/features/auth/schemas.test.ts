@@ -41,7 +41,12 @@ describe('loginSchema', () => {
 });
 
 describe('registerSchema', () => {
-  const valid = { username: 'pan', email: 'pan@test.com', password: 'secret123' };
+  const valid = {
+    username: 'pan',
+    email: 'pan@test.com',
+    password: 'secret123',
+    confirmPassword: 'secret123',
+  };
 
   test('accepts a valid registration', () => {
     expect(registerSchema.safeParse(valid).success).toBe(true);
@@ -62,15 +67,43 @@ describe('registerSchema', () => {
   );
 
   test('mirrors backend password boundaries (8-128)', () => {
-    expect(registerSchema.safeParse({ ...valid, password: '1234567' }).success).toBe(false);
-    expect(registerSchema.safeParse({ ...valid, password: '12345678' }).success).toBe(true);
-    expect(registerSchema.safeParse({ ...valid, password: 'x'.repeat(128) }).success).toBe(true);
-    expect(registerSchema.safeParse({ ...valid, password: 'x'.repeat(129) }).success).toBe(false);
+    expect(
+      registerSchema.safeParse({ ...valid, password: '1234567', confirmPassword: '1234567' })
+        .success
+    ).toBe(false);
+    expect(
+      registerSchema.safeParse({ ...valid, password: '12345678', confirmPassword: '12345678' })
+        .success
+    ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        ...valid,
+        password: 'x'.repeat(128),
+        confirmPassword: 'x'.repeat(128),
+      }).success
+    ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        ...valid,
+        password: 'x'.repeat(129),
+        confirmPassword: 'x'.repeat(129),
+      }).success
+    ).toBe(false);
   });
 
   test('provides human-readable messages', () => {
-    const result = registerSchema.safeParse({ ...valid, password: 'short' });
+    const result = registerSchema.safeParse({
+      ...valid,
+      password: 'short',
+      confirmPassword: 'short',
+    });
     expect(result.error!.issues[0].message).toBe('Password must be at least 8 characters');
+  });
+
+  test('rejects mismatched passwords', () => {
+    const result = registerSchema.safeParse({ ...valid, confirmPassword: 'different123' });
+    expect(result.success).toBe(false);
+    expect(result.error!.issues[0].message).toBe('Passwords do not match');
   });
 });
 
