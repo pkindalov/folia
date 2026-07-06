@@ -21,7 +21,7 @@ export default function ExplorePage() {
               <div key={album._id} className="flex flex-col">
                 <Link
                   to={`/book/${album._id}`}
-                  className={`group relative block aspect-[4/5] rounded-r-card overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-transform duration-500 hover:-translate-y-2 ${
+                  className={`group relative block aspect-4/5 rounded-r-card overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-transform duration-500 hover:-translate-y-2 ${
                     i % 3 === 1 ? 'rotate-[0.6deg]' : i % 3 === 2 ? 'rotate-[-0.8deg]' : ''
                   }`}
                   style={{ backgroundColor: album.coverColor }}
@@ -31,7 +31,7 @@ export default function ExplorePage() {
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-luminosity group-hover:scale-105 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent" />
                   <div className="absolute bottom-0 p-6">
                     <h3 className="font-display text-[28px] leading-tight text-surface font-semibold">
                       {album.title}

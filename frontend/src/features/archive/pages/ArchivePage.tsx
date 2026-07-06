@@ -20,12 +20,12 @@ export default function ArchivePage() {
 
           {/* The shelf */}
           <div className="relative mb-16">
-            <div className="flex items-end gap-1 overflow-x-auto pb-0 pt-8 px-6 min-h-[280px]">
+            <div className="flex items-end gap-1 overflow-x-auto pb-0 pt-8 px-6 min-h-70">
               {mockArchivedVolumes.map((volume, i) => (
                 <Link
                   key={volume._id}
                   to={`/book/${volume._id}`}
-                  className="group relative flex-shrink-0 w-16 md:w-20 rounded-t-paper shadow-[2px_0_6px_rgba(0,0,0,0.25)] transition-transform duration-300 hover:-translate-y-4 focus:-translate-y-4"
+                  className="group relative shrink-0 w-16 md:w-20 rounded-t-paper shadow-[2px_0_6px_rgba(0,0,0,0.25)] transition-transform duration-300 hover:-translate-y-4 focus:-translate-y-4"
                   style={{
                     backgroundColor: volume.spineColor,
                     height: `${210 + (i % 3) * 22}px`,
@@ -46,12 +46,12 @@ export default function ArchivePage() {
               {[0, 1].map((slot) => (
                 <div
                   key={slot}
-                  className="flex-shrink-0 w-16 md:w-20 h-[200px] border border-dashed border-outline-variant rounded-t-paper opacity-50"
+                  className="shrink-0 w-16 md:w-20 h-50 border border-dashed border-outline-variant rounded-t-paper opacity-50"
                 />
               ))}
             </div>
             {/* Shelf base */}
-            <div className="h-4 bg-gradient-to-b from-[#6E5A44] to-[#4A3B2C] rounded-paper shadow-[0_10px_25px_rgba(0,0,0,0.3)]" />
+            <div className="h-4 bg-linear-to-b from-[#6E5A44] to-[#4A3B2C] rounded-paper shadow-[0_10px_25px_rgba(0,0,0,0.3)]" />
           </div>
 
           {/* Stats bento */}

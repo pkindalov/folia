@@ -45,7 +45,7 @@ export default function LandingPage() {
 
       <main className="max-w-7xl mx-auto px-6 md:px-margin-edge py-12 flex-1">
         {/* Hero */}
-        <section className="grid lg:grid-cols-2 gap-16 items-center mb-24 min-h-[614px]">
+        <section className="grid lg:grid-cols-2 gap-16 items-center mb-24 min-h-153.5">
           <div className="flex flex-col gap-8 order-2 lg:order-1">
             <h1 className="font-display text-display-lg leading-tight">
               Preserve Your Legacy in a <span className="italic">Tactile</span> Digital World.
@@ -80,15 +80,15 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-secondary/5 rounded-full blur-3xl -z-10" />
             <div className="relative p-4 bg-white shadow-2xl rotate-2 paper-depth border-r border-outline-variant/20 page-curl-hover cursor-pointer group">
               <div className="absolute -top-4 -left-4 photo-tape opacity-80 z-10" />
-              <div className="absolute -bottom-4 -right-4 photo-tape opacity-80 z-10 scale-x-[-1] rotate-[15deg]" />
-              <div className="relative overflow-hidden w-full max-w-md aspect-[4/5] bg-surface-dim">
+              <div className="absolute -bottom-4 -right-4 photo-tape opacity-80 z-10 -scale-x-100 rotate-15" />
+              <div className="relative overflow-hidden w-full max-w-md aspect-4/5 bg-surface-dim">
                 <img
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
                   alt="A handcrafted leather-bound album in warm afternoon light"
                   src="https://picsum.photos/seed/folia-hero/640/800"
                 />
-                <div className="absolute inset-y-0 left-0 w-[1px] bg-white/30" />
-                <div className="absolute inset-y-0 right-0 w-[1px] bg-black/10" />
+                <div className="absolute inset-y-0 left-0 w-px bg-white/30" />
+                <div className="absolute inset-y-0 right-0 w-px bg-black/10" />
               </div>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function LandingPage() {
         <section className="mb-24">
           <div className="flex flex-col items-center text-center mb-16">
             <h2 className="font-display text-headline-md mb-4">The Craft of Memory</h2>
-            <div className="w-24 h-[1px] bg-secondary opacity-30" />
+            <div className="w-24 h-px bg-secondary opacity-30" />
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {VALUES.map((value) => (
@@ -107,7 +107,7 @@ export default function LandingPage() {
                 className="bg-surface p-10 paper-depth border border-outline-variant/10 flex flex-col gap-6 relative overflow-hidden group"
               >
                 <div className="text-secondary opacity-20 absolute -right-4 -top-4">
-                  <Icon name={value.icon} className="!text-[120px]" />
+                  <Icon name={value.icon} className="text-[120px]!" />
                 </div>
                 <Icon name={value.icon} className="text-secondary text-4xl" />
                 <h3 className="font-display text-2xl">{value.title}</h3>
@@ -145,18 +145,18 @@ export default function LandingPage() {
           </div>
           <div className="lg:col-span-7 grid grid-cols-2 gap-4 relative">
             <div className="pt-12">
-              <div className="bg-white p-2 stuck-photo rotate-[-2deg] mb-6">
+              <div className="bg-white p-2 stuck-photo -rotate-2 mb-6">
                 <img className="w-full aspect-square object-cover" alt="A 1940s family gathering" src="https://picsum.photos/seed/folia-s1/480/480" />
               </div>
-              <div className="bg-white p-2 stuck-photo rotate-[1deg]">
-                <img className="w-full aspect-[3/4] object-cover" alt="A handwritten letter on aged parchment" src="https://picsum.photos/seed/folia-s2/480/640" />
+              <div className="bg-white p-2 stuck-photo rotate-1">
+                <img className="w-full aspect-3/4 object-cover" alt="A handwritten letter on aged parchment" src="https://picsum.photos/seed/folia-s2/480/640" />
               </div>
             </div>
             <div>
-              <div className="bg-white p-2 stuck-photo rotate-[3deg] mb-6">
-                <img className="w-full aspect-[4/5] object-cover" alt="Grandmother and child browsing a digital album" src="https://picsum.photos/seed/folia-s3/480/600" />
+              <div className="bg-white p-2 stuck-photo rotate-3 mb-6">
+                <img className="w-full aspect-4/5 object-cover" alt="Grandmother and child browsing a digital album" src="https://picsum.photos/seed/folia-s3/480/600" />
               </div>
-              <div className="bg-white p-2 stuck-photo rotate-[-1deg] translate-x-4">
+              <div className="bg-white p-2 stuck-photo -rotate-1 translate-x-4">
                 <img className="w-full aspect-square object-cover" alt="Vintage memorabilia flat-lay" src="https://picsum.photos/seed/folia-s4/480/480" />
               </div>
             </div>

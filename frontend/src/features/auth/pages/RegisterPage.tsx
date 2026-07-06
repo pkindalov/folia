@@ -54,7 +54,7 @@ export default function RegisterPage() {
         />
         <div className="pt-4">
           <button
-            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-[1px] transition-all disabled:opacity-60"
+            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-px transition-all disabled:opacity-60"
             type="submit"
             disabled={registerMutation.isPending}
           >
