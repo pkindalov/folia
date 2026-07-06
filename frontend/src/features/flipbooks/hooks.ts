@@ -20,9 +20,12 @@ export function useCreateAlbum() {
   const navigate = useNavigate();
   return useMutation({
     mutationFn: albumsApi.createAlbum,
-    onSuccess: () => {
+    onSuccess: (album) => {
       queryClient.invalidateQueries({ queryKey: ['albums'] });
-      navigate('/flipbooks');
+      queryClient.setQueryData(['albums', album._id], album);
+      // Stay in the editor so the newly-unlocked Pages panel is reachable
+      // without a second navigation.
+      navigate(`/editor/${album._id}`, { replace: true });
     },
   });
 }
@@ -47,6 +50,38 @@ export function useDeleteAlbum() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['albums'] });
       navigate('/flipbooks');
+    },
+  });
+}
+
+export function usePages(albumId: string | undefined) {
+  return useQuery({
+    queryKey: ['albums', albumId, 'pages'],
+    queryFn: () => albumsApi.listPages(albumId!),
+    enabled: !!albumId,
+  });
+}
+
+export function useUploadPages(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (files: File[]) => albumsApi.uploadPages(albumId, files),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId] });
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
+    },
+  });
+}
+
+export function useDeletePage(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pageId: string) => albumsApi.deletePage(albumId, pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId] });
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
   });
 }

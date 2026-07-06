@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
+import PagesPanel from '../components/PagesPanel';
 import {
   albumFormSchema,
   type AlbumFormInput,
@@ -11,6 +12,11 @@ import {
   useCreateAlbum,
   useUpdateAlbum,
   useDeleteAlbum,
+  usePages,
+  useUploadPages,
+  useDeletePage,
+  ALLOWED_PHOTO_MIME_TYPES,
+  MAX_PHOTO_SIZE_BYTES,
 } from '../../flipbooks';
 
 const VISIBILITY_OPTIONS = [
@@ -18,6 +24,35 @@ const VISIBILITY_OPTIONS = [
   ['shared', 'group', 'Shared — family circle'],
   ['public', 'public', 'Public — community table'],
 ] as const;
+
+type Rejection = { filename: string; reason: 'type' | 'size' };
+
+function isAllowedPhotoType(type: string): type is (typeof ALLOWED_PHOTO_MIME_TYPES)[number] {
+  return (ALLOWED_PHOTO_MIME_TYPES as readonly string[]).includes(type);
+}
+
+function describeRejections(rejected: Rejection[]): string[] {
+  if (rejected.length === 0) return [];
+
+  if (rejected.length <= 3) {
+    return rejected.map(({ filename, reason }) =>
+      reason === 'type'
+        ? `"${filename}" wasn't added — only JPEG, PNG, WEBP, or GIF photos are supported.`
+        : `"${filename}" wasn't added — photos must be 10MB or smaller.`
+    );
+  }
+
+  const tooLarge = rejected.filter((r) => r.reason === 'size').length;
+  const wrongType = rejected.filter((r) => r.reason === 'type').length;
+  const parts: string[] = [];
+  if (tooLarge > 0) parts.push(`${tooLarge} were too large (max 10MB)`);
+  if (wrongType > 0) {
+    parts.push(
+      `${wrongType} ${wrongType === 1 ? 'has' : 'have'} an unsupported format (only JPEG, PNG, WEBP, GIF)`
+    );
+  }
+  return [`${rejected.length} photos weren't added: ${parts.join(', ')}.`];
+}
 
 export default function EditorPage() {
   const { id } = useParams();
@@ -27,6 +62,12 @@ export default function EditorPage() {
   const createAlbum = useCreateAlbum();
   const updateAlbum = useUpdateAlbum(id ?? '');
   const deleteAlbum = useDeleteAlbum();
+
+  const pagesQuery = usePages(id);
+  const uploadPages = useUploadPages(id ?? '');
+  const deletePage = useDeletePage(id ?? '');
+  const [rejections, setRejections] = useState<string[]>([]);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string>();
 
   const mutation = isEdit ? updateAlbum : createAlbum;
 
@@ -57,6 +98,30 @@ export default function EditorPage() {
     if (window.confirm('Delete this volume? Its pages and photos are removed permanently.')) {
       deleteAlbum.mutate(id);
     }
+  };
+
+  const onFilesSelected = (files: File[]) => {
+    const accepted: File[] = [];
+    const rejected: Rejection[] = [];
+
+    for (const file of files) {
+      if (!isAllowedPhotoType(file.type)) {
+        rejected.push({ filename: file.name, reason: 'type' });
+      } else if (file.size > MAX_PHOTO_SIZE_BYTES) {
+        rejected.push({ filename: file.name, reason: 'size' });
+      } else {
+        accepted.push(file);
+      }
+    }
+
+    setRejections(describeRejections(rejected));
+    if (accepted.length > 0) uploadPages.mutate(accepted);
+  };
+
+  const onRemovePhoto = (photoId: string) => {
+    if (!window.confirm("Remove this photo from the volume? This can't be undone.")) return;
+    setDeletingPhotoId(photoId);
+    deletePage.mutate(photoId, { onSettled: () => setDeletingPhotoId(undefined) });
   };
 
   return (
@@ -187,13 +252,23 @@ export default function EditorPage() {
 
               <div className="relative p-8 md:p-12 flex items-center justify-center">
                 <div className="absolute inset-y-0 left-0 w-2 bg-linear-to-r from-black/5 to-transparent hidden md:block" />
-                <div className="w-full h-full min-h-70 border-2 border-dashed border-outline-variant rounded-card flex flex-col items-center justify-center gap-4 text-on-surface-variant">
-                  <Icon name="add_photo_alternate" className="text-5xl" />
-                  <span className="font-body italic">Pages arrive in the next chapter</span>
-                  <span className="font-ui text-ui-label uppercase text-xs">
-                    photo uploads coming soon
-                  </span>
-                </div>
+                <PagesPanel
+                  locked={!isEdit}
+                  photos={pagesQuery.data ?? []}
+                  isUploading={uploadPages.isPending}
+                  uploadError={
+                    uploadPages.isError
+                      ? uploadPages.error.message
+                      : deletePage.isError
+                        ? deletePage.error.message
+                        : undefined
+                  }
+                  rejections={rejections}
+                  deletingPhotoId={deletingPhotoId}
+                  onFilesSelected={onFilesSelected}
+                  onRemovePhoto={onRemovePhoto}
+                  onDismissRejections={() => setRejections([])}
+                />
               </div>
             </div>
 

@@ -1,0 +1,185 @@
+import { useState, type DragEvent } from 'react';
+import Icon from '../../../components/Icon';
+import PageThumbnail from './PageThumbnail';
+
+type Photo = {
+  _id: string;
+  url: string;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+};
+
+type PagesPanelProps = {
+  locked: boolean;
+  photos: Photo[];
+  isUploading: boolean;
+  uploadError?: string;
+  rejections: string[];
+  deletingPhotoId?: string;
+  onFilesSelected: (files: File[]) => void;
+  onRemovePhoto: (photoId: string) => void;
+  onDismissRejections: () => void;
+};
+
+const ACCEPTED_FILE_TYPES = 'image/jpeg,image/png,image/webp,image/gif';
+
+function getDropzoneColorClasses(isDraggingOver: boolean, isUploading: boolean) {
+  if (!isUploading && isDraggingOver) {
+    return 'border-secondary bg-secondary/5 text-secondary';
+  }
+  return 'border-outline-variant text-on-surface-variant';
+}
+
+export default function PagesPanel({
+  locked,
+  photos,
+  isUploading,
+  uploadError,
+  rejections,
+  deletingPhotoId,
+  onFilesSelected,
+  onRemovePhoto,
+  onDismissRejections,
+}: PagesPanelProps) {
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDraggingOver(false);
+    onFilesSelected(Array.from(event.dataTransfer.files));
+  };
+
+  if (locked) {
+    return (
+      <div className="w-full h-full flex flex-col gap-4">
+        <span className="font-ui text-ui-label uppercase text-on-surface-variant">Pages</span>
+        <div className="w-full h-full min-h-70 border border-outline-variant/40 bg-surface-container-low rounded-card flex flex-col items-center justify-center gap-4">
+          <Icon name="add_photo_alternate" className="text-5xl text-on-surface-variant/50" />
+          <p className="font-body italic text-on-surface-variant">
+            Save this volume first to add its pages.
+          </p>
+          <p className="font-ui text-ui-label uppercase text-xs text-on-surface-variant/50">
+            Pages unlock after saving.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const dropzoneColorClasses = getDropzoneColorClasses(isDraggingOver, isUploading);
+  const hasPhotos = photos.length > 0;
+
+  return (
+    <div className="w-full h-full flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <span className="font-ui text-ui-label uppercase text-on-surface-variant">Pages</span>
+        {hasPhotos && (
+          <span className="font-ui text-ui-label uppercase text-on-surface-variant/60">
+            {photos.length} pages
+          </span>
+        )}
+      </div>
+
+      <label
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-card transition-colors focus-within:ring-2 focus-within:ring-secondary focus-within:ring-offset-2 ${dropzoneColorClasses} ${
+          isUploading ? 'pointer-events-none opacity-70' : 'cursor-pointer'
+        } ${
+          hasPhotos
+            ? 'h-24 flex items-center justify-center gap-3'
+            : 'flex-1 w-full h-full min-h-70 flex flex-col items-center justify-center gap-3'
+        }`}
+      >
+        <input
+          type="file"
+          multiple
+          accept={ACCEPTED_FILE_TYPES}
+          disabled={isUploading}
+          className="sr-only"
+          onChange={(event) => event.target.files && onFilesSelected(Array.from(event.target.files))}
+        />
+        {isUploading ? (
+          <>
+            <Icon name="progress_activity" className="animate-spin text-2xl text-secondary" />
+            <span className="font-ui text-ui-label uppercase text-sm text-on-surface-variant">
+              Uploading photos…
+            </span>
+          </>
+        ) : hasPhotos ? (
+          <>
+            <Icon name="add_photo_alternate" className="text-2xl" />
+            <div className="flex flex-col">
+              <span className="font-ui text-ui-label uppercase text-sm">Add more pages</span>
+              <span className="text-xs text-on-surface-variant/70">or drag photos here</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <Icon name="add_photo_alternate" className="text-5xl" />
+            <p className="font-body italic">Drop the first pages of this volume here.</p>
+            <p className="font-ui text-ui-label uppercase text-xs">or click to choose photos</p>
+            <p className="text-xs text-on-surface-variant/70">
+              JPEG, PNG, WEBP, or GIF · up to 10MB each
+            </p>
+          </>
+        )}
+      </label>
+
+      {rejections.length > 0 && (
+        <div
+          role="alert"
+          className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm relative"
+        >
+          <button
+            type="button"
+            onClick={onDismissRejections}
+            aria-label="Dismiss"
+            className="absolute top-2 right-2 text-on-error-container/70 hover:text-on-error-container"
+          >
+            <Icon name="close" className="text-base" />
+          </button>
+          <div className="flex flex-col gap-1 pr-6">
+            {rejections.map((message, index) => (
+              <p key={index}>{message}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {uploadError && (
+        <div
+          role="alert"
+          className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm"
+        >
+          {uploadError}
+        </div>
+      )}
+
+      {hasPhotos && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto flex-1">
+          {photos.map((photo, index) => (
+            <PageThumbnail
+              key={photo._id}
+              photo={photo}
+              index={index}
+              isDeleting={deletingPhotoId === photo._id}
+              onRemove={() => onRemovePhoto(photo._id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

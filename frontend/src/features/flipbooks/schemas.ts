@@ -30,3 +30,38 @@ export const albumFormSchema = z.object({
 });
 
 export type AlbumFormInput = z.infer<typeof albumFormSchema>;
+
+export const pageSchema = z
+  .object({
+    _id: z.string(),
+    album: z.string(),
+    filename: z.string(),
+    mimeType: z.string(),
+    size: z.number(),
+    url: z.string(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  })
+  .passthrough();
+
+export const pagesResponseSchema = z.object({ pages: z.array(pageSchema) });
+export const uploadPagesResponseSchema = z.object({
+  pages: z.array(pageSchema),
+  pageCount: z.number(),
+});
+export const deletePageResponseSchema = z.object({
+  deleted: z.boolean(),
+  pageCount: z.number(),
+});
+
+export type Page = z.infer<typeof pageSchema>;
+
+// Mirrors the backend's multer config (server/config/upload.js) — used for
+// instant client-side feedback; the server remains the real boundary.
+export const ALLOWED_PHOTO_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+] as const;
+export const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;

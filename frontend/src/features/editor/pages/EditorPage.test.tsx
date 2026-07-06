@@ -19,6 +19,15 @@ const ALBUM = {
   },
 };
 
+const PAGE = {
+  _id: 'p1',
+  album: 'a1',
+  filename: 'photo1.jpg',
+  mimeType: 'image/jpeg',
+  size: 1024,
+  url: '/uploads/id1/a1/photo1.jpg',
+};
+
 type Call = { url: string; options?: RequestInit };
 const calls: Call[] = [];
 
@@ -43,7 +52,7 @@ const renderNew = () =>
   renderWithProviders(<EditorPage />, {
     route: '/editor',
     path: '/editor',
-    extraRoutes: <Route path="/flipbooks" element={<div>Gallery reached</div>} />,
+    extraRoutes: <Route path="/editor/:id" element={<EditorPage />} />,
   });
 
 const renderEdit = () =>
@@ -69,10 +78,12 @@ describe('EditorPage — create', () => {
     expect(calls.some((c) => c.url.includes('/api/albums'))).toBe(false);
   });
 
-  test('creates an album and navigates back to the gallery', async () => {
+  test('creates an album and stays in the editor with pages unlocked', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
       'POST /api/albums': { body: ALBUM, status: 201 },
+      'GET /api/albums/a1/pages': { body: { pages: [] } },
+      'GET /api/albums/a1': { body: ALBUM },
     });
     const user = userEvent.setup();
     renderNew();
@@ -82,7 +93,8 @@ describe('EditorPage — create', () => {
     await user.click(screen.getByLabelText(/public — community table/i));
     await user.click(screen.getByRole('button', { name: /create volume/i }));
 
-    expect(await screen.findByText('Gallery reached')).toBeInTheDocument();
+    expect(await screen.findByText('Save changes')).toBeInTheDocument();
+    expect(await screen.findByText(/drop the first pages of this volume here/i)).toBeInTheDocument();
     const post = calls.find((c) => c.options?.method === 'POST');
     expect(post).toBeDefined();
     expect(JSON.parse(post!.options!.body as string)).toEqual({
@@ -167,5 +179,107 @@ describe('EditorPage — edit', () => {
     await user.click(await screen.findByRole('button', { name: /delete volume/i }));
     expect(calls.some((c) => c.options?.method === 'DELETE')).toBe(false);
     expect(screen.queryByText('Gallery reached')).not.toBeInTheDocument();
+  });
+});
+
+describe('EditorPage — pages panel', () => {
+  test('locked before the volume is first saved: no file input, no dropzone copy', async () => {
+    mockApi({ 'GET /api/users/me': { body: ME } });
+    const { container } = renderNew();
+    expect(
+      await screen.findByText('Save this volume first to add its pages.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/drop the first pages/i)).not.toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  test('renders existing thumbnails when editing an album with pages', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderEdit();
+    const thumbnail = await screen.findByAltText('photo1.jpg');
+    expect(thumbnail).toHaveAttribute('src', '/uploads/id1/a1/photo1.jpg');
+    expect(screen.getByRole('button', { name: /remove photo1\.jpg/i })).toBeInTheDocument();
+  });
+
+  test('uploads a selected photo as multipart form data', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'POST /api/albums/a1/pages': { body: { pages: [PAGE], pageCount: 1 }, status: 201 },
+    });
+    const user = userEvent.setup();
+    const { container } = renderEdit();
+    await screen.findByText(/drop the first pages of this volume here/i);
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['fake-bytes'], 'photo1.jpg', { type: 'image/jpeg' });
+    await user.upload(input, file);
+
+    await waitFor(() => {
+      const post = calls.find((c) => c.url.includes('/api/albums/a1/pages') && c.options?.method === 'POST');
+      expect(post).toBeDefined();
+      expect(post!.options!.body).toBeInstanceOf(FormData);
+      expect((post!.options!.body as FormData).getAll('photos')).toEqual([file]);
+    });
+  });
+
+  test('rejects an unsupported file type client-side without calling the API', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    // The accept attribute only hints at the OS file picker — files dropped
+    // or picked through a picker that ignores it still reach the input, so
+    // this bypasses userEvent's accept-based filtering to exercise the
+    // app's own client-side validation, the real safety net here.
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderEdit();
+    await screen.findByText(/drop the first pages of this volume here/i);
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['not an image'], 'notes.txt', { type: 'text/plain' });
+    await user.upload(input, file);
+
+    expect(await screen.findByText(/only JPEG, PNG, WEBP, or GIF photos are supported/i)).toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes('/api/albums/a1/pages') && c.options?.method === 'POST')).toBe(false);
+  });
+
+  test('removes a photo after confirmation', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'DELETE /api/albums/a1/pages/p1': { body: { deleted: true, pageCount: 0 } },
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderEdit();
+
+    await user.click(await screen.findByRole('button', { name: /remove photo1\.jpg/i }));
+    expect(window.confirm).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(calls.some((c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'DELETE')).toBe(true);
+    });
+  });
+
+  test('surfaces an error when removing a photo fails', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'DELETE /api/albums/a1/pages/p1': { body: { error: 'Photo not found' }, status: 404 },
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderEdit();
+
+    await user.click(await screen.findByRole('button', { name: /remove photo1\.jpg/i }));
+    expect(await screen.findByText('Photo not found')).toBeInTheDocument();
   });
 });

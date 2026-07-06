@@ -13,6 +13,7 @@ export default defineConfig({
     // LAN never need to reach the backend (or fight CORS) directly
     proxy: {
       '/api': 'http://localhost:1337',
+      '/uploads': 'http://localhost:1337',
     },
   },
   test: {
