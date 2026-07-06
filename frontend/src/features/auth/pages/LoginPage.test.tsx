@@ -32,9 +32,9 @@ beforeEach(() => {
 });
 
 describe('LoginPage', () => {
-  test('renders username, password and submit button', () => {
+  test('renders identifier, password and submit button', () => {
     renderLogin();
-    expect(screen.getByLabelText('Username')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email or username')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
@@ -43,19 +43,19 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderLogin();
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByText('Username is required')).toBeInTheDocument();
+    expect(await screen.findByText('Enter your email or username')).toBeInTheDocument();
     expect(screen.getByText('Password is required')).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
 
   test('surfaces the API error message on failed login', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'Invalid username or password' }, 401));
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'Invalid credentials' }, 401));
     const user = userEvent.setup();
     renderLogin();
-    await user.type(screen.getByLabelText('Username'), 'pan');
+    await user.type(screen.getByLabelText('Email or username'), 'pan');
     await user.type(screen.getByLabelText('Password'), 'wrong-pass');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByText('Invalid username or password')).toBeInTheDocument();
+    expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
     expect(tokenStorage.get()).toBeNull();
   });
 
@@ -63,7 +63,7 @@ describe('LoginPage', () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'jwt-ok', user: VALID_USER }));
     const user = userEvent.setup();
     renderLogin();
-    await user.type(screen.getByLabelText('Username'), 'pan');
+    await user.type(screen.getByLabelText('Email or username'), 'pan@test.com');
     await user.type(screen.getByLabelText('Password'), 'secret123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -72,7 +72,7 @@ describe('LoginPage', () => {
     const [url, options] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toMatch(/\/api\/auth\/login$/);
     expect(JSON.parse(options!.body as string)).toEqual({
-      username: 'pan',
+      identifier: 'pan@test.com',
       password: 'secret123',
     });
   });
@@ -82,7 +82,7 @@ describe('LoginPage', () => {
     vi.mocked(fetch).mockReturnValue(new Promise((r) => (resolveFetch = r)));
     const user = userEvent.setup();
     renderLogin();
-    await user.type(screen.getByLabelText('Username'), 'pan');
+    await user.type(screen.getByLabelText('Email or username'), 'pan');
     await user.type(screen.getByLabelText('Password'), 'secret123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 

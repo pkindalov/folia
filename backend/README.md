@@ -40,7 +40,7 @@ Requires MongoDB on localhost:27017 (you can run just Mongo via `docker compose 
 |---|---|---|---|
 | GET | /api/health | – | – |
 | POST | /api/auth/register | – | `{ username, email, password }` |
-| POST | /api/auth/login | – | `{ username, password }` |
+| POST | /api/auth/login | – | `{ identifier, password }` — identifier is a username or email |
 | GET | /api/users/me | Bearer token | – |
 | GET | /api/users/:username | Bearer token | – |
 

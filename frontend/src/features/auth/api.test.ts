@@ -23,7 +23,7 @@ beforeEach(() => {
 describe('auth api service', () => {
   test('login stores the token and returns the parsed response', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'jwt-1', user: VALID_USER }));
-    const result = await login({ username: 'pan', password: 'secret123' });
+    const result = await login({ identifier: 'pan', password: 'secret123' });
     expect(result.token).toBe('jwt-1');
     expect(result.user.username).toBe('pan');
     expect(tokenStorage.get()).toBe('jwt-1');
@@ -31,27 +31,27 @@ describe('auth api service', () => {
 
   test('login posts credentials to the right endpoint', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 't', user: VALID_USER }));
-    await login({ username: 'pan', password: 'secret123' });
+    await login({ identifier: 'pan@test.com', password: 'secret123' });
     const [url, options] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toMatch(/\/api\/auth\/login$/);
     expect(options!.method).toBe('POST');
     expect(JSON.parse(options!.body as string)).toEqual({
-      username: 'pan',
+      identifier: 'pan@test.com',
       password: 'secret123',
     });
   });
 
   test('failed login does not store a token', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'Invalid username or password' }, 401));
-    await expect(login({ username: 'pan', password: 'wrong' })).rejects.toThrow(
-      'Invalid username or password'
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'Invalid credentials' }, 401));
+    await expect(login({ identifier: 'pan', password: 'wrong' })).rejects.toThrow(
+      'Invalid credentials'
     );
     expect(tokenStorage.get()).toBeNull();
   });
 
   test('login rejects a malformed API response (zod guard)', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: 'jwt-1', user: { bogus: true } }));
-    await expect(login({ username: 'pan', password: 'secret123' })).rejects.toThrow();
+    await expect(login({ identifier: 'pan', password: 'secret123' })).rejects.toThrow();
     expect(tokenStorage.get()).toBeNull();
   });
 

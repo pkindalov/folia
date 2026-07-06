@@ -38,17 +38,18 @@ module.exports = {
   },
 
   login: (req, res) => {
-    const { username, password } = req.body || {};
+    const { identifier, password } = req.body || {};
 
-    if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
-      return res.status(400).json({ error: 'username and password are required' });
+    if (!isNonEmptyString(identifier) || !isNonEmptyString(password)) {
+      return res.status(400).json({ error: 'identifier and password are required' });
     }
 
-    User.findOne({ username })
+    // The identifier is a username or an email; emails are stored lowercased
+    User.findOne({ $or: [{ username: identifier }, { email: identifier.toLowerCase() }] })
       .then((user) => {
         if (!user || !user.authenticate(password)) {
           // Same message for both cases — no user enumeration
-          return res.status(401).json({ error: 'Invalid username or password' });
+          return res.status(401).json({ error: 'Invalid credentials' });
         }
         res.json({ token: auth.signToken(user), user });
       })

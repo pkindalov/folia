@@ -31,10 +31,10 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit((data) => login.mutate(data))} noValidate>
         <FormField
-          label="Username"
+          label="Email or username"
           autoComplete="username"
-          error={errors.username?.message}
-          {...register('username')}
+          error={errors.identifier?.message}
+          {...register('identifier')}
         />
         <FormField
           label="Password"
@@ -46,7 +46,7 @@ export default function LoginPage() {
         />
         <div className="pt-4">
           <button
-            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-[1px] transition-all disabled:opacity-60"
+            className="w-full bg-secondary text-on-secondary py-4 font-ui text-ui-button uppercase rounded-paper shadow-sm hover:opacity-90 active:translate-y-px transition-all disabled:opacity-60"
             type="submit"
             disabled={login.isPending}
           >

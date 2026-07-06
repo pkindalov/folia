@@ -104,7 +104,7 @@ describe('HTTP integration', () => {
 
       const login = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'pan', password: 'secret123' });
+        .send({ identifier: 'pan', password: 'secret123' });
       expect(login.status).toBe(200);
       expect(login.body.token).toBeDefined();
 

@@ -173,10 +173,10 @@ describe('users-controller', () => {
   describe('login', () => {
     test.each([
       ['empty body', {}],
-      ['missing password', { username: 'pan' }],
-      ['missing username', { password: 'secret123' }],
-      ['object as username (injection)', { username: { $gt: '' }, password: 'x' }],
-      ['object as password (injection)', { username: 'pan', password: { $gt: '' } }],
+      ['missing password', { identifier: 'pan' }],
+      ['missing identifier', { password: 'secret123' }],
+      ['object as identifier (injection)', { identifier: { $gt: '' }, password: 'x' }],
+      ['object as password (injection)', { identifier: 'pan', password: { $gt: '' } }],
       ['null body', null],
     ])('rejects %s with 400 before touching the DB', (_name, body) => {
       const findOne = jest.spyOn(User, 'findOne');
@@ -186,20 +186,22 @@ describe('users-controller', () => {
       expect(findOne).not.toHaveBeenCalled();
     });
 
-    test('queries by the exact username string', async () => {
+    test('looks the identifier up as username or lowercased email', async () => {
       const findOne = jest.spyOn(User, 'findOne').mockResolvedValue(null);
-      controller.login({ body: { username: 'pan', password: 'secret123' } }, mockRes());
+      controller.login({ body: { identifier: 'Pan@Test.com', password: 'secret123' } }, mockRes());
       await flush();
-      expect(findOne).toHaveBeenCalledWith({ username: 'pan' });
+      expect(findOne).toHaveBeenCalledWith({
+        $or: [{ username: 'Pan@Test.com' }, { email: 'pan@test.com' }],
+      });
     });
 
     test('returns 401 for an unknown user', async () => {
       jest.spyOn(User, 'findOne').mockResolvedValue(null);
       const res = mockRes();
-      controller.login({ body: { username: 'ghost', password: 'secret123' } }, res);
+      controller.login({ body: { identifier: 'ghost', password: 'secret123' } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid username or password' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid credentials' });
     });
 
     test('returns 401 for a wrong password', async () => {
@@ -209,7 +211,7 @@ describe('users-controller', () => {
         authenticate: () => false,
       });
       const res = mockRes();
-      controller.login({ body: { username: 'pan', password: 'wrong-pass' } }, res);
+      controller.login({ body: { identifier: 'pan', password: 'wrong-pass' } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(401);
     });
@@ -217,14 +219,14 @@ describe('users-controller', () => {
     test('unknown user and wrong password produce identical responses (no user enumeration)', async () => {
       const resUnknown = mockRes();
       jest.spyOn(User, 'findOne').mockResolvedValue(null);
-      controller.login({ body: { username: 'ghost', password: 'x'.repeat(8) } }, resUnknown);
+      controller.login({ body: { identifier: 'ghost', password: 'x'.repeat(8) } }, resUnknown);
       await flush();
 
       const resWrongPass = mockRes();
       jest.spyOn(User, 'findOne').mockResolvedValue({
         _id: 'id1', username: 'pan', authenticate: () => false,
       });
-      controller.login({ body: { username: 'pan', password: 'x'.repeat(8) } }, resWrongPass);
+      controller.login({ body: { identifier: 'pan', password: 'x'.repeat(8) } }, resWrongPass);
       await flush();
 
       expect(resUnknown.json.mock.calls[0][0]).toEqual(resWrongPass.json.mock.calls[0][0]);
@@ -235,7 +237,7 @@ describe('users-controller', () => {
       const user = { _id: 'id1', username: 'pan', authenticate: () => true };
       jest.spyOn(User, 'findOne').mockResolvedValue(user);
       const res = mockRes();
-      controller.login({ body: { username: 'pan', password: 'secret123' } }, res);
+      controller.login({ body: { identifier: 'pan', password: 'secret123' } }, res);
       await flush();
       const body = res.json.mock.calls[0][0];
       expect(body.user).toBe(user);
@@ -246,7 +248,7 @@ describe('users-controller', () => {
     test('returns 500 when the DB lookup fails', async () => {
       jest.spyOn(User, 'findOne').mockRejectedValue(new Error('db down'));
       const res = mockRes();
-      controller.login({ body: { username: 'pan', password: 'secret123' } }, res);
+      controller.login({ body: { identifier: 'pan', password: 'secret123' } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Login failed' });

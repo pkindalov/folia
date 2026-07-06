@@ -16,12 +16,13 @@ const VALID_USER = {
 
 describe('loginSchema', () => {
   test('accepts valid credentials', () => {
-    expect(loginSchema.safeParse({ username: 'pan', password: 'x' }).success).toBe(true);
+    expect(loginSchema.safeParse({ identifier: 'pan', password: 'x' }).success).toBe(true);
+    expect(loginSchema.safeParse({ identifier: 'pan@test.com', password: 'x' }).success).toBe(true);
   });
 
   test.each([
-    ['empty username', { username: '', password: 'x' }, 'Username is required'],
-    ['empty password', { username: 'pan', password: '' }, 'Password is required'],
+    ['empty identifier', { identifier: '', password: 'x' }, 'Enter your email or username'],
+    ['empty password', { identifier: 'pan', password: '' }, 'Password is required'],
   ])('rejects %s with message', (_name, input, message) => {
     const result = loginSchema.safeParse(input);
     expect(result.success).toBe(false);
@@ -30,12 +31,12 @@ describe('loginSchema', () => {
 
   test('rejects missing fields', () => {
     expect(loginSchema.safeParse({}).success).toBe(false);
-    expect(loginSchema.safeParse({ username: 'pan' }).success).toBe(false);
+    expect(loginSchema.safeParse({ identifier: 'pan' }).success).toBe(false);
   });
 
   test('rejects non-string values', () => {
-    expect(loginSchema.safeParse({ username: 42, password: 'x' }).success).toBe(false);
-    expect(loginSchema.safeParse({ username: 'pan', password: null }).success).toBe(false);
+    expect(loginSchema.safeParse({ identifier: 42, password: 'x' }).success).toBe(false);
+    expect(loginSchema.safeParse({ identifier: 'pan', password: null }).success).toBe(false);
   });
 });
 

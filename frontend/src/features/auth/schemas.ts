@@ -25,7 +25,7 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 
 // Form schemas — mirror the backend's validation rules
 export const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
+  identifier: z.string().min(1, 'Enter your email or username'),
   password: z.string().min(1, 'Password is required'),
 });
 
