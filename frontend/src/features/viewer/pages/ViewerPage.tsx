@@ -1,11 +1,20 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
-import { useAlbum } from '../../flipbooks';
+import { useAlbum, usePages } from '../../flipbooks';
 
 export default function ViewerPage() {
   const { id } = useParams();
   const { data: album, isLoading, isError, error } = useAlbum(id);
+  const { data: pagesData } = usePages(id);
+  const pages = pagesData ?? [];
+  const hasPhotos = pages.length > 0;
+
+  const [photoIndex, setPhotoIndex] = useState(0);
+  useEffect(() => setPhotoIndex(0), [id]);
+  const currentIndex = Math.min(photoIndex, pages.length - 1);
+  const currentPhoto = pages[currentIndex];
 
   return (
     <AppShell>
@@ -67,20 +76,56 @@ export default function ViewerPage() {
                 </div>
               </div>
 
-              {/* Right page: pages (none exist yet — the pages API is a future chapter) */}
+              {/* Right page: the volume's photos */}
               <div className="relative p-8 md:p-12 flex items-center justify-center">
                 <div className="absolute inset-y-0 left-0 w-3 bg-linear-to-r from-black/10 to-transparent hidden md:block" />
-                <div className="text-center flex flex-col items-center gap-4 text-on-surface-variant">
-                  <Icon name="auto_stories" className="text-5xl" />
-                  <p className="font-body italic">This volume has no pages yet.</p>
-                  <Link
-                    to={`/editor/${album._id}`}
-                    className="font-ui text-ui-label uppercase text-secondary hover:underline flex items-center gap-2"
-                  >
-                    <Icon name="edit" className="text-base" />
-                    Add memories in the editor
-                  </Link>
-                </div>
+                {hasPhotos ? (
+                  <div className="flex flex-col items-center gap-6 w-full">
+                    <div className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full">
+                      <img
+                        key={currentPhoto._id}
+                        src={currentPhoto.url}
+                        alt={currentPhoto.filename}
+                        className="w-full aspect-square object-cover"
+                      />
+                    </div>
+                    {pages.length > 1 && (
+                      <div className="flex items-center gap-6">
+                        <button
+                          onClick={() => setPhotoIndex((i) => i - 1)}
+                          disabled={currentIndex === 0}
+                          aria-label="Previous photo"
+                          className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <Icon name="chevron_left" />
+                        </button>
+                        <span className="font-body italic text-on-surface-variant text-sm">
+                          Photo {currentIndex + 1} of {pages.length}
+                        </span>
+                        <button
+                          onClick={() => setPhotoIndex((i) => i + 1)}
+                          disabled={currentIndex === pages.length - 1}
+                          aria-label="Next photo"
+                          className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <Icon name="chevron_right" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center flex flex-col items-center gap-4 text-on-surface-variant">
+                    <Icon name="auto_stories" className="text-5xl" />
+                    <p className="font-body italic">This volume has no pages yet.</p>
+                    <Link
+                      to={`/editor/${album._id}`}
+                      className="font-ui text-ui-label uppercase text-secondary hover:underline flex items-center gap-2"
+                    >
+                      <Icon name="edit" className="text-base" />
+                      Add memories in the editor
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}

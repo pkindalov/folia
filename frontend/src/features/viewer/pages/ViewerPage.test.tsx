@@ -19,6 +19,24 @@ const ALBUM = {
   },
 };
 
+const PAGE_1 = {
+  _id: 'p1',
+  album: 'a1',
+  filename: 'photo1.jpg',
+  mimeType: 'image/jpeg',
+  size: 1024,
+  url: '/uploads/id1/a1/photo1.jpg',
+};
+
+const PAGE_2 = {
+  _id: 'p2',
+  album: 'a1',
+  filename: 'photo2.jpg',
+  mimeType: 'image/jpeg',
+  size: 2048,
+  url: '/uploads/id1/a1/photo2.jpg',
+};
+
 function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
   vi.mocked(fetch).mockImplementation((url, options) => {
     const method = options?.method ?? 'GET';
@@ -104,5 +122,40 @@ describe('ViewerPage', () => {
     });
     renderViewer();
     expect(await screen.findByText('Album not found')).toBeInTheDocument();
+  });
+
+  test('shows the album\'s photo when it has one page', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderViewer();
+    const photo = await screen.findByAltText('photo1.jpg');
+    expect(photo).toHaveAttribute('src', '/uploads/id1/a1/photo1.jpg');
+    expect(screen.queryByText('This volume has no pages yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/photo 1 of/i)).not.toBeInTheDocument();
+  });
+
+  test('navigates between multiple photos', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous photo/i })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /next photo/i }));
+    expect(await screen.findByAltText('photo2.jpg')).toBeInTheDocument();
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next photo/i })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /previous photo/i }));
+    expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
   });
 });
