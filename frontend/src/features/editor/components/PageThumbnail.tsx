@@ -17,6 +17,7 @@ type PageThumbnailProps = {
   isSettingCover: boolean;
   onRemove: () => void;
   onSetCover: () => void;
+  onOpenPhoto: () => void;
   onCaptionChange: (caption: string) => void;
 };
 
@@ -30,6 +31,7 @@ export default function PageThumbnail({
   isSettingCover,
   onRemove,
   onSetCover,
+  onOpenPhoto,
   onCaptionChange,
 }: PageThumbnailProps) {
   const rotationClass = ROTATION_CLASSES[index % ROTATION_CLASSES.length];
@@ -51,11 +53,18 @@ export default function PageThumbnail({
     <div
       className={`relative bg-white p-1.5 stuck-photo rounded-paper hover:-translate-y-0.5 transition-transform ${rotationClass}`}
     >
-      <img
-        src={photo.url}
-        alt={photo.filename || 'Volume page photo'}
-        className="aspect-square object-cover w-full rounded-[1px]"
-      />
+      <button
+        type="button"
+        onClick={onOpenPhoto}
+        aria-label={`View ${photo.filename || 'this photo'} full size`}
+        className="block w-full cursor-zoom-in"
+      >
+        <img
+          src={photo.url}
+          alt={photo.filename || 'Volume page photo'}
+          className="aspect-square object-cover w-full rounded-[1px]"
+        />
+      </button>
       <button
         type="button"
         onClick={onSetCover}

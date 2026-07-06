@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router-dom';
 import EditorPage from './EditorPage';
@@ -367,6 +367,23 @@ describe('EditorPage — pages panel', () => {
         )
       ).toBe(true);
     });
+  });
+
+  test('clicking a thumbnail opens it full-size in a lightbox', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderEdit();
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+    expect(within(dialog).getByAltText('photo1.jpg')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: /close photo viewer/i }));
+    expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
   });
 
   test('renders the chosen cover photo in the preview panel', async () => {

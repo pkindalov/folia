@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
+import PhotoLightbox from '../../../components/PhotoLightbox';
 import { useAlbum, usePages } from '../../flipbooks';
 
 export default function ViewerPage() {
@@ -15,6 +16,8 @@ export default function ViewerPage() {
   useEffect(() => setPhotoIndex(0), [id]);
   const currentIndex = Math.min(photoIndex, pages.length - 1);
   const currentPhoto = pages[currentIndex];
+
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   return (
     <AppShell>
@@ -81,14 +84,19 @@ export default function ViewerPage() {
                 <div className="absolute inset-y-0 left-0 w-3 bg-linear-to-r from-black/10 to-transparent hidden md:block" />
                 {hasPhotos ? (
                   <div className="flex flex-col items-center gap-6 w-full">
-                    <div className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full">
+                    <button
+                      type="button"
+                      onClick={() => setIsLightboxOpen(true)}
+                      aria-label={`View ${currentPhoto.filename || 'this photo'} full size`}
+                      className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full cursor-zoom-in"
+                    >
                       <img
                         key={currentPhoto._id}
                         src={currentPhoto.url}
                         alt={currentPhoto.filename}
                         className="w-full aspect-square object-cover"
                       />
-                    </div>
+                    </button>
                     {currentPhoto.caption && (
                       <p className="max-w-sm mx-auto font-body italic text-on-surface-variant text-center">
                         "{currentPhoto.caption}"
@@ -136,6 +144,15 @@ export default function ViewerPage() {
           )}
         </div>
       </div>
+
+      {isLightboxOpen && hasPhotos && (
+        <PhotoLightbox
+          photos={pages}
+          index={currentIndex}
+          onClose={() => setIsLightboxOpen(false)}
+          onNavigate={setPhotoIndex}
+        />
+      )}
     </AppShell>
   );
 }

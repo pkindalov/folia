@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router-dom';
 import ViewerPage from './ViewerPage';
@@ -178,5 +178,40 @@ describe('ViewerPage', () => {
     renderViewer();
     await screen.findByAltText('photo1.jpg');
     expect(screen.queryByText(/^"/)).not.toBeInTheDocument();
+  });
+
+  test('clicking the photo opens it full-size in a lightbox', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+    expect(within(dialog).getAllByAltText('photo1.jpg')).toHaveLength(1);
+
+    await user.click(within(dialog).getByRole('button', { name: /next photo/i }));
+    expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: /close photo viewer/i }));
+    expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
+  });
+
+  test('closes the lightbox on Escape', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    await screen.findByRole('dialog', { name: /photo viewer/i });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
   });
 });

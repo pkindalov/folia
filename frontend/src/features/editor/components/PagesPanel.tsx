@@ -1,5 +1,6 @@
 import { useState, type DragEvent } from 'react';
 import Icon from '../../../components/Icon';
+import PhotoLightbox from '../../../components/PhotoLightbox';
 import PageThumbnail from './PageThumbnail';
 
 type Photo = {
@@ -52,6 +53,7 @@ export default function PagesPanel({
   onCaptionChange,
 }: PagesPanelProps) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
@@ -177,7 +179,7 @@ export default function PagesPanel({
       )}
 
       {hasPhotos && (
-        <div className="grid grid-cols-1 gap-3 overflow-y-auto flex-1">
+        <div className="grid grid-cols-1 gap-3 overflow-y-auto flex-1 p-2">
           {photos.map((photo, index) => (
             <PageThumbnail
               key={photo._id}
@@ -188,10 +190,20 @@ export default function PagesPanel({
               isSettingCover={settingCoverPhotoId === photo._id}
               onRemove={() => onRemovePhoto(photo._id)}
               onSetCover={() => onSetCoverPhoto(photo._id)}
+              onOpenPhoto={() => setLightboxIndex(index)}
               onCaptionChange={(caption) => onCaptionChange(photo._id, caption)}
             />
           ))}
         </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <PhotoLightbox
+          photos={photos}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
       )}
     </div>
   );
