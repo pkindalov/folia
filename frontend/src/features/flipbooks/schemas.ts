@@ -20,6 +20,12 @@ export const albumResponseSchema = z.object({ album: albumSchema });
 
 export type Album = z.infer<typeof albumSchema>;
 
+// A public album as shown on the Explore page — same shape, plus who made it.
+export const publicAlbumSchema = albumSchema.extend({ ownerUsername: z.string() });
+export const publicAlbumsResponseSchema = z.object({ albums: z.array(publicAlbumSchema) });
+
+export type PublicAlbum = z.infer<typeof publicAlbumSchema>;
+
 // Form schema — mirrors backend validation
 export const albumFormSchema = z.object({
   title: z

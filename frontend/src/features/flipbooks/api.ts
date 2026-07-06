@@ -2,6 +2,7 @@ import { api } from '../../lib/api-client';
 import {
   albumsResponseSchema,
   albumResponseSchema,
+  publicAlbumsResponseSchema,
   pagesResponseSchema,
   uploadPagesResponseSchema,
   deletePageResponseSchema,
@@ -10,11 +11,17 @@ import {
   type Album,
   type AlbumFormInput,
   type Page,
+  type PublicAlbum,
 } from './schemas';
 
 export async function listAlbums(): Promise<Album[]> {
   const data = await api('/api/albums');
   return albumsResponseSchema.parse(data).albums;
+}
+
+export async function listPublicAlbums(): Promise<PublicAlbum[]> {
+  const data = await api('/api/albums/public');
+  return publicAlbumsResponseSchema.parse(data).albums;
 }
 
 export async function getAlbum(id: string): Promise<Album> {

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
+const User = require('../data/User');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
 
@@ -59,6 +60,31 @@ module.exports = {
       .then((albums) => Promise.all(albums.map(withCoverImage)))
       .then((albums) => res.json({ albums }))
       .catch(() => res.status(500).json({ error: 'Failed to load albums' }));
+  },
+
+  // Every public album, across all owners, for the community Explore page.
+  listPublic: (req, res) => {
+    Album.find({ visibility: 'public' })
+      .sort('-createdAt')
+      .then((albums) => {
+        const ownerIds = [...new Set(albums.map((album) => album.owner.toString()))];
+        return User.find({ _id: { $in: ownerIds } }, 'username').then((users) => {
+          const usernameByOwnerId = new Map(
+            users.map((user) => [user._id.toString(), user.username])
+          );
+          return Promise.all(
+            albums.map((album) =>
+              resolveCoverImage(album).then((coverImage) => ({
+                ...album.toJSON(),
+                ownerUsername: usernameByOwnerId.get(album.owner.toString()),
+                coverImage,
+              }))
+            )
+          );
+        });
+      })
+      .then((albums) => res.json({ albums }))
+      .catch(() => res.status(500).json({ error: 'Failed to load public albums' }));
   },
 
   getOne: (req, res) => {

@@ -7,6 +7,7 @@ jest.mock('../../server/utilities/storage', () => ({
 
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
+const User = require('../../server/data/User');
 const storage = require('../../server/utilities/storage');
 const controller = require('../../server/controllers/albums-controller');
 
@@ -177,6 +178,50 @@ describe('albums-controller', () => {
           { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/chosen.jpg` },
         ],
       });
+    });
+  });
+
+  describe('listPublic', () => {
+    test('returns public albums across all owners with their cover and username', async () => {
+      const album = fakeAlbum({ visibility: 'public', owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([album]) });
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan' }]);
+      jest.spyOn(Page, 'findOne').mockReturnValue({
+        sort: jest.fn().mockResolvedValue({ filename: 'first.jpg' }),
+      });
+
+      const res = mockRes();
+      controller.listPublic({}, res);
+      await flush();
+
+      expect(Album.find).toHaveBeenCalledWith({ visibility: 'public' });
+      expect(res.json).toHaveBeenCalledWith({
+        albums: [
+          {
+            ...album.toJSON(),
+            ownerUsername: 'pan',
+            coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/first.jpg`,
+          },
+        ],
+      });
+    });
+
+    test('returns an empty list when there are no public albums', async () => {
+      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
+      const findUsers = jest.spyOn(User, 'find').mockResolvedValue([]);
+      const res = mockRes();
+      controller.listPublic({}, res);
+      await flush();
+      expect(findUsers).toHaveBeenCalledWith({ _id: { $in: [] } }, 'username');
+      expect(res.json).toHaveBeenCalledWith({ albums: [] });
+    });
+
+    test('returns 500 when the query fails', async () => {
+      jest.spyOn(Album, 'find').mockReturnValue({ sort: () => Promise.reject(new Error('x')) });
+      const res = mockRes();
+      controller.listPublic({}, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 

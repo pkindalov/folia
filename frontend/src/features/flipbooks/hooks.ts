@@ -7,6 +7,10 @@ export function useAlbums() {
   return useQuery({ queryKey: ['albums'], queryFn: albumsApi.listAlbums });
 }
 
+export function usePublicAlbums() {
+  return useQuery({ queryKey: ['albums', 'public'], queryFn: albumsApi.listPublicAlbums });
+}
+
 export function useAlbum(id: string | undefined) {
   return useQuery({
     queryKey: ['albums', id],
