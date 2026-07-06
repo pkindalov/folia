@@ -1,0 +1,258 @@
+jest.mock('../../server/utilities/storage', () => ({
+  albumDir: jest.fn(),
+  photoPath: jest.fn((ownerId, albumId, filename) => `/uploads/${ownerId}/${albumId}/${filename}`),
+  ensureAlbumDir: jest.fn(),
+  removeAlbumDir: jest.fn(),
+}));
+
+jest.mock('fs', () => ({
+  rm: jest.fn((filePath, opts, cb) => cb(null)),
+}));
+
+const Album = require('../../server/data/Album');
+const Page = require('../../server/data/Page');
+const fs = require('fs');
+const controller = require('../../server/controllers/pages-controller');
+
+const flush = () => new Promise(setImmediate);
+
+const OWNER_ID = '507f1f77bcf86cd799439011';
+const OTHER_ID = '507f1f77bcf86cd799439022';
+const ALBUM_ID = '507f191e810c19729de860ea';
+const PAGE_ID = '507f191e810c19729de860eb';
+
+const owner = { _id: OWNER_ID, username: 'pan', roles: ['User'] };
+const stranger = { _id: OTHER_ID, username: 'maria', roles: ['User'] };
+const admin = { _id: OTHER_ID, username: 'root', roles: ['Admin'] };
+
+const mockRes = () => {
+  const res = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  return res;
+};
+
+const fakeAlbum = (overrides = {}) => ({
+  _id: ALBUM_ID,
+  title: 'Summer',
+  visibility: 'private',
+  owner: { toString: () => OWNER_ID },
+  pageCount: 0,
+  save: jest.fn().mockImplementation(function () {
+    return Promise.resolve(this);
+  }),
+  ...overrides,
+});
+
+const fakePage = (overrides = {}) => ({
+  _id: PAGE_ID,
+  album: ALBUM_ID,
+  filename: 'abc.jpg',
+  mimeType: 'image/jpeg',
+  size: 1024,
+  toJSON: function () {
+    const { toJSON: _drop, deleteOne: _drop2, ...rest } = this;
+    return rest;
+  },
+  deleteOne: jest.fn().mockResolvedValue({}),
+  ...overrides,
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('pages-controller', () => {
+  describe('requireOwnedAlbum', () => {
+    test('404 for a malformed id (no DB hit)', () => {
+      const findById = jest.spyOn(Album, 'findById');
+      const res = mockRes();
+      controller.requireOwnedAlbum({ params: { id: 'not-an-objectid' }, user: owner }, res, jest.fn());
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findById).not.toHaveBeenCalled();
+    });
+
+    test('404 when the album does not exist', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(null);
+      const res = mockRes();
+      controller.requireOwnedAlbum({ params: { id: ALBUM_ID }, user: owner }, res, jest.fn());
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('403 when a non-owner, non-admin requests it', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = mockRes();
+      controller.requireOwnedAlbum({ params: { id: ALBUM_ID }, user: stranger }, res, jest.fn());
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('sets req.album and calls next for the owner', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const next = jest.fn();
+      const req = { params: { id: ALBUM_ID }, user: owner };
+      controller.requireOwnedAlbum(req, mockRes(), next);
+      await flush();
+      expect(req.album).toBe(album);
+      expect(next).toHaveBeenCalled();
+    });
+
+    test('an Admin passes through too', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const next = jest.fn();
+      controller.requireOwnedAlbum({ params: { id: ALBUM_ID }, user: admin }, mockRes(), next);
+      await flush();
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe('list', () => {
+    test('404 for a malformed id', () => {
+      const findById = jest.spyOn(Album, 'findById');
+      const res = mockRes();
+      controller.list({ params: { id: 'nope' }, user: owner }, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findById).not.toHaveBeenCalled();
+    });
+
+    test('403 when a stranger requests a private album', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('owner sees their private album pages with a url per page', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const sort = jest.fn().mockResolvedValue([fakePage()]);
+      jest.spyOn(Page, 'find').mockReturnValue({ sort });
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.json).toHaveBeenCalledWith({
+        pages: [expect.objectContaining({ url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg` })],
+      });
+    });
+
+    test('a stranger can list a public album\'s pages', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum({ visibility: 'public' }));
+      jest.spyOn(Page, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.json).toHaveBeenCalledWith({ pages: [] });
+    });
+
+    test('500 when the query fails', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'find').mockReturnValue({ sort: () => Promise.reject(new Error('x')) });
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('upload', () => {
+    test('400 when no files are attached', async () => {
+      const res = mockRes();
+      controller.upload({ album: fakeAlbum(), files: [] }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    test('400 and cleans up the just-written files when the album cap would be exceeded', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(299);
+      const insertMany = jest.spyOn(Page, 'insertMany');
+      const res = mockRes();
+      const files = [
+        { filename: 'a.jpg', mimetype: 'image/jpeg', size: 10 },
+        { filename: 'b.jpg', mimetype: 'image/jpeg', size: 10 },
+      ];
+      controller.upload({ album, files }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(insertMany).not.toHaveBeenCalled();
+      expect(fs.rm).toHaveBeenCalledTimes(2);
+    });
+
+    test('201 with the created pages, their urls, and the recomputed pageCount', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Page, 'countDocuments')
+        .mockResolvedValueOnce(0) // cap check
+        .mockResolvedValueOnce(1); // syncPageCount
+      jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files }, res);
+      await flush();
+      expect(album.save).toHaveBeenCalled();
+      expect(album.pageCount).toBe(1);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        pages: [expect.objectContaining({ url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg` })],
+        pageCount: 1,
+      });
+    });
+
+    test('cleans up written files and responds 500 when the DB write fails', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      jest.spyOn(Page, 'insertMany').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files }, res);
+      await flush();
+      expect(fs.rm).toHaveBeenCalledTimes(1);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('remove', () => {
+    test('404 for a malformed page id', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.remove({ album: fakeAlbum(), params: { pageId: 'nope' } }, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('404 when the page does not belong to this album', async () => {
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = mockRes();
+      controller.remove({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('deletes the file, the record, recomputes pageCount, and responds', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(fs.rm).toHaveBeenCalledWith(
+        `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+        { force: true },
+        expect.any(Function)
+      );
+      expect(page.deleteOne).toHaveBeenCalled();
+      expect(album.pageCount).toBe(0);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true, pageCount: 0 });
+    });
+
+    test('500 when the lookup fails', async () => {
+      jest.spyOn(Page, 'findOne').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+});

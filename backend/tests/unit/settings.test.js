@@ -4,6 +4,7 @@ jest.mock('dotenv', () => ({ config: jest.fn() }));
 const ENV_KEYS = [
   'NODE_ENV', 'DB_URL', 'PORT', 'JWT_SECRET', 'JWT_EXPIRES_IN',
   'UPLOADS_DIR', 'CORS_ORIGIN', 'ADMIN_USERNAME', 'ADMIN_EMAIL', 'ADMIN_PASSWORD',
+  'MAX_PHOTO_SIZE_BYTES', 'MAX_PHOTOS_PER_UPLOAD', 'MAX_PHOTOS_PER_ALBUM',
 ];
 
 const loadSettings = () => {
@@ -49,6 +50,9 @@ describe('settings', () => {
     expect(development.admin.username).toBe('Admin');
     expect(development.admin.email).toBe('admin@folia.local');
     expect(development.admin.password).toBeUndefined();
+    expect(development.maxPhotoSizeBytes).toBe(10 * 1024 * 1024);
+    expect(development.maxPhotosPerUpload).toBe(20);
+    expect(development.maxPhotosPerAlbum).toBe(300);
   });
 
   test('env vars override every default', () => {
@@ -60,6 +64,9 @@ describe('settings', () => {
     process.env.ADMIN_USERNAME = 'root';
     process.env.ADMIN_EMAIL = 'root@folia.app';
     process.env.ADMIN_PASSWORD = 'hunter22!';
+    process.env.MAX_PHOTO_SIZE_BYTES = '2048';
+    process.env.MAX_PHOTOS_PER_UPLOAD = '5';
+    process.env.MAX_PHOTOS_PER_ALBUM = '50';
 
     const { development } = loadSettings();
     expect(development.db).toBe('mongodb://db:27017/x');
@@ -72,6 +79,9 @@ describe('settings', () => {
       email: 'root@folia.app',
       password: 'hunter22!',
     });
+    expect(development.maxPhotoSizeBytes).toBe(2048);
+    expect(development.maxPhotosPerUpload).toBe(5);
+    expect(development.maxPhotosPerAlbum).toBe(50);
   });
 
   test('throws in production when JWT_SECRET is missing', () => {

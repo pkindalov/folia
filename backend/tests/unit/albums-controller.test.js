@@ -5,6 +5,7 @@ jest.mock('../../server/utilities/storage', () => ({
 }));
 
 const Album = require('../../server/data/Album');
+const Page = require('../../server/data/Page');
 const storage = require('../../server/utilities/storage');
 const controller = require('../../server/controllers/albums-controller');
 
@@ -251,13 +252,15 @@ describe('albums-controller', () => {
       expect(storage.removeAlbumDir).not.toHaveBeenCalled();
     });
 
-    test('deletes the album and its upload folder', async () => {
+    test('deletes the album, its pages, and its upload folder', async () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const deleteMany = jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
       const res = mockRes();
       controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
       expect(album.deleteOne).toHaveBeenCalled();
+      expect(deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
       expect(storage.removeAlbumDir).toHaveBeenCalledWith(album.owner, ALBUM_ID);
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
@@ -265,6 +268,7 @@ describe('albums-controller', () => {
     test('an Admin can delete any album', async () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
       const res = mockRes();
       controller.remove({ params: { id: ALBUM_ID }, user: admin }, res);
       await flush();

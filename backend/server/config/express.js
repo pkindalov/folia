@@ -17,7 +17,10 @@ module.exports = (app) => {
   app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-  // Serve persisted uploads (flipbook images, etc.)
+  // Serve persisted uploads (flipbook photos, etc.). Files are reachable by
+  // anyone with the URL, regardless of the owning album's visibility —
+  // paths are unguessable (ObjectId + generated UUID) but not access-checked.
+  // Revisit with an authenticated streaming route if that guarantee matters.
   const uploadsPath = path.resolve(settings.uploadsDir);
   if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
   app.use('/uploads', express.static(uploadsPath, { dotfiles: 'ignore', index: false }));

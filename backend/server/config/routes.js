@@ -1,6 +1,8 @@
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const controllers = require('../controllers');
 const auth = require('./auth');
+const upload = require('./upload');
 
 // Slow down brute-force attempts on login/register
 const authLimiter = rateLimit({
@@ -30,6 +32,22 @@ module.exports = (app) => {
   app.put('/api/albums/:id', auth.isAuthenticated, controllers.albums.update);
   app.delete('/api/albums/:id', auth.isAuthenticated, controllers.albums.remove);
 
+  // Album pages (photos)
+  app.get('/api/albums/:id/pages', auth.isAuthenticated, controllers.pages.list);
+  app.post(
+    '/api/albums/:id/pages',
+    auth.isAuthenticated,
+    controllers.pages.requireOwnedAlbum,
+    upload.array('photos'),
+    controllers.pages.upload
+  );
+  app.delete(
+    '/api/albums/:id/pages/:pageId',
+    auth.isAuthenticated,
+    controllers.pages.requireOwnedAlbum,
+    controllers.pages.remove
+  );
+
   // 404 for unknown routes
   app.all('*', (req, res) => {
     res.status(404).json({ error: 'Not found' });
@@ -43,6 +61,18 @@ module.exports = (app) => {
     }
     if (err.type === 'entity.too.large') {
       return res.status(413).json({ error: 'Request body too large' });
+    }
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({ error: 'Only JPEG, PNG, WEBP and GIF photos are supported' });
+    }
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Photo is too large' });
+      }
+      if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: 'Too many photos in one upload' });
+      }
+      return res.status(400).json({ error: 'Invalid photo upload' });
     }
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

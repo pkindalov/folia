@@ -46,4 +46,9 @@ describe('storage utility', () => {
   test('removeAlbumDir tolerates a folder that never existed', () => {
     expect(() => storage.removeAlbumDir('ghost', 'nothing')).not.toThrow();
   });
+
+  test('photoPath resolves inside the album\'s own folder', () => {
+    const path = storage.photoPath('user1', 'album1', 'abc.jpg');
+    expect(path).toBe(require('path').join(storage.albumDir('user1', 'album1'), 'abc.jpg'));
+  });
 });

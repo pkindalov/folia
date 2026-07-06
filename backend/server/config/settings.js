@@ -20,6 +20,9 @@ const base = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   uploadsDir: process.env.UPLOADS_DIR || 'uploads',
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  maxPhotoSizeBytes: Number(process.env.MAX_PHOTO_SIZE_BYTES) || 10 * 1024 * 1024,
+  maxPhotosPerUpload: Number(process.env.MAX_PHOTOS_PER_UPLOAD) || 20,
+  maxPhotosPerAlbum: Number(process.env.MAX_PHOTOS_PER_ALBUM) || 300,
   admin: {
     // Identity may have defaults; the password is a secret and must be explicit
     username: process.env.ADMIN_USERNAME || 'Admin',

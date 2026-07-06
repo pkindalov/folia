@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Album = require('../data/Album');
+const Page = require('../data/Page');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
 
@@ -117,11 +118,14 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
-        return album.deleteOne().then(() => {
-          // The album's uploads folder goes with it
-          storage.removeAlbumDir(album.owner, album._id);
-          res.json({ deleted: true });
-        });
+        return album.deleteOne().then(() =>
+          // Its pages (and their files) go with it — otherwise the Page
+          // records would orphan once the album they reference is gone
+          Page.deleteMany({ album: album._id }).then(() => {
+            storage.removeAlbumDir(album.owner, album._id);
+            res.json({ deleted: true });
+          })
+        );
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete album' }));
   },
