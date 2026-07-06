@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:1337';
+// Default to same-origin requests: in dev, Vite proxies /api to the backend
+// (see vite.config.ts), which also works from other devices on the LAN.
+const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 const TOKEN_KEY = 'folia_token';
 

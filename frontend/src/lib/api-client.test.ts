@@ -51,12 +51,11 @@ describe('api', () => {
     expect((options!.headers as Record<string, string>).Authorization).toBe('Bearer my-jwt');
   });
 
-  test('prefixes the path with the API base URL', async () => {
+  test('uses a same-origin path when no API base URL is configured', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({}));
     await api('/api/health');
     const [url] = vi.mocked(fetch).mock.calls[0];
-    expect(String(url)).toMatch(/\/api\/health$/);
-    expect(String(url)).toMatch(/^http/);
+    expect(String(url)).toBe('/api/health');
   });
 
   test('returns the parsed JSON body on success', async () => {
