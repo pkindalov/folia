@@ -11,7 +11,7 @@ const FormField = forwardRef<HTMLInputElement, Props>(({ label, error, id, ...re
   return (
     <div className="flex flex-col gap-1 mb-8">
       <label
-        className="font-ui text-ui-label uppercase tracking-[0.05em] text-on-surface-variant"
+        className="font-ui text-ui-label uppercase tracking-wider text-on-surface-variant"
         htmlFor={inputId}
       >
         {label}
