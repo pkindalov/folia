@@ -37,6 +37,12 @@ export async function listArchivedAlbums(page: number): Promise<PaginatedAlbums>
   return albumsResponseSchema.parse(data);
 }
 
+export async function listSharedWithMeAlbums(page: number): Promise<PaginatedPublicAlbums> {
+  const params = new URLSearchParams({ page: String(page) });
+  const data = await api(`/api/albums/shared-with-me?${params}`);
+  return publicAlbumsResponseSchema.parse(data);
+}
+
 export async function getAlbum(id: string): Promise<Album> {
   const data = await api(`/api/albums/${id}`);
   return albumResponseSchema.parse(data).album;

@@ -7,6 +7,8 @@ import { renderWithProviders } from '../../../tests/test-utils';
 
 const ME = { user: { _id: 'id1', username: 'pan', email: 'pan@test.com', roles: ['User'] } };
 
+const EMPTY_SHARED = { albums: [], total: 0, page: 1, limit: 12 };
+
 const PUBLIC_ALBUMS = {
   albums: [
     {
@@ -33,6 +35,17 @@ const PUBLIC_ALBUMS = {
   total: 2,
   page: 1,
   limit: 12,
+};
+
+const SHARED_ALBUM = {
+  _id: 'a9',
+  title: 'The Family Reunion',
+  description: '',
+  visibility: 'shared',
+  owner: 'id3',
+  ownerUsername: 'sam',
+  pageCount: 2,
+  coverImage: null,
 };
 
 const calledUrls: string[] = [];
@@ -62,7 +75,11 @@ beforeEach(() => {
 
 describe('ExplorePage', () => {
   test('lists public albums with their author and photo count', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums/public': { body: PUBLIC_ALBUMS } });
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
+      '/api/albums/public': { body: PUBLIC_ALBUMS },
+    });
     renderPage();
     expect(await screen.findByText('Summer in the Valley')).toBeInTheDocument();
     expect(screen.getByText('by elena')).toBeInTheDocument();
@@ -72,7 +89,11 @@ describe('ExplorePage', () => {
   });
 
   test('renders the cover photo when an album has one', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums/public': { body: PUBLIC_ALBUMS } });
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
+      '/api/albums/public': { body: PUBLIC_ALBUMS },
+    });
     renderPage();
     await screen.findByText('Summer in the Valley');
     expect(document.querySelectorAll('img[src="/uploads/id2/a1/cover.jpg"]')).toHaveLength(1);
@@ -81,6 +102,7 @@ describe('ExplorePage', () => {
   test('shows an empty-state message when there are no public albums', async () => {
     mockApi({
       '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
       '/api/albums/public': { body: { albums: [], total: 0, page: 1, limit: 12 } },
     });
     renderPage();
@@ -90,6 +112,7 @@ describe('ExplorePage', () => {
   test('shows numbered pagination when there is more than one page', async () => {
     mockApi({
       '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
       '/api/albums/public': { body: { ...PUBLIC_ALBUMS, total: 30, limit: 12 } },
     });
     const user = userEvent.setup();
@@ -104,7 +127,11 @@ describe('ExplorePage', () => {
   });
 
   test('does not show pagination when everything fits on one page', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums/public': { body: PUBLIC_ALBUMS } });
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
+      '/api/albums/public': { body: PUBLIC_ALBUMS },
+    });
     renderPage();
     await screen.findByText('Summer in the Valley');
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
@@ -113,9 +140,44 @@ describe('ExplorePage', () => {
   test('shows the API error when public albums fail to load', async () => {
     mockApi({
       '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
       '/api/albums/public': { body: { error: 'Failed to load public albums' }, status: 500 },
     });
     renderPage();
     expect(await screen.findByText('Failed to load public albums')).toBeInTheDocument();
+  });
+
+  test('shows a Shared With You section when albums are shared with the user', async () => {
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': {
+        body: { albums: [SHARED_ALBUM], total: 1, page: 1, limit: 12 },
+      },
+      '/api/albums/public': { body: { albums: [], total: 0, page: 1, limit: 12 } },
+    });
+    renderPage();
+    expect(await screen.findByText('Shared With You')).toBeInTheDocument();
+    expect(screen.getByText('The Family Reunion')).toBeInTheDocument();
+  });
+
+  test('hides the Shared With You section when nothing has been shared', async () => {
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: EMPTY_SHARED },
+      '/api/albums/public': { body: PUBLIC_ALBUMS },
+    });
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    expect(screen.queryByText('Shared With You')).not.toBeInTheDocument();
+  });
+
+  test('shows the API error when shared-with-me albums fail to load', async () => {
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/shared-with-me': { body: { error: 'Failed to load shared albums' }, status: 500 },
+      '/api/albums/public': { body: PUBLIC_ALBUMS },
+    });
+    renderPage();
+    expect(await screen.findByText('Failed to load shared albums')).toBeInTheDocument();
   });
 });

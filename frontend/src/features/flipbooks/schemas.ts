@@ -7,6 +7,7 @@ export const albumSchema = z
     description: z.string().default(''),
     visibility: z.enum(['private', 'shared', 'public']),
     owner: z.string(),
+    sharedWithCircle: z.string().nullable().optional(),
     pageCount: z.number().default(0),
     coverPage: z.string().nullable().optional(),
     coverImage: z.string().nullable().optional(),
@@ -48,6 +49,7 @@ export const albumFormSchema = z.object({
     .max(120, 'Title must be at most 120 characters'),
   description: z.string().max(2000, 'Description must be at most 2000 characters'),
   visibility: z.enum(['private', 'shared', 'public']),
+  sharedWithCircle: z.string().nullable().optional(),
 });
 
 export type AlbumFormInput = z.infer<typeof albumFormSchema>;

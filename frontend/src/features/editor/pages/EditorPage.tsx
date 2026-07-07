@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PagesPanel from '../components/PagesPanel';
+import { useMe } from '../../auth';
+import { useCircle, useCircles } from '../../circles';
 import {
   albumFormSchema,
   type AlbumFormInput,
@@ -66,6 +68,24 @@ export default function EditorPage() {
   const updateAlbum = useUpdateAlbum(id ?? '');
   const deleteAlbum = useDeleteAlbum();
   const archiveAlbum = useArchiveAlbum(id ?? '');
+  const { data: me } = useMe();
+  const circlesQuery = useCircles(1);
+  // The circle the album is already restricted to might not be on the first
+  // page of the general list (or might have fallen off it) — fetch it
+  // directly so the picker never silently drops the album's current state.
+  const assignedCircleQuery = useCircle(albumQuery.data?.sharedWithCircle ?? undefined);
+
+  const ownedCirclesFromList = (circlesQuery.data?.circles ?? []).filter(
+    (circle) => circle.owner === me?._id
+  );
+  const assignedCircle = assignedCircleQuery.data;
+  const assignedCircleIsMissing =
+    !!assignedCircle &&
+    assignedCircle.owner === me?._id &&
+    !ownedCirclesFromList.some((circle) => circle._id === assignedCircle._id);
+  const ownedCircles = assignedCircleIsMissing
+    ? [...ownedCirclesFromList, assignedCircle]
+    : ownedCirclesFromList;
 
   const pagesQuery = usePages(id);
   const uploadPages = useUploadPages(id ?? '');
@@ -90,14 +110,14 @@ export default function EditorPage() {
     formState: { errors },
   } = useForm<AlbumFormInput>({
     resolver: zodResolver(albumFormSchema),
-    defaultValues: { title: '', description: '', visibility: 'private' },
+    defaultValues: { title: '', description: '', visibility: 'private', sharedWithCircle: null },
   });
 
   // When editing, fill the form once the album arrives
   useEffect(() => {
     if (albumQuery.data) {
-      const { title, description, visibility } = albumQuery.data;
-      reset({ title, description, visibility });
+      const { title, description, visibility, sharedWithCircle } = albumQuery.data;
+      reset({ title, description, visibility, sharedWithCircle: sharedWithCircle ?? null });
     }
   }, [albumQuery.data, reset]);
 
@@ -241,6 +261,37 @@ export default function EditorPage() {
                 ))}
               </div>
             </fieldset>
+
+            {visibility === 'shared' && (
+              <fieldset className="mb-10">
+                <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
+                  Share with circle
+                </legend>
+                {ownedCircles.length === 0 ? (
+                  <p className="font-body italic text-sm text-on-surface-variant">
+                    You don't have any circles yet.{' '}
+                    <Link to="/circles" className="underline hover:text-secondary">
+                      Create one
+                    </Link>{' '}
+                    to restrict who can see this album.
+                  </p>
+                ) : (
+                  <select
+                    className="line-input w-full py-2 text-body-text"
+                    {...register('sharedWithCircle', {
+                      setValueAs: (value) => (value === '' ? null : value),
+                    })}
+                  >
+                    <option value="">Open to any signed-in user</option>
+                    {ownedCircles.map((circle) => (
+                      <option key={circle._id} value={circle._id}>
+                        {circle.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </fieldset>
+            )}
           </form>
 
           {isEdit && (

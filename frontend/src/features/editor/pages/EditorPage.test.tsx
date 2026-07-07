@@ -110,6 +110,7 @@ describe('EditorPage — create', () => {
       title: 'Summer in the Valley',
       description: 'Holidays 2025',
       visibility: 'public',
+      sharedWithCircle: null,
     });
   });
 
@@ -138,6 +139,43 @@ describe('EditorPage — edit', () => {
     );
     expect(screen.getByLabelText(/description/i)).toHaveValue('Holidays 2025');
     expect(screen.getByLabelText(/public — community table/i)).toBeChecked();
+  });
+
+  test("the share-with-circle picker preserves the album's assigned circle even when it's off the fetched list", async () => {
+    const restrictedAlbum = {
+      album: { ...ALBUM.album, visibility: 'shared', sharedWithCircle: 'c99' },
+    };
+    const otherCircle = {
+      _id: 'c1',
+      name: 'Other Circle',
+      purpose: 'travel',
+      privacy: 'private',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+    const assignedCircle = {
+      _id: 'c99',
+      name: 'Assigned Circle',
+      purpose: 'family_lineage',
+      privacy: 'private',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': { body: restrictedAlbum },
+      'GET /api/circles/c99': { body: { circle: assignedCircle } },
+      'GET /api/circles': { body: { circles: [otherCircle], total: 1, page: 1, limit: 12 } },
+    });
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    expect(await screen.findByRole('option', { name: 'Assigned Circle' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Other Circle' })).toBeInTheDocument();
   });
 
   test('saves changes with PUT and returns to the gallery', async () => {

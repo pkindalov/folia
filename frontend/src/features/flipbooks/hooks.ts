@@ -24,6 +24,13 @@ export function useArchivedAlbums(page: number) {
   });
 }
 
+export function useSharedWithMeAlbums(page: number) {
+  return useQuery({
+    queryKey: ['albums', 'shared-with-me', page],
+    queryFn: () => albumsApi.listSharedWithMeAlbums(page),
+  });
+}
+
 export function useAlbum(id: string | undefined) {
   return useQuery({
     queryKey: ['albums', id],
