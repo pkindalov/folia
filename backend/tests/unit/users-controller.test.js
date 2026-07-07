@@ -291,4 +291,60 @@ describe('users-controller', () => {
       expect(res.status).toHaveBeenCalledWith(500);
     });
   });
+
+  describe('search', () => {
+    const requester = { _id: 'id1', username: 'pan' };
+
+    test.each([
+      ['missing q', {}],
+      ['empty q', { q: '' }],
+      ['single-character q', { q: 'a' }],
+      ['whitespace-only q', { q: '  ' }],
+      ['non-string q (injection)', { q: { $gt: '' } }],
+    ])('rejects %s with 400 before touching the DB', (_name, query) => {
+      const find = jest.spyOn(User, 'find');
+      const res = mockRes();
+      controller.search({ query, user: requester }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(find).not.toHaveBeenCalled();
+    });
+
+    test('excludes the requester and returns only username fields', async () => {
+      const find = jest.spyOn(User, 'find').mockReturnValue({
+        limit: jest.fn().mockResolvedValue([{ _id: 'id2', username: 'maria' }]),
+      });
+      const res = mockRes();
+      controller.search({ query: { q: 'mar' }, user: requester }, res);
+      await flush();
+      expect(find).toHaveBeenCalledWith(
+        { username: { $regex: 'mar', $options: 'i' }, _id: { $ne: 'id1' } },
+        'username'
+      );
+      expect(res.json).toHaveBeenCalledWith({ users: [{ _id: 'id2', username: 'maria' }] });
+    });
+
+    test('escapes regex metacharacters in the search term', async () => {
+      const limit = jest.fn().mockResolvedValue([]);
+      const find = jest.spyOn(User, 'find').mockReturnValue({ limit });
+      controller.search({ query: { q: 'a.*b' }, user: requester }, mockRes());
+      await flush();
+      expect(find.mock.calls[0][0].username.$regex).toBe('a\\.\\*b');
+    });
+
+    test('caps results to 10', async () => {
+      const limit = jest.fn().mockResolvedValue([]);
+      jest.spyOn(User, 'find').mockReturnValue({ limit });
+      controller.search({ query: { q: 'ma' }, user: requester }, mockRes());
+      await flush();
+      expect(limit).toHaveBeenCalledWith(10);
+    });
+
+    test('returns 500 when the query fails', async () => {
+      jest.spyOn(User, 'find').mockReturnValue({ limit: jest.fn().mockRejectedValue(new Error('x')) });
+      const res = mockRes();
+      controller.search({ query: { q: 'ma' }, user: requester }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
 });

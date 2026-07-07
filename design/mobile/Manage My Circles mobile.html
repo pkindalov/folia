@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Heritage Album - Manage My Circles</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#ffdad5",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-primary-container": "#95908b",
+                    "on-tertiary-container": "#4f3e00",
+                    "tertiary-container": "#cca830",
+                    "surface-container-low": "#f6f3ec",
+                    "surface-container-highest": "#e5e2db",
+                    "surface-tint": "#625e5a",
+                    "tertiary": "#735c00",
+                    "on-tertiary-fixed": "#241a00",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "surface-dim": "#dcdad3",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "inverse-on-surface": "#f3f0e9",
+                    "inverse-primary": "#ccc5c1",
+                    "secondary": "#a63a2e",
+                    "tertiary-fixed": "#ffe088",
+                    "on-surface": "#1c1c18",
+                    "on-primary-fixed": "#1e1b18",
+                    "on-background": "#1c1c18",
+                    "primary": "#171512",
+                    "primary-container": "#2c2926",
+                    "surface-container-high": "#ebe8e1",
+                    "on-tertiary": "#ffffff",
+                    "background": "#fcf9f2",
+                    "secondary-container": "#ff7c6c",
+                    "surface-container": "#f1eee7",
+                    "inverse-surface": "#31312c",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "outline-variant": "#cec5bd",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#e8e1dc",
+                    "on-secondary": "#ffffff",
+                    "surface-variant": "#e5e2db",
+                    "surface-bright": "#fcf9f2",
+                    "outline": "#7d766f",
+                    "on-surface-variant": "#4c463f",
+                    "on-secondary-fixed": "#410001",
+                    "on-error-container": "#93000a",
+                    "surface": "#fcf9f2",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "on-secondary-container": "#72140e",
+                    "secondary-fixed-dim": "#ffb4a9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "section-gap": "40px",
+                    "unit": "4px",
+                    "gutter-mobile": "12px",
+                    "stack-md": "16px",
+                    "touch-target-min": "44px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "16px",
+                    "stack-lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Public Sans"],
+                    "headline-md": ["Newsreader"],
+                    "display-lg": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-lg-mobile": ["Newsreader"],
+                    "headline-lg": ["Newsreader"],
+                    "body-md": ["Newsreader"],
+                    "body-lg": ["Newsreader"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #fcf9f2; /* Heritage Background */
+            color: #171512;
+            -webkit-font-smoothing: antialiased;
+        }
+        .parchment-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+            background-repeat: repeat;
+        }
+        .ink-border {
+            border: 0.5px solid rgba(23, 21, 18, 0.15);
+        }
+        .ink-button-shadow {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .pressed-state:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transform: scale(0.98);
+        }
+        .hairline-rule {
+            border-bottom: 0.5px solid #cec5bd;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cec5bd;
+            border-radius: 2px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden parchment-texture">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b-[0.5px] border-outline-variant shadow-sm flex justify-between items-center px-margin-mobile h-14">
+<button aria-label="Menu" class="material-symbols-outlined text-primary active:scale-95 duration-150">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary italic">Heritage Album</h1>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A portrait of a distinguished individual with a classic aesthetic, shot in soft film photography style. The person has a thoughtful expression, with high-quality textured skin details. The background is a soft-focus library with warm, archival wood tones, fitting a premium heritage journal brand identity with muted, earthy colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9ZJDPa54iuYn7jwe07R7UzbfXMcQLy7WOpZ6DvvneVWzMaz_4zkOGKKhF-8eKkPvf8hwr3_CIXbtOnYhrKqeNiy1gRFUXHVJt5QnkLQAhXvay9UuSA-qPJpXXIbCgVhlbyLLVFpqwNsRGTlxAokLanNiT_Wanc6BHN-5mcEh-BJIvNvCLCPzeZFHXOS5E9pcLYYOaQ3YFB1bwmOYNeVjuA-PQasb3xY7Lz_mUZr_V72AQXYkCAJ-zMHm09Feb-r3IuzZK07lYDnI"/>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pt-20 pb-28 px-margin-mobile max-w-lg mx-auto">
+<section class="mb-stack-lg">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-1">Manage My Circles</h2>
+<p class="font-body-md text-on-surface-variant italic mb-stack-lg border-b-[0.5px] border-outline-variant pb-2">The curated collection of your shared histories.</p>
+</section>
+<!-- Circle Grid -->
+<div class="grid grid-cols-1 gap-stack-lg">
+<!-- Circle Card: Family -->
+<div class="bg-surface-container-low rounded-lg p-stack-md ink-border ink-button-shadow relative overflow-hidden group">
+<div class="flex justify-between items-start mb-stack-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Primary Ledger</span>
+<h3 class="font-headline-md text-headline-md text-primary mt-1">Family Circle</h3>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+<div class="flex items-center gap-2 mb-stack-lg">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of an elderly woman with kind eyes and elegant features, styled as a vintage medium-format photograph. Soft sepia tones and tactile paper grain texture visible. Representing family heritage and wisdom in a premium journal design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDE40FWlD9zAzTJhUOcylIMYvdmsiW8cKDcBPrWzTvMuIqPrbcqS7BiYLTiPccrEO_BCoVbsm3gBP_0aca3woVKpGZlJEg6yKrQCxrgGHFBnmvUe7EYYHGhMS74yUnngPTGnqVOTeAwT6GqgpBSvZwTT8si8QI59nvVxhZqeEWTDKXLNIYAhs_wrd51uaAXHHhTEgVaFf4ngtFq2Cgj7ob8nUAnjEFpereb9FupaR_u3u38Quo9LcSkzA8RKkrSLT5T0_L4Th29YRc"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A candid profile of a young man with classic features, shot in natural light with a timeless, archival feel. The image has a slight film grain and uses a palette of warm beiges and deep obsidian blacks to maintain the heritage brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZKKk0ks-7ygqIicUJZ0DUhZ_DnaFqFuSwJu4cXPB3lEEGRoFs25TUD4k83iJZmldUN7WKdrjB_Md_uxEA6yUTwPS16h0xs28LdNZvo24mpiETV4Uha_5OsRgqTj7MyeFUPD6LAiHB06YMHg9l6ydpHCNDB_05pmIWgwcpcuxDbt3tb4C2dsPgbGoROyYY_bNIHerTZBO4IqCxI1fhTuLBGcftwYp39GhhzXa0XXx9j2AdKnIwVhDZf0gguiu4K5qKbIYY1XPuMrs"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">+8</span>
+</div>
+</div>
+<span class="font-body-md text-on-surface-variant text-sm">11 active chroniclers</span>
+</div>
+<div class="flex gap-stack-sm">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">group_add</span>
+                        Invite
+                    </button>
+<button class="flex-1 border border-primary text-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state">
+                        Manage
+                    </button>
+</div>
+</div>
+<!-- Circle Card: University -->
+<div class="bg-surface-container-low rounded-lg p-stack-md ink-border ink-button-shadow relative overflow-hidden">
+<div class="flex justify-between items-start mb-stack-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Academic Archives</span>
+<h3 class="font-headline-md text-headline-md text-primary mt-1">Oxford Alumni</h3>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+<div class="flex items-center gap-2 mb-stack-lg">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A sophisticated woman wearing a tweed blazer, standing against a backdrop of antique books. The image is stylized as a professional editorial portrait with muted colors and a high-end archival texture, reflecting the intellectual nature of the brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCylHscuePj9J7r7bOQ9Sf1lcguaASTCPkiIfguMN7w9VfJtEEZptpa39zx03rCs_bbiC67YVSjP20aKCyYNhVanf9WZUETa46F6CDQCW4EkCelkgbwVCeNxnJsWuY80YJ6Ue8J_mXgc-jZd2ARaQnUE0Jw7W1nj69hfATxp7o3UREW00n72dTHSQ-W96YS6BsCP0KvDO2Gt1lv1pYwfoFA3ZRDqbIzMAVlpnH549cIQtUPUZPFFoxgGGdTwrA3H3zZf6v_d0fNUIg"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Detailed close up of an individual's hands holding an old fountain pen over a leather-bound journal. The scene is lit with warm, moody lighting that emphasizes texture and craftsmanship. High-contrast blacks and warm cream tones dominate." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9Wav-9keZwpGw0yoAIItAHwKUlmIIJCcJTfQF4e5hojIUZ5r-1MxWrIXZ2d_gDhNfLOHslBSVmnfKYVliFQ1Pc6l_Jui2_-049XVzMh5q_5DfmkFniyWOYwY4jx_Y7PzX8TEt2b8PWCT0p7q-cG6OlXR3_Wl5INxVIIdaPaZ7Yrf_K8j9l2FVEuYl82ofyzYI3N07E-BmL8PPDilXc-vJtSaFwhBVx5lFdOnB4l-VOyisaw5IPOqjERHsutmiT3_MvyPvy2mbHHo"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">+42</span>
+</div>
+</div>
+<span class="font-body-md text-on-surface-variant text-sm">44 active chroniclers</span>
+</div>
+<div class="flex gap-stack-sm">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">group_add</span>
+                        Invite
+                    </button>
+<button class="flex-1 border border-primary text-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state">
+                        Manage
+                    </button>
+</div>
+</div>
+<!-- Circle Card: Colleagues -->
+<div class="bg-surface-container-low rounded-lg p-stack-md ink-border ink-button-shadow relative overflow-hidden">
+<div class="flex justify-between items-start mb-stack-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Professional Guild</span>
+<h3 class="font-headline-md text-headline-md text-primary mt-1">Design Studio</h3>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+<div class="flex items-center gap-2 mb-stack-lg">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A modern minimalist office interior with large windows and architectural details. Soft morning light creates long shadows on a concrete floor. The aesthetic is clean, professional, and high-key, using a palette of whites, grays, and natural wood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWsom7jbvtkBvu5bxcXU0xR6CH7Brv9Az3R9k7la7RWHvumjhgR-KNOivBDcUbeLCcVweDHa8rN-jfnUJKgJfmWL7y3R5hPsog-onSEEP5nxQPMNX6ECkd8-ztB4K2s65dsTPaNeBJGurm-AJiUBQU4T4LZgs2IfOjxamlhT42tcLL4ztH4ArZ4gHC9ohPmW3loM0UvmATjIZviQGbqbmpwO5Y9I5P8VSBQFSGRByJ1MJwLLJsMYIULnP9Xtl_mnV8qcptdVC82rA"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">+5</span>
+</div>
+</div>
+<span class="font-body-md text-on-surface-variant text-sm">6 active chroniclers</span>
+</div>
+<div class="flex gap-stack-sm">
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">group_add</span>
+                        Invite
+                    </button>
+<button class="flex-1 border border-primary text-primary font-label-md text-label-md py-3 rounded-DEFAULT pressed-state">
+                        Manage
+                    </button>
+</div>
+</div>
+</div>
+<!-- Secondary Action List -->
+<div class="mt-section-gap space-y-4">
+<h4 class="font-label-md text-label-md uppercase tracking-widest text-on-surface-variant">Recent Activity</h4>
+<div class="hairline-rule py-3 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">history_edu</span>
+<span class="font-body-md">New story in <span class="font-bold">Family Circle</span></span>
+</div>
+<span class="font-label-sm text-on-surface-variant">2h ago</span>
+</div>
+<div class="hairline-rule py-3 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">person_add</span>
+<span class="font-body-md">Sarah joined <span class="font-bold">Design Studio</span></span>
+</div>
+<span class="font-label-sm text-on-surface-variant">Yesterday</span>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button aria-label="Create New Circle" class="fixed bottom-24 right-margin-mobile w-14 h-14 bg-secondary text-on-secondary rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform z-40 ink-button-shadow">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 h-[72px] bg-surface/90 backdrop-blur-md border-t-[0.5px] border-outline-variant shadow-[0_-2px_4px_rgba(0,0,0,0.05)] flex justify-around items-center px-4 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-label-sm text-label-sm">Create</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary font-bold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<!-- Micro-interaction Script -->
+<script>
+        // Simple ripple-like effect on buttons
+        document.querySelectorAll('.pressed-state').forEach(button => {
+            button.addEventListener('mousedown', function(e) {
+                const x = e.clientX - e.target.offsetLeft;
+                const y = e.clientY - e.target.offsetTop;
+                
+                let ripples = document.createElement('span');
+                ripples.style.left = x + 'px';
+                ripples.style.top = y + 'px';
+                this.appendChild(ripples);
+
+                setTimeout(() => {
+                    ripples.remove();
+                }, 600);
+            });
+        });
+
+        // Toggle mobile menu simulation
+        document.querySelector('header button').addEventListener('click', () => {
+            console.log('Menu toggled');
+        });
+    </script>
+</body></html>

@@ -8,6 +8,7 @@ jest.mock('../../server/utilities/storage', () => ({
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const User = require('../../server/data/User');
+const Circle = require('../../server/data/Circle');
 const storage = require('../../server/utilities/storage');
 const controller = require('../../server/controllers/albums-controller');
 
@@ -68,6 +69,7 @@ describe('albums-controller', () => {
       ['description over 2000 chars', { title: 'ok', description: 'x'.repeat(2001) }],
       ['invalid visibility', { title: 'ok', visibility: 'friends-only' }],
       ['non-string visibility', { title: 'ok', visibility: 1 }],
+      ['non-ObjectId sharedWithCircle', { title: 'ok', sharedWithCircle: 'not-an-id' }],
     ])('rejects %s with 400', (_name, body) => {
       const create = jest.spyOn(Album, 'create');
       const res = mockRes();
@@ -122,6 +124,81 @@ describe('albums-controller', () => {
       await flush();
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ album: { ...album.toJSON(), coverImage: null } });
+    });
+
+    test('rejects a sharedWithCircle that belongs to a circle the requester does not own', async () => {
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValue({ owner: { toString: () => OTHER_ID } });
+      const create = jest.spyOn(Album, 'create');
+      const res = mockRes();
+      controller.create(
+        {
+          body: {
+            title: 'Summer',
+            visibility: 'shared',
+            sharedWithCircle: '507f1f77bcf86cd799439099',
+          },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    test('rejects a sharedWithCircle pointing at a nonexistent circle', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(null);
+      const create = jest.spyOn(Album, 'create');
+      const res = mockRes();
+      controller.create(
+        {
+          body: {
+            title: 'Summer',
+            visibility: 'shared',
+            sharedWithCircle: '507f1f77bcf86cd799439099',
+          },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    test('accepts a sharedWithCircle the requester owns', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Album, 'create').mockResolvedValue(fakeAlbum({ sharedWithCircle: '507f1f77bcf86cd799439099' }));
+      const res = mockRes();
+      controller.create(
+        {
+          body: {
+            title: 'Summer',
+            visibility: 'shared',
+            sharedWithCircle: '507f1f77bcf86cd799439099',
+          },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test('ignores a submitted sharedWithCircle when visibility is not shared', async () => {
+      const create = jest.spyOn(Album, 'create').mockResolvedValue(fakeAlbum());
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.create(
+        { body: { title: 'Summer', sharedWithCircle: '507f1f77bcf86cd799439099' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(create.mock.calls[0][0].sharedWithCircle).toBeNull();
+      expect(res.status).toHaveBeenCalledWith(201);
     });
   });
 
@@ -292,6 +369,24 @@ describe('albums-controller', () => {
       });
     });
 
+    test('falls back to a placeholder label when the owner was deleted', async () => {
+      const album = fakeAlbum({ visibility: 'public', owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      jest.spyOn(Page, 'findOne').mockReturnValue({ sort: jest.fn().mockResolvedValue(null) });
+
+      const res = mockRes();
+      controller.listPublic({ query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          albums: [expect.objectContaining({ ownerUsername: 'Deleted user' })],
+        })
+      );
+    });
+
     test('skips to the requested page', async () => {
       const query = mockAlbumQuery([]);
       jest.spyOn(Album, 'find').mockReturnValue(query);
@@ -320,6 +415,72 @@ describe('albums-controller', () => {
       jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
       const res = mockRes();
       controller.listPublic({ query: {} }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('listSharedWithMe', () => {
+    test("returns albums shared with a circle the requester owns or belongs to, excluding the requester's own albums", async () => {
+      jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: 'c1' }, { _id: 'c2' }]);
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: 'c1' });
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan' }]);
+
+      const res = mockRes();
+      controller.listSharedWithMe({ user: owner, query: {} }, res);
+      await flush();
+
+      expect(Circle.find).toHaveBeenCalledWith(
+        {
+          $or: [
+            { owner: OWNER_ID },
+            { members: { $elemMatch: { user: OWNER_ID, status: 'accepted' } } },
+          ],
+        },
+        '_id'
+      );
+      expect(find).toHaveBeenCalledWith({
+        visibility: 'shared',
+        sharedWithCircle: { $in: ['c1', 'c2'] },
+        owner: { $ne: OWNER_ID },
+      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ total: 1, albums: [expect.objectContaining({ ownerUsername: 'pan' })] })
+      );
+    });
+
+    test('returns an empty list when the requester belongs to no circles', async () => {
+      jest.spyOn(Circle, 'find').mockResolvedValue([]);
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+
+      const res = mockRes();
+      controller.listSharedWithMe({ user: owner, query: {} }, res);
+      await flush();
+
+      expect(find).toHaveBeenCalledWith(
+        expect.objectContaining({ sharedWithCircle: { $in: [] } })
+      );
+      expect(res.json).toHaveBeenCalledWith({ albums: [], total: 0, page: 1, limit: 12 });
+    });
+
+    test('returns 500 when the circle lookup fails', async () => {
+      jest.spyOn(Circle, 'find').mockRejectedValue(new Error('x'));
+      const res = mockRes();
+      controller.listSharedWithMe({ user: owner, query: {} }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    test('returns 500 when the album query fails', async () => {
+      jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: 'c1' }]);
+      jest.spyOn(Album, 'find').mockReturnValue(mockFailingAlbumQuery(new Error('x')));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.listSharedWithMe({ user: owner, query: {} }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
@@ -414,6 +575,66 @@ describe('albums-controller', () => {
       await flush();
       expect(res.json).toHaveBeenCalledWith({ album: { ...album.toJSON(), coverImage: null } });
     });
+
+    test('a stranger can read a shared album with no circle attached (legacy behavior)', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: null });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const res = mockRes();
+      controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(403);
+    });
+
+    test('a circle member can read an album shared with their circle', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({
+          name: 'Family',
+          purpose: 'family_lineage',
+          owner: OWNER_ID,
+          members: [{ user: OTHER_ID, status: 'accepted' }],
+        })
+      );
+      const res = mockRes();
+      controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ album: { ...album.toJSON(), coverImage: null } });
+    });
+
+    test('a non-member gets 403 for an album shared with a circle they are not in', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({ name: 'Family', purpose: 'family_lineage', owner: OWNER_ID, members: [] })
+      );
+      const res = mockRes();
+      controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('a dangling circle reference (deleted circle) is treated as no access', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(null);
+      const res = mockRes();
+      controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('the album owner can always read their shared album regardless of circle', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.getOne({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalledWith(403);
+    });
   });
 
   describe('update', () => {
@@ -459,6 +680,70 @@ describe('albums-controller', () => {
       expect(album.visibility).toBe('public');
       expect(album.save).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ album: { ...album.toJSON(), coverImage: null } });
+    });
+
+    test('rejects setting sharedWithCircle to a circle the requester does not own', async () => {
+      const album = fakeAlbum({ visibility: 'shared' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValue({ owner: { toString: () => OTHER_ID } });
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { sharedWithCircle: '507f1f77bcf86cd799439099' }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(album.save).not.toHaveBeenCalled();
+    });
+
+    test('accepts setting sharedWithCircle to a circle the requester owns', async () => {
+      const album = fakeAlbum({ visibility: 'shared' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { sharedWithCircle: '507f1f77bcf86cd799439099' }, user: owner },
+        res
+      );
+      await flush();
+      expect(album.sharedWithCircle).toBe('507f1f77bcf86cd799439099');
+      expect(album.save).toHaveBeenCalled();
+    });
+
+    test('clears sharedWithCircle when visibility moves away from shared', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { visibility: 'private' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(album.sharedWithCircle).toBeNull();
+      expect(album.save).toHaveBeenCalled();
+    });
+
+    test('ignores a submitted sharedWithCircle when visibility is not shared', async () => {
+      const album = fakeAlbum({ visibility: 'private' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.update(
+        {
+          params: { id: ALBUM_ID },
+          body: { sharedWithCircle: '507f1f77bcf86cd799439099' },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(album.sharedWithCircle).toBeNull();
+      expect(res.status).not.toHaveBeenCalledWith(400);
     });
 
     test('rejects a non-boolean archived value', () => {

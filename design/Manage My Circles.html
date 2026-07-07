@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heritage Album - Manage My Circles</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Public+Sans:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@100..900&family=Public+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#ffdad5",
+                    "on-secondary-fixed-variant": "#85221a",
+                    "on-primary-container": "#95908b",
+                    "on-tertiary-container": "#4f3e00",
+                    "tertiary-container": "#cca830",
+                    "surface-container-low": "#f6f3ec",
+                    "surface-container-highest": "#e5e2db",
+                    "surface-tint": "#625e5a",
+                    "tertiary": "#735c00",
+                    "on-tertiary-fixed": "#241a00",
+                    "primary-fixed-dim": "#ccc5c1",
+                    "surface-dim": "#dcdad3",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#574500",
+                    "inverse-on-surface": "#f3f0e9",
+                    "inverse-primary": "#ccc5c1",
+                    "secondary": "#a63a2e",
+                    "tertiary-fixed": "#ffe088",
+                    "on-surface": "#1c1c18",
+                    "on-primary-fixed": "#1e1b18",
+                    "on-background": "#1c1c18",
+                    "primary": "#171512",
+                    "primary-container": "#2c2926",
+                    "surface-container-high": "#ebe8e1",
+                    "on-tertiary": "#ffffff",
+                    "background": "#fcf9f2",
+                    "secondary-container": "#ff7c6c",
+                    "surface-container": "#f1eee7",
+                    "inverse-surface": "#31312c",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#e9c349",
+                    "outline-variant": "#cec5bd",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#e8e1dc",
+                    "on-secondary": "#ffffff",
+                    "surface-variant": "#e5e2db",
+                    "surface-bright": "#fcf9f2",
+                    "outline": "#7d766f",
+                    "on-surface-variant": "#4c463f",
+                    "on-secondary-fixed": "#410001",
+                    "on-error-container": "#93000a",
+                    "surface": "#fcf9f2",
+                    "on-primary-fixed-variant": "#4a4643",
+                    "on-secondary-container": "#72140e",
+                    "secondary-fixed-dim": "#ffb4a9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "section-gap": "40px",
+                    "unit": "4px",
+                    "gutter-mobile": "12px",
+                    "stack-md": "16px",
+                    "touch-target-min": "44px",
+                    "stack-sm": "8px",
+                    "margin-mobile": "16px",
+                    "stack-lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Public Sans"],
+                    "headline-md": ["Newsreader"],
+                    "display-lg": ["Newsreader"],
+                    "label-sm": ["Public Sans"],
+                    "headline-lg-mobile": ["Newsreader"],
+                    "headline-lg": ["Newsreader"],
+                    "body-md": ["Newsreader"],
+                    "body-lg": ["Newsreader"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "30px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["10px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .paper-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/felt.png");
+        }
+        .ink-line {
+            border-bottom: 0.5px solid rgba(28, 28, 24, 0.15);
+        }
+        .tactile-shadow {
+            box-shadow: 0px 4px 20px rgba(0,0,0,0.05);
+        }
+        .inner-press:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .circle-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .circle-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0px 8px 30px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden paper-texture">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 w-full z-50 bg-[#fdfcf8] dark:bg-[#121210] border-b-[0.5px] border-stone-300 dark:border-stone-800 flex justify-between items-center px-10 py-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+<div class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210] dark:text-[#fdfcf8]">Heritage Album</div>
+<nav class="hidden md:flex gap-10">
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 transition-opacity duration-300" href="#">The Gallery</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 transition-opacity duration-300" href="#">My Spreads</a>
+<a class="font-['Newsreader'] italic text-lg tracking-tight text-stone-400 dark:text-stone-600 hover:text-stone-600 transition-opacity duration-300" href="#">Archived</a>
+</nav>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80">menu_book</span>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80">settings</span>
+<div class="w-10 h-10 overflow-hidden rounded-full border border-stone-200">
+<img class="w-full h-full object-cover" data-alt="A professional and elegant headshot of an elderly person with kind eyes and silver hair, wearing a classic linen blazer. The lighting is soft and artistic, reminiscent of a high-end editorial portrait in a heritage journal. The background is a warm, neutral cream tone that feels tactile and refined." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYvq5Z2NmYrUwswZ55GSHLJTKkOzm3uKHaFpJD98ia9lBgHEh3cQhAC8nCOhiTh7qfI_7oVgEHqT43X0-EsTqw7MK4POafqJn3YdqLMnlF1MetqtngLSzfGsKJlTLzjmX4FvNfkYRGtP6KljZ88pmqETebt2XsVpjtRZYzwmJTaB42J2emedf1tpYIVmQFvMbIZ9fQhuHrlAZs3A_Qv9tSS2vdE6v7ExuAXYQ_luYw_CrdYVj9NDg3LxyBq0kbAZDiqc99V0y5jRk"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Anchor -->
+<aside class="fixed left-0 top-0 h-full w-72 bg-[#fdfcf8] dark:bg-[#1a1a18] border-r-[1px] border-stone-200 dark:border-stone-900 flex flex-col h-full py-12 px-8 pt-32 hidden lg:flex">
+<div class="mb-12">
+<h2 class="font-['Newsreader'] font-semibold text-xl text-[#121210] mb-1">The Living Archive</h2>
+<p class="font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400">Est. 2024</p>
+</div>
+<div class="flex-grow space-y-2">
+<div class="flex items-center gap-3 py-4 cursor-pointer text-stone-400 dark:text-stone-600 hover:bg-stone-50 transition-colors">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Current Spread</span>
+</div>
+<div class="flex items-center gap-3 py-4 cursor-pointer text-[#121210] dark:text-white font-bold italic underline underline-offset-8">
+<span class="material-symbols-outlined">group</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Contributors</span>
+</div>
+<div class="flex items-center gap-3 py-4 cursor-pointer text-stone-400 dark:text-stone-600 hover:bg-stone-50 transition-colors">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Conversations</span>
+</div>
+<div class="flex items-center gap-3 py-4 cursor-pointer text-stone-400 dark:text-stone-600 hover:bg-stone-50 transition-colors">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Historical Notes</span>
+</div>
+<div class="flex items-center gap-3 py-4 cursor-pointer text-stone-400 dark:text-stone-600 hover:bg-stone-50 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Settings</span>
+</div>
+</div>
+<button class="mt-8 bg-primary text-on-primary py-4 px-6 font-label-md text-label-md tracking-widest uppercase hover:opacity-90 transition-all tactile-shadow inner-press">
+            Add New Memory
+        </button>
+<div class="mt-auto border-t border-stone-100 pt-6">
+<div class="flex items-center gap-3 py-4 cursor-pointer text-stone-400 hover:text-secondary transition-colors">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-['Newsreader'] text-sm tracking-wide uppercase">Logout</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="lg:ml-72 pt-32 pb-20 px-6 md:px-16 max-w-7xl mx-auto">
+<header class="mb-12 fade-in">
+<h1 class="font-display-lg text-display-lg text-primary mb-4">6. Manage My Circles</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl italic">
+                Organize your contributors into intimate circles to curate the shared history of your family, colleagues, and lifelong friends.
+            </p>
+</header>
+<!-- Bento Grid / Asymmetric Layout for Circles -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 fade-in" style="animation-delay: 0.1s;">
+<!-- Create New Circle Action -->
+<div class="group cursor-pointer border-2 border-dashed border-stone-300 bg-surface-container-low hover:bg-surface-container hover:border-outline transition-all p-10 flex flex-col items-center justify-center text-center space-y-4" onclick="toggleModal(true)">
+<div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-on-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-4xl">add</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Create New Circle</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-2">Initialize a new archive</p>
+</div>
+</div>
+<!-- Circle Card: Family -->
+<div class="circle-card bg-surface-container-lowest p-8 border border-stone-200 tactile-shadow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-6">
+<div class="bg-secondary-fixed text-on-secondary-fixed-variant px-3 py-1 font-label-sm text-label-sm uppercase tracking-tighter">
+                            Primary Circle
+                        </div>
+<span class="material-symbols-outlined text-stone-400">more_vert</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-2">The Sterling Family</h3>
+<p class="font-body-md text-body-md text-on-surface-variant italic mb-6">"Preserving the lineages of the Pacific Northwest branch."</p>
+</div>
+<div class="ink-line pb-4 mb-4 flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-200 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of an elderly man with a warm smile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzzFl4iRwqXI2BQdEuNH0HciFmnUAuikcvN2ZRsBEjPYV4O-RUdXQ2hHc6udy8KD2nGP939LfjGKApENGp1x2r3OEicGnd77Nw_yMiFpWXPi_on4zSUE3VDikCgo7vdtbK8YVmiDO0kzlZIMgE_w1dZPxLUSOx4l6TlketnmR_FdXMSCGDpR31SyBXWZ_XLsShgwuifnQq-XYDND22QX5eHCrd5X-eZZHFr1o6stRiPNUGuHdVeAf4SVJaqb6rY1DdRpc8EqS83Kk"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-300 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a young woman with spectacles." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCkSqL0HsSB6NDEz1AUVFRHTX_z5kZYFEAhimCwXq4PheJeJ3zR-2zIYVu6uyNIEXQTfIHde__hPMas63H4leZQyByA2FB8FYOWm9NPgjIx0JY4ArK1DvHyZSJfl5WSVFngtpvO-j1o05hlABv8orVi3-3bmSUUtsePGUz6Cb9AWR9jV-8rmV4vDPq-EtDCE51h4e98H09sIGy2EzYweOVkpThyskcx1YzAG_mK4lR7kOL4e3EgCLzGtzlMoVDXZwfqGpRdzpEsQI"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-400 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a middle aged man with a beard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQwd7flIYBYD9LrwVSix-rqr-FFvHUl4AkACU6hCpPTfEt6FNNXZCW_XWE7kIcWoUR4dwaApCetnK5z8Z9mb0IOBXSOL9Pb4NSP5C7fVetVecJkZo_CYFfRDVJ_nFenXtI-F_Jak414dqMavF-wWgyAyF6TBLJMRA3vtWqm387YRYz1qBPcdZHej6YyeBuAuyTg7H2HOEeM_7ciQ9Jt0JNNfkrDq-7a5WM06fCcbtnFqQaM2rm7ToRK64tBwAxnpMQzZr-Im37uyk"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-500 flex items-center justify-center text-[10px] text-white font-bold">+12</div>
+</div>
+<div class="text-right">
+<div class="font-label-sm text-label-sm text-primary uppercase">15 Members</div>
+<div class="font-label-sm text-[10px] text-on-tertiary-container flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-weight="fill">lock</span> Private
+                        </div>
+</div>
+</div>
+<button class="w-full py-2 font-label-md text-label-md border border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors uppercase tracking-widest">
+                    Manage Archive
+                </button>
+</div>
+<!-- Circle Card: University -->
+<div class="circle-card bg-surface-container-lowest p-8 border border-stone-200 tactile-shadow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-6">
+<div class="bg-surface-container-high text-on-surface-variant px-3 py-1 font-label-sm text-label-sm uppercase tracking-tighter">
+                            Academic
+                        </div>
+<span class="material-symbols-outlined text-stone-400">more_vert</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-2">Oxford Class of '88</h3>
+<p class="font-body-md text-body-md text-on-surface-variant italic mb-6">"Digital scrapbook of the Magdalen College years."</p>
+</div>
+<div class="ink-line pb-4 mb-4 flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-200 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a man in a tweed jacket." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCW_BZ5L_DOfV-rz2NDzmWLAohH79Mm0Q6_DwcNUjjjuPsYzBlinw8_fkV6f2Q0vKKm-1SSp6zfmwfM71Ce6eFpZFIDr3EC1AWC7_jFdH14qptgPHdGkm5YnDt4zeLaJivJKZcoGGF3kqbAVdSXCps9qmCX7U308eO_LOB_9m9uICkPZSiosdbNZ1L9pkor5aj3AvqSK_rnLCmOZzV3AQIXNX4v17SbqPxFCeg90ITovCifA0EZAcHzG_UXuj4T20X1-dVwWv90NLQ"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-300 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a woman with a silk scarf." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKH3WC0sdZ30P6wRixPiJPorjOUMwTQEDz0cxUqjtkOts9s-w9l1aI0tjda4PY_kux5iYVYvHHehfoIx3UWUNpe4o7YAQBaclHS6cfJLujZ94ZbeeR9KDHwKRR1CosGXP_5nML1604S6ghpZI1D-z396afuxz0jp40EoISiOvYkqYcw_M6eMMTyK4axT61URRmi_f0VzDdhitupuu58EGrbslgv9yY_BtD_k9fnwvP45OOgNBE3LeTUM8537Plu98DM3Gw0Z3Ooio"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-500 flex items-center justify-center text-[10px] text-white font-bold">+42</div>
+</div>
+<div class="text-right">
+<div class="font-label-sm text-label-sm text-primary uppercase">44 Members</div>
+<div class="font-label-sm text-[10px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">public</span> Restricted
+                        </div>
+</div>
+</div>
+<button class="w-full py-2 font-label-md text-label-md border border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors uppercase tracking-widest">
+                    Manage Archive
+                </button>
+</div>
+<!-- Circle Card: Colleagues -->
+<div class="circle-card bg-surface-container-lowest p-8 border border-stone-200 tactile-shadow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-6">
+<div class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-3 py-1 font-label-sm text-label-sm uppercase tracking-tighter">
+                            Professional
+                        </div>
+<span class="material-symbols-outlined text-stone-400">more_vert</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-2">Smith & Co. Alumni</h3>
+<p class="font-body-md text-body-md text-on-surface-variant italic mb-6">"Career milestones and architectural legacies."</p>
+</div>
+<div class="ink-line pb-4 mb-4 flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-200 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a professional man in a suit." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWcXQzPQs1YrwxwR1nihvUjnJ5wczsrmAQD1BuDma5YRECUMEfufHO7op8aBWIqXg3N_2-hZDvGOAq9AJ7nr_iAhH_2gQl7rxwX_lpsdfEjKi7hU7zH19_jtYyk7zoct9rGiTp0zmlcMBZ6ED1SMgLCERDvv7iKB41At5omqnIH3PI8dgICdjkhxUxYIH82snAf7AhnjX8h0DgptW9hAAdPRDAZ-xSMyjxkfP9EoPiydt0ssbpwAM18RrfO1KsTd84T06DQIEqI6g"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-stone-300 overflow-hidden"><img class="w-full h-full object-cover" data-alt="Portrait of a professional woman in a blazer." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCR2D2GTEE4p6fA_JKHHmW6OaxHz7Qgn8IOQB_srEotm8qIqDd5mxgv4em-qqGd_wh9uHnCCG0bN0mPOEzabYSmBkvEp6kw4G3OBjRR9zccRoXekmesBz_J9Z1VK6-MucWoCoJ5tZOnWycZGqGX1wCrfDtqjcozhBsCT5HJB3T8bdTG5bozdpictoK0a-DTlRhQ9JKe0q8WPhsv626FgeEkTxTDjgHbZMt7O7A8-O98xWj79bTIwBnnHtUSUvaR7Y2Nro4RmN7eMW8"/></div>
+</div>
+<div class="text-right">
+<div class="font-label-sm text-label-sm text-primary uppercase">8 Members</div>
+<div class="font-label-sm text-[10px] text-on-tertiary-container flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-weight="fill">lock</span> Private
+                        </div>
+</div>
+</div>
+<button class="w-full py-2 font-label-md text-label-md border border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors uppercase tracking-widest">
+                    Manage Archive
+                </button>
+</div>
+</div>
+</main>
+<!-- Modal Form: Create New Circle -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center bg-primary/20 backdrop-blur-md hidden opacity-0 transition-opacity duration-300" id="createModal">
+<div class="bg-[#fdfcf8] w-full max-w-xl p-12 border border-stone-300 tactile-shadow paper-texture transform translate-y-10 transition-transform duration-300" id="modalContent">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="font-display-lg text-3xl text-primary mb-2">New Archival Circle</h2>
+<p class="font-body-md text-body-md text-on-surface-variant italic">Define the boundaries of this collection.</p>
+</div>
+<button class="text-stone-400 hover:text-primary transition-colors" onclick="toggleModal(false)">
+<span class="material-symbols-outlined text-3xl">close</span>
+</button>
+</div>
+<form class="space-y-10">
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Circle Name</label>
+<input class="w-full bg-transparent border-t-0 border-x-0 border-b-[0.5px] border-stone-300 focus:ring-0 focus:border-secondary transition-colors text-headline-md font-headline-md px-0 py-2 placeholder:text-stone-300" placeholder="e.g., The Heritage Society" type="text"/>
+</div>
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Archival Purpose</label>
+<div class="grid grid-cols-2 gap-4">
+<label class="flex items-center gap-3 p-4 border border-stone-200 cursor-pointer hover:bg-surface-container-low transition-colors">
+<input class="text-primary focus:ring-0" name="purpose" type="radio"/>
+<span class="font-body-md text-body-md">Family Lineage</span>
+</label>
+<label class="flex items-center gap-3 p-4 border border-stone-200 cursor-pointer hover:bg-surface-container-low transition-colors">
+<input class="text-primary focus:ring-0" name="purpose" type="radio"/>
+<span class="font-body-md text-body-md">Academic Memories</span>
+</label>
+<label class="flex items-center gap-3 p-4 border border-stone-200 cursor-pointer hover:bg-surface-container-low transition-colors">
+<input class="text-primary focus:ring-0" name="purpose" type="radio"/>
+<span class="font-body-md text-body-md">Travel Log</span>
+</label>
+<label class="flex items-center gap-3 p-4 border border-stone-200 cursor-pointer hover:bg-surface-container-low transition-colors">
+<input class="text-primary focus:ring-0" name="purpose" type="radio"/>
+<span class="font-body-md text-body-md">Professional Legacy</span>
+</label>
+</div>
+</div>
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Privacy level</label>
+<div class="flex gap-4">
+<button class="flex-1 py-3 px-4 border border-primary bg-primary text-on-primary font-label-md text-label-md uppercase tracking-widest flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-sm" data-weight="fill">lock</span> Private
+                        </button>
+<button class="flex-1 py-3 px-4 border border-stone-200 font-label-md text-label-md uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">group</span> Restricted
+                        </button>
+</div>
+</div>
+<div class="pt-6">
+<button class="w-full bg-primary text-on-primary py-5 px-8 font-label-md text-label-md uppercase tracking-[0.2em] tactile-shadow inner-press hover:opacity-90 transition-all" onclick="toggleModal(false)" type="button">
+                        Initialize Circle
+                    </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Background Decorative Element -->
+<div class="fixed bottom-0 right-0 p-12 pointer-events-none opacity-20">
+<span class="font-['Newsreader'] italic text-[200px] leading-none text-stone-400 select-none">H.A.</span>
+</div>
+<script>
+        function toggleModal(show) {
+            const modal = document.getElementById('createModal');
+            const content = document.getElementById('modalContent');
+            if (show) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.add('opacity-100');
+                    content.classList.remove('translate-y-10');
+                    content.classList.add('translate-y-0');
+                }, 10);
+            } else {
+                modal.classList.remove('opacity-100');
+                content.classList.add('translate-y-10');
+                content.classList.remove('translate-y-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') toggleModal(false);
+        });
+
+        // Micro-interaction for list items
+        document.querySelectorAll('.circle-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.985) translateY(0)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'translateY(-2px)';
+            });
+        });
+    </script>
+</body></html>
