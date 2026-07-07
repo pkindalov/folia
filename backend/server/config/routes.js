@@ -13,6 +13,16 @@ const authLimiter = rateLimit({
   message: { error: 'Too many attempts, try again later' },
 });
 
+// A regex scan over every username on every keystroke is cheap to abuse —
+// generous enough for interactive typeahead, tight enough to bound load.
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many searches, try again shortly' },
+});
+
 module.exports = (app) => {
   // Health / meta
   app.get('/api/health', controllers.home.health);
@@ -23,14 +33,22 @@ module.exports = (app) => {
 
   // Users (protected)
   app.get('/api/users/me', auth.isAuthenticated, controllers.users.me);
+  // Must come before /api/users/:username, or "search" would be parsed as a username.
+  app.get('/api/users/search', auth.isAuthenticated, searchLimiter, controllers.users.search);
   app.get('/api/users/:username', auth.isAuthenticated, controllers.users.profile);
 
   // Albums
   app.get('/api/albums', auth.isAuthenticated, controllers.albums.list);
   app.post('/api/albums', auth.isAuthenticated, controllers.albums.create);
-  // Must come before /api/albums/:id, or "public"/"archived" would be parsed as an id.
+  // Must come before /api/albums/:id, or "public"/"archived"/"shared-with-me"
+  // would be parsed as an id.
   app.get('/api/albums/public', auth.isAuthenticated, controllers.albums.listPublic);
   app.get('/api/albums/archived', auth.isAuthenticated, controllers.albums.listArchived);
+  app.get(
+    '/api/albums/shared-with-me',
+    auth.isAuthenticated,
+    controllers.albums.listSharedWithMe
+  );
   app.get('/api/albums/:id', auth.isAuthenticated, controllers.albums.getOne);
   app.put('/api/albums/:id', auth.isAuthenticated, controllers.albums.update);
   app.delete('/api/albums/:id', auth.isAuthenticated, controllers.albums.remove);
@@ -61,6 +79,26 @@ module.exports = (app) => {
     auth.isAuthenticated,
     controllers.pages.requireOwnedAlbum,
     controllers.pages.remove
+  );
+
+  // Circles
+  app.get('/api/circles', auth.isAuthenticated, controllers.circles.list);
+  app.post('/api/circles', auth.isAuthenticated, controllers.circles.create);
+  // Must come before /api/circles/:id, or "invites" would be parsed as an id.
+  app.get('/api/circles/invites', auth.isAuthenticated, controllers.circles.listInvites);
+  app.get('/api/circles/:id', auth.isAuthenticated, controllers.circles.getOne);
+  app.put('/api/circles/:id', auth.isAuthenticated, controllers.circles.update);
+  app.delete('/api/circles/:id', auth.isAuthenticated, controllers.circles.remove);
+  app.post('/api/circles/:id/members', auth.isAuthenticated, controllers.circles.addMember);
+  app.put(
+    '/api/circles/:id/members/:userId',
+    auth.isAuthenticated,
+    controllers.circles.respondToInvite
+  );
+  app.delete(
+    '/api/circles/:id/members/:userId',
+    auth.isAuthenticated,
+    controllers.circles.removeMember
   );
 
   // 404 for unknown routes

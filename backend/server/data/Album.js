@@ -19,6 +19,15 @@ const albumSchema = new mongoose.Schema(
       enum: ['private', 'shared', 'public'],
       default: 'private',
     },
+    // Only meaningful when visibility === 'shared'. When set, access is
+    // gated to this circle's members (see canAccessSharedAlbum in
+    // albums-controller.js). When null, a 'shared' album keeps the legacy
+    // behavior of being open to any authenticated user.
+    sharedWithCircle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Circle',
+      default: null,
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -2,25 +2,18 @@ const mongoose = require('mongoose');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const User = require('../data/User');
+const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
+const { isNonEmptyString, parsePage, DELETED_USER_LABEL } = require('../utilities/controller-helpers');
 
 const VISIBILITIES = ['private', 'shared', 'public'];
 const ALBUMS_PAGE_SIZE = 12;
 
-const isNonEmptyString = (v) => typeof v === 'string' && v.trim().length > 0;
-
-// Page size is fixed server-side — only the page number is caller-controlled,
-// so a client can't request an unbounded page of results.
-function parsePage(query) {
-  const page = parseInt(query?.page, 10);
-  return Number.isInteger(page) && page > 0 ? page : 1;
-}
-
 // Returns an error message, or null when the input is valid.
 // For updates, fields that are undefined are simply skipped.
 function validateAlbumInput(body, { partial = false } = {}) {
-  const { title, description, visibility, archived } = body || {};
+  const { title, description, visibility, archived, sharedWithCircle } = body || {};
 
   if (!partial || title !== undefined) {
     if (!isNonEmptyString(title)) return 'title is required';
@@ -36,11 +29,46 @@ function validateAlbumInput(body, { partial = false } = {}) {
   if (archived !== undefined && typeof archived !== 'boolean') {
     return 'archived must be a boolean';
   }
+  if (
+    sharedWithCircle !== undefined &&
+    sharedWithCircle !== null &&
+    !mongoose.isValidObjectId(sharedWithCircle)
+  ) {
+    return 'sharedWithCircle must be a valid circle id or null';
+  }
   return null;
 }
 
 function canModify(album, user) {
   return album.owner.toString() === user._id.toString() || user.roles.includes('Admin');
+}
+
+// Sharing an album to a circle only makes sense for a circle the album's
+// owner actually owns — otherwise an accidental or copy-pasted id would
+// silently gate the album behind a stranger's circle. Returns an error
+// message, or null when sharedWithCircle is absent or valid.
+function verifySharedCircleOwnership(sharedWithCircle, user) {
+  if (!sharedWithCircle) return Promise.resolve(null);
+
+  return Circle.findById(sharedWithCircle).then((circle) => {
+    if (!circle || circle.owner.toString() !== user._id.toString()) {
+      return 'sharedWithCircle must reference a circle you own';
+    }
+    return null;
+  });
+}
+
+// A 'shared' album with no circle attached keeps the legacy behavior of
+// being open to any authenticated user. Once a circle is attached, access
+// narrows to that circle's owner and members. A dangling reference (the
+// circle was deleted) is treated as "no access" rather than throwing.
+function canAccessSharedAlbum(album, user) {
+  if (!album.sharedWithCircle) return Promise.resolve(true);
+
+  return Circle.findById(album.sharedWithCircle).then((circle) => {
+    if (!circle) return false;
+    return circle.isOwnerOrMember(user._id);
+  });
 }
 
 // The cover is whichever page the user explicitly picked; absent that,
@@ -62,6 +90,24 @@ function resolveCoverImage(album) {
 
 function withCoverImage(album) {
   return resolveCoverImage(album).then((coverImage) => ({ ...album.toJSON(), coverImage }));
+}
+
+// Attaches ownerUsername and coverImage to each album — shared by listPublic
+// and listSharedWithMe, which both need the same owner-lookup + cover shape.
+function withOwnerUsernamesAndCovers(albums) {
+  const ownerIds = [...new Set(albums.map((album) => album.owner.toString()))];
+  return User.find({ _id: { $in: ownerIds } }, 'username').then((users) => {
+    const usernameByOwnerId = new Map(users.map((user) => [user._id.toString(), user.username]));
+    return Promise.all(
+      albums.map((album) =>
+        resolveCoverImage(album).then((coverImage) => ({
+          ...album.toJSON(),
+          ownerUsername: usernameByOwnerId.get(album.owner.toString()) ?? DELETED_USER_LABEL,
+          coverImage,
+        }))
+      )
+    );
+  });
 }
 
 module.exports = {
@@ -124,25 +170,50 @@ module.exports = {
         .skip((page - 1) * ALBUMS_PAGE_SIZE)
         .limit(ALBUMS_PAGE_SIZE),
     ])
-      .then(([total, albums]) => {
-        const ownerIds = [...new Set(albums.map((album) => album.owner.toString()))];
-        return User.find({ _id: { $in: ownerIds } }, 'username').then((users) => {
-          const usernameByOwnerId = new Map(
-            users.map((user) => [user._id.toString(), user.username])
-          );
-          return Promise.all(
-            albums.map((album) =>
-              resolveCoverImage(album).then((coverImage) => ({
-                ...album.toJSON(),
-                ownerUsername: usernameByOwnerId.get(album.owner.toString()),
-                coverImage,
-              }))
-            )
-          ).then((albums) => ({ total, albums }));
-        });
-      })
+      .then(([total, albums]) =>
+        withOwnerUsernamesAndCovers(albums).then((albums) => ({ total, albums }))
+      )
       .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load public albums' }));
+  },
+
+  // Albums explicitly shared with a circle the requester owns or has
+  // accepted membership in — the "shared with you" counterpart to the
+  // public Explore listing. Excludes the requester's own albums, which
+  // already show up in their own gallery.
+  listSharedWithMe: (req, res) => {
+    const page = parsePage(req.query);
+
+    Circle.find(
+      {
+        $or: [
+          { owner: req.user._id },
+          { members: { $elemMatch: { user: req.user._id, status: 'accepted' } } },
+        ],
+      },
+      '_id'
+    )
+      .then((circles) => {
+        const circleIds = circles.map((circle) => circle._id);
+        const filter = {
+          visibility: 'shared',
+          sharedWithCircle: { $in: circleIds },
+          owner: { $ne: req.user._id },
+        };
+
+        return Promise.all([
+          Album.countDocuments(filter),
+          Album.find(filter)
+            .sort('-updatedAt')
+            .skip((page - 1) * ALBUMS_PAGE_SIZE)
+            .limit(ALBUMS_PAGE_SIZE),
+        ]);
+      })
+      .then(([total, albums]) =>
+        withOwnerUsernamesAndCovers(albums).then((albums) => ({ total, albums }))
+      )
+      .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
+      .catch(() => res.status(500).json({ error: 'Failed to load shared albums' }));
   },
 
   getOne: (req, res) => {
@@ -157,6 +228,14 @@ module.exports = {
         if (album.visibility === 'private' && !canModify(album, req.user)) {
           return res.status(403).json({ error: 'This album is private' });
         }
+        if (album.visibility === 'shared' && !canModify(album, req.user)) {
+          return canAccessSharedAlbum(album, req.user).then((allowed) => {
+            if (!allowed) {
+              return res.status(403).json({ error: 'This album is shared with a specific circle' });
+            }
+            return withCoverImage(album).then((album) => res.json({ album }));
+          });
+        }
         return withCoverImage(album).then((album) => res.json({ album }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to load album' }));
@@ -166,21 +245,31 @@ module.exports = {
     const error = validateAlbumInput(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { title, description, visibility } = req.body;
+    const { title, description, visibility, sharedWithCircle } = req.body;
+    // sharedWithCircle only means anything for a 'shared' album — silently
+    // drop it otherwise rather than storing an inconsistent combination.
+    const effectiveVisibility = visibility ?? 'private';
+    const effectiveSharedWithCircle =
+      effectiveVisibility === 'shared' ? (sharedWithCircle ?? null) : null;
 
-    Album.create({
-      title: title.trim(),
-      description: description ?? '',
-      visibility: visibility ?? 'private',
-      owner: req.user._id,
-    })
-      .then((album) => {
-        // Every user gets their own folder under uploads/, one subfolder per album
-        storage.ensureAlbumDir(req.user._id, album._id);
-        // A brand-new album can't have any pages yet, so its cover is always null.
-        res.status(201).json({ album: { ...album.toJSON(), coverImage: null } });
+    verifySharedCircleOwnership(effectiveSharedWithCircle, req.user).then((circleError) => {
+      if (circleError) return res.status(400).json({ error: circleError });
+
+      Album.create({
+        title: title.trim(),
+        description: description ?? '',
+        visibility: effectiveVisibility,
+        sharedWithCircle: effectiveSharedWithCircle,
+        owner: req.user._id,
       })
-      .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
+        .then((album) => {
+          // Every user gets their own folder under uploads/, one subfolder per album
+          storage.ensureAlbumDir(req.user._id, album._id);
+          // A brand-new album can't have any pages yet, so its cover is always null.
+          res.status(201).json({ album: { ...album.toJSON(), coverImage: null } });
+        })
+        .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
+    }).catch(() => res.status(500).json({ error: 'Failed to create album' }));
   },
 
   update: (req, res) => {
@@ -199,16 +288,32 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
-        const { title, description, visibility, archived } = req.body;
-        if (title !== undefined) album.title = title.trim();
-        if (description !== undefined) album.description = description;
-        if (visibility !== undefined) album.visibility = visibility;
-        if (archived !== undefined) album.archived = archived;
+        const { title, description, visibility, archived, sharedWithCircle } = req.body;
+        // sharedWithCircle only means anything for a 'shared' album — silently
+        // drop it (whatever was submitted or already stored) once the album
+        // isn't 'shared', rather than persisting an inconsistent combination.
+        const effectiveVisibility = visibility !== undefined ? visibility : album.visibility;
+        const effectiveSharedWithCircle =
+          effectiveVisibility === 'shared'
+            ? sharedWithCircle !== undefined
+              ? sharedWithCircle
+              : album.sharedWithCircle
+            : null;
 
-        return album
-          .save()
-          .then((saved) => withCoverImage(saved).then((album) => res.json({ album })))
-          .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
+        return verifySharedCircleOwnership(effectiveSharedWithCircle, req.user).then((circleError) => {
+          if (circleError) return res.status(400).json({ error: circleError });
+
+          if (title !== undefined) album.title = title.trim();
+          if (description !== undefined) album.description = description;
+          if (visibility !== undefined) album.visibility = visibility;
+          if (archived !== undefined) album.archived = archived;
+          album.sharedWithCircle = effectiveSharedWithCircle;
+
+          return album
+            .save()
+            .then((saved) => withCoverImage(saved).then((album) => res.json({ album })))
+            .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to update album' }));
   },
