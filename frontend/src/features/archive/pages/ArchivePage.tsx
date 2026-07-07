@@ -1,10 +1,79 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
-import { mockArchivedVolumes } from '../mock';
+import Pagination from '../../../components/Pagination';
+import { useArchivedAlbums, useArchiveAlbum, coverColor, type Album } from '../../flipbooks';
+
+const VISIBILITY_ICON: Record<Album['visibility'], string> = {
+  private: 'lock',
+  public: 'public',
+  shared: 'group',
+};
+
+function ArchivedVolumeCard({ album }: { album: Album }) {
+  const restoreAlbum = useArchiveAlbum(album._id);
+
+  return (
+    <div className="group flex flex-col items-center h-85">
+      <Link
+        to={`/book/${album._id}`}
+        className="relative w-full flex-1 rounded-r-card shadow-[0_8px_30px_rgba(0,0,0,0.15)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.2)] block"
+        style={{ backgroundColor: coverColor(album._id) }}
+      >
+        {album.coverImage && (
+          <>
+            <img
+              src={album.coverImage}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover grayscale-40"
+            />
+            <div className="absolute inset-0 bg-black/40" />
+          </>
+        )}
+        <div className="absolute inset-0 flex flex-col justify-between p-6">
+          <span className="self-end text-white/80">
+            <Icon name={VISIBILITY_ICON[album.visibility]} className="text-lg" />
+          </span>
+          <div>
+            <h3 className="font-display text-2xl text-white leading-tight">{album.title}</h3>
+            {album.description && (
+              <p className="font-body italic text-white/70 text-sm mt-1 line-clamp-2">
+                {album.description}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="absolute left-4 top-0 bottom-0 w-px bg-white/20" />
+        <div className="absolute left-5 top-0 bottom-0 w-px bg-black/20" />
+      </Link>
+      <div className="mt-6 w-full px-2 flex justify-between items-center">
+        <span className="font-ui text-ui-label uppercase text-on-surface-variant">
+          {album.pageCount} pages
+        </span>
+        <button
+          onClick={() => restoreAlbum.mutate(false)}
+          disabled={restoreAlbum.isPending}
+          aria-label={`Restore ${album.title}`}
+          className="flex items-center gap-1 font-ui text-ui-label uppercase text-on-surface-variant hover:text-secondary transition-colors disabled:opacity-50"
+        >
+          <Icon name="unarchive" className="text-base" />
+          {restoreAlbum.isPending ? 'Restoring…' : 'Restore'}
+        </button>
+      </div>
+      {restoreAlbum.isError && (
+        <p role="alert" className="mt-2 w-full px-2 text-sm text-error font-ui">
+          {restoreAlbum.error.message}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function ArchivePage() {
-  const totalPages = mockArchivedVolumes.reduce((sum, v) => sum + v.pageCount, 0);
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error } = useArchivedAlbums(page);
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
 
   return (
     <AppShell>
@@ -13,82 +82,36 @@ export default function ArchivePage() {
           <div className="mb-12 border-b border-outline-variant pb-6">
             <h2 className="font-display text-display-lg text-primary mb-2">The Grand Archive</h2>
             <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-              Completed volumes, sealed and preserved. Pull a spine from the shelf to revisit a
-              finished chapter of the story.
+              Completed volumes, sealed and preserved. Restore one to bring it back to your
+              gallery.
             </p>
           </div>
 
-          {/* The shelf */}
-          <div className="relative mb-16">
-            <div className="flex items-end gap-1 overflow-x-auto pb-0 pt-8 px-6 min-h-70">
-              {mockArchivedVolumes.map((volume, i) => (
-                <Link
-                  key={volume._id}
-                  to={`/book/${volume._id}`}
-                  className="group relative shrink-0 w-16 md:w-20 rounded-t-paper shadow-[2px_0_6px_rgba(0,0,0,0.25)] transition-transform duration-300 hover:-translate-y-4 focus:-translate-y-4"
-                  style={{
-                    backgroundColor: volume.spineColor,
-                    height: `${210 + (i % 3) * 22}px`,
-                  }}
-                >
-                  <div className="absolute inset-x-0 top-0 h-2 bg-white/10" />
-                  <div className="absolute inset-y-0 left-0 w-px bg-white/20" />
-                  <div className="absolute inset-y-0 right-0 w-px bg-black/30" />
-                  <span
-                    className="absolute inset-0 flex items-center justify-center font-display italic text-surface/90 text-sm md:text-base whitespace-nowrap"
-                    style={{ writingMode: 'vertical-rl' }}
-                  >
-                    {volume.title} · {volume.years}
-                  </span>
-                </Link>
-              ))}
-              {/* Empty slots */}
-              {[0, 1].map((slot) => (
-                <div
-                  key={slot}
-                  className="shrink-0 w-16 md:w-20 h-50 border border-dashed border-outline-variant rounded-t-paper opacity-50"
-                />
-              ))}
-            </div>
-            {/* Shelf base */}
-            <div className="h-4 bg-linear-to-b from-[#6E5A44] to-[#4A3B2C] rounded-paper shadow-[0_10px_25px_rgba(0,0,0,0.3)]" />
-          </div>
+          {isLoading && (
+            <p className="font-body italic text-on-surface-variant">Opening the archive…</p>
+          )}
+          {isError && (
+            <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
+              {error.message}
+            </p>
+          )}
 
-          {/* Stats bento */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-surface-container-low p-8 paper-depth border border-outline-variant/20 rounded-card">
-              <h3 className="font-ui text-ui-label text-on-surface-variant uppercase mb-2">
-                Total Archives
-              </h3>
-              <p className="font-display text-display-lg text-primary">
-                {mockArchivedVolumes.length}
-              </p>
-              <p className="font-body italic text-sm text-on-surface-variant mt-2">
-                volumes preserved across seven decades
-              </p>
+          {data && data.total === 0 && (
+            <div className="flex flex-col items-center gap-4 py-24 text-center text-on-surface-variant">
+              <Icon name="inventory_2" className="text-5xl" />
+              <p className="font-body italic text-body-text">Nothing has been archived yet.</p>
             </div>
-            <div className="bg-surface-container-low p-8 paper-depth border border-outline-variant/20 rounded-card">
-              <h3 className="font-ui text-ui-label text-on-surface-variant uppercase mb-2">
-                Pages Bound
-              </h3>
-              <p className="font-display text-display-lg text-primary">{totalPages}</p>
-              <p className="font-body italic text-sm text-on-surface-variant mt-2">
-                every one of them a moment kept
-              </p>
+          )}
+
+          {data && data.total > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+              {data.albums.map((album) => (
+                <ArchivedVolumeCard key={album._id} album={album} />
+              ))}
             </div>
-            <div className="bg-surface-container-low p-8 paper-depth border border-outline-variant/20 rounded-card flex flex-col">
-              <h3 className="font-ui text-ui-label text-on-surface-variant uppercase mb-2">
-                Recently Preserved
-              </h3>
-              <p className="font-display text-2xl text-primary">The Digital Turn</p>
-              <p className="font-body italic text-sm text-on-surface-variant mt-2">
-                Sealed on 12 June 2026
-              </p>
-              <span className="mt-auto self-end text-secondary">
-                <Icon name="verified" className="text-3xl" />
-              </span>
-            </div>
-          </div>
+          )}
+
+          {data && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
         </div>
       </div>
     </AppShell>

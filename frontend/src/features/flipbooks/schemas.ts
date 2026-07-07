@@ -10,21 +10,34 @@ export const albumSchema = z
     pageCount: z.number().default(0),
     coverPage: z.string().nullable().optional(),
     coverImage: z.string().nullable().optional(),
+    archived: z.boolean().default(false),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
   .passthrough();
 
-export const albumsResponseSchema = z.object({ albums: z.array(albumSchema) });
+export const albumsResponseSchema = z.object({
+  albums: z.array(albumSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
 export const albumResponseSchema = z.object({ album: albumSchema });
 
 export type Album = z.infer<typeof albumSchema>;
+export type PaginatedAlbums = z.infer<typeof albumsResponseSchema>;
 
 // A public album as shown on the Explore page — same shape, plus who made it.
 export const publicAlbumSchema = albumSchema.extend({ ownerUsername: z.string() });
-export const publicAlbumsResponseSchema = z.object({ albums: z.array(publicAlbumSchema) });
+export const publicAlbumsResponseSchema = z.object({
+  albums: z.array(publicAlbumSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
 
 export type PublicAlbum = z.infer<typeof publicAlbumSchema>;
+export type PaginatedPublicAlbums = z.infer<typeof publicAlbumsResponseSchema>;
 
 // Form schema — mirrors backend validation
 export const albumFormSchema = z.object({

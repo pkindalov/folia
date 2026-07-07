@@ -125,73 +125,156 @@ describe('albums-controller', () => {
     });
   });
 
+  // Album.find(...).sort(...).skip(...).limit(...) — a chainable mock query.
+  function mockAlbumQuery(albums) {
+    const query = {};
+    query.sort = jest.fn().mockReturnValue(query);
+    query.skip = jest.fn().mockReturnValue(query);
+    query.limit = jest.fn().mockResolvedValue(albums);
+    return query;
+  }
+
+  function mockFailingAlbumQuery(err) {
+    const query = {};
+    query.sort = jest.fn().mockReturnValue(query);
+    query.skip = jest.fn().mockReturnValue(query);
+    query.limit = jest.fn().mockRejectedValue(err);
+    return query;
+  }
+
   describe('list', () => {
-    test('returns only the albums owned by the requester', async () => {
+    test('returns only the albums owned by the requester, paginated', async () => {
       const album = fakeAlbum();
-      const sort = jest.fn().mockResolvedValue([album]);
-      const find = jest.spyOn(Album, 'find').mockReturnValue({ sort });
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       const res = mockRes();
-      controller.list({ user: owner }, res);
+      controller.list({ user: owner, query: {} }, res);
       await flush();
-      expect(find).toHaveBeenCalledWith({ owner: OWNER_ID });
+      expect(find).toHaveBeenCalledWith({ owner: OWNER_ID, archived: { $ne: true } });
       expect(res.json).toHaveBeenCalledWith({
         albums: [{ ...album.toJSON(), coverImage: null }],
+        total: 1,
+        page: 1,
+        limit: 12,
       });
     });
 
-    test('returns 500 when the query fails', async () => {
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: () => Promise.reject(new Error('x')) });
+    test('excludes archived volumes from the main gallery', async () => {
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
       const res = mockRes();
-      controller.list({ user: owner }, res);
+      controller.list({ user: owner, query: {} }, res);
+      await flush();
+      expect(find).toHaveBeenCalledWith(
+        expect.objectContaining({ archived: { $ne: true } })
+      );
+    });
+
+    test('filters by visibility when requested', async () => {
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.list({ user: owner, query: { visibility: 'public' } }, res);
+      await flush();
+      expect(find).toHaveBeenCalledWith({
+        owner: OWNER_ID,
+        archived: { $ne: true },
+        visibility: 'public',
+      });
+    });
+
+    test('rejects an invalid visibility filter', () => {
+      const find = jest.spyOn(Album, 'find');
+      const res = mockRes();
+      controller.list({ user: owner, query: { visibility: 'nope' } }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(find).not.toHaveBeenCalled();
+    });
+
+    test('skips to the requested page', async () => {
+      const query = mockAlbumQuery([]);
+      jest.spyOn(Album, 'find').mockReturnValue(query);
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(30);
+      const res = mockRes();
+      controller.list({ user: owner, query: { page: '3' } }, res);
+      await flush();
+      expect(query.skip).toHaveBeenCalledWith(24); // (3 - 1) * 12
+      expect(query.limit).toHaveBeenCalledWith(12);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ page: 3, total: 30 }));
+    });
+
+    test('falls back to page 1 for a garbage page value', async () => {
+      const query = mockAlbumQuery([]);
+      jest.spyOn(Album, 'find').mockReturnValue(query);
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.list({ user: owner, query: { page: 'not-a-number' } }, res);
+      await flush();
+      expect(query.skip).toHaveBeenCalledWith(0);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    });
+
+    test('returns 500 when the query fails', async () => {
+      jest.spyOn(Album, 'find').mockReturnValue(mockFailingAlbumQuery(new Error('x')));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.list({ user: owner, query: {} }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
     test('uses the earliest-uploaded photo as the cover when none was explicitly chosen', async () => {
       const album = fakeAlbum();
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([album]) });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       jest.spyOn(Page, 'findOne').mockReturnValue({
         sort: jest.fn().mockResolvedValue({ filename: 'first.jpg' }),
       });
       const res = mockRes();
-      controller.list({ user: owner }, res);
+      controller.list({ user: owner, query: {} }, res);
       await flush();
-      expect(res.json).toHaveBeenCalledWith({
-        albums: [
-          { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/first.jpg` },
-        ],
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          albums: [
+            { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/first.jpg` },
+          ],
+        })
+      );
     });
 
     test('uses the explicitly chosen cover photo when set', async () => {
       const album = fakeAlbum({ coverPage: PAGE_ID });
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([album]) });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       jest
         .spyOn(Page, 'findOne')
         .mockResolvedValueOnce({ filename: 'chosen.jpg' });
       const res = mockRes();
-      controller.list({ user: owner }, res);
+      controller.list({ user: owner, query: {} }, res);
       await flush();
       expect(Page.findOne).toHaveBeenCalledWith({ _id: PAGE_ID, album: ALBUM_ID });
-      expect(res.json).toHaveBeenCalledWith({
-        albums: [
-          { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/chosen.jpg` },
-        ],
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          albums: [
+            { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/chosen.jpg` },
+          ],
+        })
+      );
     });
   });
 
   describe('listPublic', () => {
     test('returns public albums across all owners with their cover and username', async () => {
       const album = fakeAlbum({ visibility: 'public', owner: { toString: () => OWNER_ID } });
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([album]) });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan' }]);
       jest.spyOn(Page, 'findOne').mockReturnValue({
         sort: jest.fn().mockResolvedValue({ filename: 'first.jpg' }),
       });
 
       const res = mockRes();
-      controller.listPublic({}, res);
+      controller.listPublic({ query: {} }, res);
       await flush();
 
       expect(Album.find).toHaveBeenCalledWith({ visibility: 'public' });
@@ -203,23 +286,78 @@ describe('albums-controller', () => {
             coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/first.jpg`,
           },
         ],
+        total: 1,
+        page: 1,
+        limit: 12,
       });
     });
 
+    test('skips to the requested page', async () => {
+      const query = mockAlbumQuery([]);
+      jest.spyOn(Album, 'find').mockReturnValue(query);
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(30);
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      const res = mockRes();
+      controller.listPublic({ query: { page: '2' } }, res);
+      await flush();
+      expect(query.skip).toHaveBeenCalledWith(12); // (2 - 1) * 12
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ page: 2, total: 30 }));
+    });
+
     test('returns an empty list when there are no public albums', async () => {
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
       const findUsers = jest.spyOn(User, 'find').mockResolvedValue([]);
       const res = mockRes();
-      controller.listPublic({}, res);
+      controller.listPublic({ query: {} }, res);
       await flush();
       expect(findUsers).toHaveBeenCalledWith({ _id: { $in: [] } }, 'username');
-      expect(res.json).toHaveBeenCalledWith({ albums: [] });
+      expect(res.json).toHaveBeenCalledWith({ albums: [], total: 0, page: 1, limit: 12 });
     });
 
     test('returns 500 when the query fails', async () => {
-      jest.spyOn(Album, 'find').mockReturnValue({ sort: () => Promise.reject(new Error('x')) });
+      jest.spyOn(Album, 'find').mockReturnValue(mockFailingAlbumQuery(new Error('x')));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
       const res = mockRes();
-      controller.listPublic({}, res);
+      controller.listPublic({ query: {} }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('listArchived', () => {
+    test("returns only the requester's archived albums, paginated", async () => {
+      const album = fakeAlbum({ archived: true });
+      const find = jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
+      const res = mockRes();
+      controller.listArchived({ user: owner, query: {} }, res);
+      await flush();
+      expect(find).toHaveBeenCalledWith({ owner: OWNER_ID, archived: true });
+      expect(res.json).toHaveBeenCalledWith({
+        albums: [{ ...album.toJSON(), coverImage: null }],
+        total: 1,
+        page: 1,
+        limit: 12,
+      });
+    });
+
+    test('skips to the requested page', async () => {
+      const query = mockAlbumQuery([]);
+      jest.spyOn(Album, 'find').mockReturnValue(query);
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(30);
+      const res = mockRes();
+      controller.listArchived({ user: owner, query: { page: '2' } }, res);
+      await flush();
+      expect(query.skip).toHaveBeenCalledWith(12);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ page: 2, total: 30 }));
+    });
+
+    test('returns 500 when the query fails', async () => {
+      jest.spyOn(Album, 'find').mockReturnValue(mockFailingAlbumQuery(new Error('x')));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.listArchived({ user: owner, query: {} }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
@@ -321,6 +459,45 @@ describe('albums-controller', () => {
       expect(album.visibility).toBe('public');
       expect(album.save).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ album: { ...album.toJSON(), coverImage: null } });
+    });
+
+    test('rejects a non-boolean archived value', () => {
+      const findById = jest.spyOn(Album, 'findById');
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { archived: 'yes' }, user: owner },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(findById).not.toHaveBeenCalled();
+    });
+
+    test('archives a volume', async () => {
+      const album = fakeAlbum({ archived: false });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { archived: true }, user: owner },
+        res
+      );
+      await flush();
+      expect(album.archived).toBe(true);
+      expect(album.save).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        album: { ...album.toJSON(), coverImage: null },
+      });
+    });
+
+    test('restores an archived volume', async () => {
+      const album = fakeAlbum({ archived: true });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { archived: false }, user: owner },
+        res
+      );
+      await flush();
+      expect(album.archived).toBe(false);
     });
 
     test('owner can rename (title trimmed)', async () => {

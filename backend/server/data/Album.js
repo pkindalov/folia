@@ -37,6 +37,12 @@ const albumSchema = new mongoose.Schema(
       ref: 'Page',
       default: null,
     },
+    // A volume the owner has filed away — hidden from the main gallery,
+    // shown only in the Archive. Unrelated to visibility/access control.
+    archived: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

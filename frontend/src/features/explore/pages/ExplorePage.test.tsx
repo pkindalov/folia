@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ExplorePage from './ExplorePage';
 import { tokenStorage } from '../../../lib/api-client';
 import { renderWithProviders } from '../../../tests/test-utils';
@@ -29,11 +30,17 @@ const PUBLIC_ALBUMS = {
       coverImage: null,
     },
   ],
+  total: 2,
+  page: 1,
+  limit: 12,
 };
+
+const calledUrls: string[] = [];
 
 function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
   vi.mocked(fetch).mockImplementation((url) => {
     const path = String(url);
+    calledUrls.push(path);
     const match = Object.entries(routes).find(([suffix]) => path.includes(suffix));
     const { body, status = 200 } = match?.[1] ?? { body: { error: 'Not found' }, status: 404 };
     return Promise.resolve({
@@ -50,6 +57,7 @@ const renderPage = () =>
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
   tokenStorage.set('jwt-ok');
+  calledUrls.length = 0;
 });
 
 describe('ExplorePage', () => {
@@ -71,9 +79,35 @@ describe('ExplorePage', () => {
   });
 
   test('shows an empty-state message when there are no public albums', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums/public': { body: { albums: [] } } });
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/public': { body: { albums: [], total: 0, page: 1, limit: 12 } },
+    });
     renderPage();
     expect(await screen.findByText(/no public volumes yet/i)).toBeInTheDocument();
+  });
+
+  test('shows numbered pagination when there is more than one page', async () => {
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums/public': { body: { ...PUBLIC_ALBUMS, total: 30, limit: 12 } },
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    expect(screen.getByRole('button', { name: 'Page 3' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    await waitFor(() => {
+      expect(calledUrls.some((url) => url.includes('page=2'))).toBe(true);
+    });
+  });
+
+  test('does not show pagination when everything fits on one page', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums/public': { body: PUBLIC_ALBUMS } });
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 
   test('shows the API error when public albums fail to load', async () => {

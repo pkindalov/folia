@@ -1,14 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as albumsApi from './api';
-import type { AlbumFormInput } from './schemas';
+import type { Album, AlbumFormInput } from './schemas';
 
-export function useAlbums() {
-  return useQuery({ queryKey: ['albums'], queryFn: albumsApi.listAlbums });
+export function useAlbums(page: number, visibility?: Album['visibility']) {
+  return useQuery({
+    queryKey: ['albums', 'list', { page, visibility }],
+    queryFn: () => albumsApi.listAlbums(page, visibility),
+  });
 }
 
-export function usePublicAlbums() {
-  return useQuery({ queryKey: ['albums', 'public'], queryFn: albumsApi.listPublicAlbums });
+export function usePublicAlbums(page: number) {
+  return useQuery({
+    queryKey: ['albums', 'public', page],
+    queryFn: () => albumsApi.listPublicAlbums(page),
+  });
+}
+
+export function useArchivedAlbums(page: number) {
+  return useQuery({
+    queryKey: ['albums', 'archived', page],
+    queryFn: () => albumsApi.listArchivedAlbums(page),
+  });
 }
 
 export function useAlbum(id: string | undefined) {
@@ -105,6 +118,17 @@ export function useSetCoverPhoto(albumId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (pageId: string) => albumsApi.setCoverPhoto(albumId, pageId),
+    onSuccess: (album) => {
+      queryClient.setQueryData(['albums', albumId], album);
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
+    },
+  });
+}
+
+export function useArchiveAlbum(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (archived: boolean) => albumsApi.archiveAlbum(albumId, archived),
     onSuccess: (album) => {
       queryClient.setQueryData(['albums', albumId], album);
       queryClient.invalidateQueries({ queryKey: ['albums'] });

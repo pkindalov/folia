@@ -11,17 +11,30 @@ import {
   type Album,
   type AlbumFormInput,
   type Page,
-  type PublicAlbum,
+  type PaginatedAlbums,
+  type PaginatedPublicAlbums,
 } from './schemas';
 
-export async function listAlbums(): Promise<Album[]> {
-  const data = await api('/api/albums');
-  return albumsResponseSchema.parse(data).albums;
+export async function listAlbums(
+  page: number,
+  visibility?: Album['visibility']
+): Promise<PaginatedAlbums> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (visibility) params.set('visibility', visibility);
+  const data = await api(`/api/albums?${params}`);
+  return albumsResponseSchema.parse(data);
 }
 
-export async function listPublicAlbums(): Promise<PublicAlbum[]> {
-  const data = await api('/api/albums/public');
-  return publicAlbumsResponseSchema.parse(data).albums;
+export async function listPublicAlbums(page: number): Promise<PaginatedPublicAlbums> {
+  const params = new URLSearchParams({ page: String(page) });
+  const data = await api(`/api/albums/public?${params}`);
+  return publicAlbumsResponseSchema.parse(data);
+}
+
+export async function listArchivedAlbums(page: number): Promise<PaginatedAlbums> {
+  const params = new URLSearchParams({ page: String(page) });
+  const data = await api(`/api/albums/archived?${params}`);
+  return albumsResponseSchema.parse(data);
 }
 
 export async function getAlbum(id: string): Promise<Album> {
@@ -41,6 +54,14 @@ export async function updateAlbum(id: string, input: AlbumFormInput): Promise<Al
 
 export async function deleteAlbum(id: string): Promise<void> {
   await api(`/api/albums/${id}`, { method: 'DELETE' });
+}
+
+export async function archiveAlbum(id: string, archived: boolean): Promise<Album> {
+  const data = await api(`/api/albums/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ archived }),
+  });
+  return albumResponseSchema.parse(data).album;
 }
 
 export async function listPages(albumId: string): Promise<Page[]> {

@@ -6,13 +6,21 @@ const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
 
 const VISIBILITIES = ['private', 'shared', 'public'];
+const ALBUMS_PAGE_SIZE = 12;
 
 const isNonEmptyString = (v) => typeof v === 'string' && v.trim().length > 0;
+
+// Page size is fixed server-side — only the page number is caller-controlled,
+// so a client can't request an unbounded page of results.
+function parsePage(query) {
+  const page = parseInt(query?.page, 10);
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
 
 // Returns an error message, or null when the input is valid.
 // For updates, fields that are undefined are simply skipped.
 function validateAlbumInput(body, { partial = false } = {}) {
-  const { title, description, visibility } = body || {};
+  const { title, description, visibility, archived } = body || {};
 
   if (!partial || title !== undefined) {
     if (!isNonEmptyString(title)) return 'title is required';
@@ -24,6 +32,9 @@ function validateAlbumInput(body, { partial = false } = {}) {
   }
   if (visibility !== undefined && !VISIBILITIES.includes(visibility)) {
     return 'visibility must be one of: private, shared, public';
+  }
+  if (archived !== undefined && typeof archived !== 'boolean') {
+    return 'archived must be a boolean';
   }
   return null;
 }
@@ -55,18 +66,65 @@ function withCoverImage(album) {
 
 module.exports = {
   list: (req, res) => {
-    Album.find({ owner: req.user._id })
-      .sort('-updatedAt')
-      .then((albums) => Promise.all(albums.map(withCoverImage)))
-      .then((albums) => res.json({ albums }))
+    const page = parsePage(req.query);
+    const { visibility } = req.query || {};
+    if (visibility !== undefined && !VISIBILITIES.includes(visibility)) {
+      return res.status(400).json({ error: 'visibility must be one of: private, shared, public' });
+    }
+    // Archived volumes are filed away — they belong on the Archive page, not
+    // cluttering the main gallery.
+    const filter = {
+      owner: req.user._id,
+      archived: { $ne: true },
+      ...(visibility ? { visibility } : {}),
+    };
+
+    Promise.all([
+      Album.countDocuments(filter),
+      Album.find(filter)
+        .sort('-updatedAt')
+        .skip((page - 1) * ALBUMS_PAGE_SIZE)
+        .limit(ALBUMS_PAGE_SIZE),
+    ])
+      .then(([total, albums]) =>
+        Promise.all(albums.map(withCoverImage)).then((albums) => ({ total, albums }))
+      )
+      .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load albums' }));
+  },
+
+  // The owner's own archived volumes, for the Archive page.
+  listArchived: (req, res) => {
+    const page = parsePage(req.query);
+    const filter = { owner: req.user._id, archived: true };
+
+    Promise.all([
+      Album.countDocuments(filter),
+      Album.find(filter)
+        .sort('-updatedAt')
+        .skip((page - 1) * ALBUMS_PAGE_SIZE)
+        .limit(ALBUMS_PAGE_SIZE),
+    ])
+      .then(([total, albums]) =>
+        Promise.all(albums.map(withCoverImage)).then((albums) => ({ total, albums }))
+      )
+      .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
+      .catch(() => res.status(500).json({ error: 'Failed to load archived albums' }));
   },
 
   // Every public album, across all owners, for the community Explore page.
   listPublic: (req, res) => {
-    Album.find({ visibility: 'public' })
-      .sort('-createdAt')
-      .then((albums) => {
+    const page = parsePage(req.query);
+    const filter = { visibility: 'public' };
+
+    Promise.all([
+      Album.countDocuments(filter),
+      Album.find(filter)
+        .sort('-createdAt')
+        .skip((page - 1) * ALBUMS_PAGE_SIZE)
+        .limit(ALBUMS_PAGE_SIZE),
+    ])
+      .then(([total, albums]) => {
         const ownerIds = [...new Set(albums.map((album) => album.owner.toString()))];
         return User.find({ _id: { $in: ownerIds } }, 'username').then((users) => {
           const usernameByOwnerId = new Map(
@@ -80,10 +138,10 @@ module.exports = {
                 coverImage,
               }))
             )
-          );
+          ).then((albums) => ({ total, albums }));
         });
       })
-      .then((albums) => res.json({ albums }))
+      .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load public albums' }));
   },
 
@@ -141,10 +199,11 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
-        const { title, description, visibility } = req.body;
+        const { title, description, visibility, archived } = req.body;
         if (title !== undefined) album.title = title.trim();
         if (description !== undefined) album.description = description;
         if (visibility !== undefined) album.visibility = visibility;
+        if (archived !== undefined) album.archived = archived;
 
         return album
           .save()

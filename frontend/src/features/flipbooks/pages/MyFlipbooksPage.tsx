@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
+import Pagination from '../../../components/Pagination';
 import { useAlbums, coverColor } from '../hooks';
 import type { Album } from '../schemas';
 
@@ -14,16 +15,22 @@ const VISIBILITY_ICON: Record<Album['visibility'], string> = {
   shared: 'group',
 };
 
-function matchesFilter(album: Album, filter: Filter) {
-  if (filter === 'All Volumes') return true;
-  return album.visibility === filter.toLowerCase();
+function visibilityForFilter(filter: Filter): Album['visibility'] | undefined {
+  if (filter === 'All Volumes') return undefined;
+  return filter.toLowerCase() as Album['visibility'];
 }
 
 export default function MyFlipbooksPage() {
   const [filter, setFilter] = useState<Filter>('All Volumes');
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
-  const { data: albums, isLoading, isError, error } = useAlbums();
-  const visible = (albums ?? []).filter((a) => matchesFilter(a, filter));
+  const { data, isLoading, isError, error } = useAlbums(page, visibilityForFilter(filter));
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+
+  const onFilterChange = (nextFilter: Filter) => {
+    setFilter(nextFilter);
+    setPage(1);
+  };
 
   return (
     <AppShell>
@@ -42,7 +49,7 @@ export default function MyFlipbooksPage() {
               {FILTERS.map((f) => (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => onFilterChange(f)}
                   className={`font-ui text-ui-label uppercase pb-1 transition-colors ${
                     filter === f
                       ? 'text-primary border-b border-primary'
@@ -64,30 +71,32 @@ export default function MyFlipbooksPage() {
             </p>
           )}
 
-          {albums && (
+          {data && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
               {/* Create new volume */}
-              <button
-                onClick={() => navigate('/editor')}
-                className="group flex flex-col items-center text-left h-85"
-              >
-                <div className="relative w-full flex-1 bg-surface-container-high rounded-r-card shadow-[0_8px_30px_rgba(0,0,0,0.08)] flex items-center justify-center border-l border-outline-variant transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
-                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-outline text-outline flex items-center justify-center bg-surface-container-lowest">
-                    <Icon name="add" className="text-3xl" />
+              {page === 1 && (
+                <button
+                  onClick={() => navigate('/editor')}
+                  className="group flex flex-col items-center text-left h-85"
+                >
+                  <div className="relative w-full flex-1 bg-surface-container-high rounded-r-card shadow-[0_8px_30px_rgba(0,0,0,0.08)] flex items-center justify-center border-l border-outline-variant transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+                    <div className="w-16 h-16 rounded-full border-2 border-dashed border-outline text-outline flex items-center justify-center bg-surface-container-lowest">
+                      <Icon name="add" className="text-3xl" />
+                    </div>
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-outline-variant opacity-30" />
+                    <div className="absolute left-5 top-0 bottom-0 w-px bg-surface-container-lowest opacity-50" />
                   </div>
-                  <div className="absolute left-4 top-0 bottom-0 w-px bg-outline-variant opacity-30" />
-                  <div className="absolute left-5 top-0 bottom-0 w-px bg-surface-container-lowest opacity-50" />
-                </div>
-                <div className="mt-6 w-full px-2">
-                  <h3 className="font-display text-primary text-xl">Start a New Volume</h3>
-                  <p className="font-body italic text-on-surface-variant mt-1">
-                    Empty canvas, ready for memories
-                  </p>
-                </div>
-              </button>
+                  <div className="mt-6 w-full px-2">
+                    <h3 className="font-display text-primary text-xl">Start a New Volume</h3>
+                    <p className="font-body italic text-on-surface-variant mt-1">
+                      Empty canvas, ready for memories
+                    </p>
+                  </div>
+                </button>
+              )}
 
               {/* Albums */}
-              {visible.map((album) => (
+              {data.albums.map((album) => (
                 <div key={album._id} className="group flex flex-col items-center h-85">
                   <Link
                     to={`/book/${album._id}`}
@@ -138,15 +147,19 @@ export default function MyFlipbooksPage() {
                 </div>
               ))}
 
-              {albums.length === 0 && (
+              {data.total === 0 && (
                 <div className="col-span-full sm:col-span-1 lg:col-span-2 flex items-center">
                   <p className="font-body italic text-on-surface-variant text-body-text">
-                    Your shelf is empty. Start your first volume and give your memories a home.
+                    {filter === 'All Volumes'
+                      ? 'Your shelf is empty. Start your first volume and give your memories a home.'
+                      : `No ${filter.toLowerCase()} volumes yet.`}
                   </p>
                 </div>
               )}
             </div>
           )}
+
+          {data && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
         </div>
       </div>
     </AppShell>

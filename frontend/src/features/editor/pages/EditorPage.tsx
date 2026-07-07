@@ -12,6 +12,7 @@ import {
   useCreateAlbum,
   useUpdateAlbum,
   useDeleteAlbum,
+  useArchiveAlbum,
   usePages,
   useUploadPages,
   useDeletePage,
@@ -64,6 +65,7 @@ export default function EditorPage() {
   const createAlbum = useCreateAlbum();
   const updateAlbum = useUpdateAlbum(id ?? '');
   const deleteAlbum = useDeleteAlbum();
+  const archiveAlbum = useArchiveAlbum(id ?? '');
 
   const pagesQuery = usePages(id);
   const uploadPages = useUploadPages(id ?? '');
@@ -100,13 +102,17 @@ export default function EditorPage() {
   }, [albumQuery.data, reset]);
 
   const visibility = watch('visibility');
-  const busy = mutation.isPending || deleteAlbum.isPending;
+  const busy = mutation.isPending || deleteAlbum.isPending || archiveAlbum.isPending;
 
   const onDelete = () => {
     if (!id) return;
     if (window.confirm('Delete this volume? Its pages and photos are removed permanently.')) {
       deleteAlbum.mutate(id);
     }
+  };
+
+  const onToggleArchived = () => {
+    archiveAlbum.mutate(!albumQuery.data?.archived);
   };
 
   const onFilesSelected = (files: File[]) => {
@@ -167,6 +173,11 @@ export default function EditorPage() {
           {deleteAlbum.isError && (
             <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
               {deleteAlbum.error.message}
+            </p>
+          )}
+          {archiveAlbum.isError && (
+            <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
+              {archiveAlbum.error.message}
             </p>
           )}
 
@@ -233,14 +244,28 @@ export default function EditorPage() {
           </form>
 
           {isEdit && (
-            <button
-              onClick={onDelete}
-              disabled={busy}
-              className="w-full flex items-center justify-center gap-2 font-ui text-ui-label uppercase text-error border border-error/40 px-4 py-3 rounded-paper hover:bg-error-container/40 transition-colors disabled:opacity-50"
-            >
-              <Icon name="delete" className="text-lg" />
-              {deleteAlbum.isPending ? 'Deleting…' : 'Delete volume'}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={onToggleArchived}
+                disabled={busy}
+                className="w-full flex items-center justify-center gap-2 font-ui text-ui-label uppercase text-on-surface-variant border border-outline-variant/50 px-4 py-3 rounded-paper hover:bg-surface-container transition-colors disabled:opacity-50"
+              >
+                <Icon name={albumQuery.data?.archived ? 'unarchive' : 'archive'} className="text-lg" />
+                {archiveAlbum.isPending
+                  ? 'Saving…'
+                  : albumQuery.data?.archived
+                    ? 'Restore from archive'
+                    : 'Archive volume'}
+              </button>
+              <button
+                onClick={onDelete}
+                disabled={busy}
+                className="w-full flex items-center justify-center gap-2 font-ui text-ui-label uppercase text-error border border-error/40 px-4 py-3 rounded-paper hover:bg-error-container/40 transition-colors disabled:opacity-50"
+              >
+                <Icon name="delete" className="text-lg" />
+                {deleteAlbum.isPending ? 'Deleting…' : 'Delete volume'}
+              </button>
+            </div>
           )}
         </aside>
 

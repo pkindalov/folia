@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
+import Pagination from '../../../components/Pagination';
 import { usePublicAlbums, coverColor } from '../../flipbooks';
 
 export default function ExplorePage() {
-  const { data: albums, isLoading, isError, error } = usePublicAlbums();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error } = usePublicAlbums(page);
+  const albums = data?.albums;
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
 
   return (
     <AppShell>
@@ -67,6 +72,10 @@ export default function ExplorePage() {
                 </div>
               ))}
             </div>
+          )}
+
+          {albums && albums.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>
       </div>

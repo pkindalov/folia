@@ -28,8 +28,9 @@ module.exports = (app) => {
   // Albums
   app.get('/api/albums', auth.isAuthenticated, controllers.albums.list);
   app.post('/api/albums', auth.isAuthenticated, controllers.albums.create);
-  // Must come before /api/albums/:id, or "public" would be parsed as an id.
+  // Must come before /api/albums/:id, or "public"/"archived" would be parsed as an id.
   app.get('/api/albums/public', auth.isAuthenticated, controllers.albums.listPublic);
+  app.get('/api/albums/archived', auth.isAuthenticated, controllers.albums.listArchived);
   app.get('/api/albums/:id', auth.isAuthenticated, controllers.albums.getOne);
   app.put('/api/albums/:id', auth.isAuthenticated, controllers.albums.update);
   app.delete('/api/albums/:id', auth.isAuthenticated, controllers.albums.remove);

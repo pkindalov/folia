@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router-dom';
 import MyFlipbooksPage from './MyFlipbooksPage';
@@ -8,17 +8,32 @@ import { renderWithProviders } from '../../../tests/test-utils';
 
 const ME = { user: { _id: 'id1', username: 'pan', email: 'pan@test.com', roles: ['User'] } };
 
-const ALBUMS = {
-  albums: [
-    { _id: 'a1', title: 'Summer in the Valley', description: 'Holidays', visibility: 'public', owner: 'id1', pageCount: 4 },
-    { _id: 'a2', title: 'Letters from Home', description: '', visibility: 'private', owner: 'id1', pageCount: 0 },
-  ],
+const ALBUM_1 = {
+  _id: 'a1',
+  title: 'Summer in the Valley',
+  description: 'Holidays',
+  visibility: 'public',
+  owner: 'id1',
+  pageCount: 4,
 };
+const ALBUM_2 = {
+  _id: 'a2',
+  title: 'Letters from Home',
+  description: '',
+  visibility: 'private',
+  owner: 'id1',
+  pageCount: 0,
+};
+
+const ALBUMS = { albums: [ALBUM_1, ALBUM_2], total: 2, page: 1, limit: 12 };
+
+const calledUrls: string[] = [];
 
 /** fetch mock that routes by URL. */
 function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
   vi.mocked(fetch).mockImplementation((url) => {
     const path = String(url);
+    calledUrls.push(path);
     const match = Object.entries(routes).find(([suffix]) => path.includes(suffix));
     const { body, status = 200 } = match?.[1] ?? { body: { error: 'Not found' }, status: 404 };
     return Promise.resolve({
@@ -45,6 +60,7 @@ const renderPage = () =>
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
   tokenStorage.set('jwt-ok');
+  calledUrls.length = 0;
 });
 
 describe('MyFlipbooksPage', () => {
@@ -57,23 +73,43 @@ describe('MyFlipbooksPage', () => {
   });
 
   test('shows an empty-state invitation when there are no albums', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: { albums: [] } } });
+    mockApi({
+      '/api/users/me': { body: ME },
+      '/api/albums': { body: { albums: [], total: 0, page: 1, limit: 12 } },
+    });
     renderPage();
     expect(await screen.findByText(/Your shelf is empty/)).toBeInTheDocument();
   });
 
-  test('filters albums by visibility', async () => {
-    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: ALBUMS } });
+  test('filters albums by visibility on the server', async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      const path = String(url);
+      calledUrls.push(path);
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      const isPublicOnly = path.includes('visibility=public');
+      const albums = isPublicOnly ? [ALBUM_1] : [ALBUM_1, ALBUM_2];
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ albums, total: albums.length, page: 1, limit: 12 }),
+      } as Response);
+    });
     const user = userEvent.setup();
     renderPage();
     await screen.findByText('Summer in the Valley');
+    expect(screen.getByText('Letters from Home')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Public' }));
+    await waitFor(() => {
+      expect(calledUrls.some((url) => url.includes('visibility=public'))).toBe(true);
+    });
     expect(screen.getByText('Summer in the Valley')).toBeInTheDocument();
     expect(screen.queryByText('Letters from Home')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'All Volumes' }));
-    expect(screen.getByText('Letters from Home')).toBeInTheDocument();
+    expect(await screen.findByText('Letters from Home')).toBeInTheDocument();
   });
 
   test('shows the API error when albums fail to load', async () => {
@@ -103,10 +139,8 @@ describe('MyFlipbooksPage', () => {
 
   test('renders the album cover photo when one is set', async () => {
     const albumsWithCover = {
-      albums: [
-        { ...ALBUMS.albums[0], coverImage: '/uploads/id1/a1/cover.jpg' },
-        ALBUMS.albums[1],
-      ],
+      ...ALBUMS,
+      albums: [{ ...ALBUM_1, coverImage: '/uploads/id1/a1/cover.jpg' }, ALBUM_2],
     };
     mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: albumsWithCover } });
     renderPage();
@@ -130,5 +164,32 @@ describe('MyFlipbooksPage', () => {
     await user.click(signOutButton);
     expect(tokenStorage.get()).toBeNull();
     expect(await screen.findByText('Login screen')).toBeInTheDocument();
+  });
+
+  test('shows numbered pagination and requests the clicked page', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: { ...ALBUMS, total: 30 } } });
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    expect(screen.getByRole('button', { name: 'Page 3' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    await waitFor(() => {
+      expect(calledUrls.some((url) => url.includes('page=2'))).toBe(true);
+    });
+  });
+
+  test('only shows the create-volume tile on the first page', async () => {
+    mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: { ...ALBUMS, total: 30 } } });
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+    expect(screen.getByText('Start a New Volume')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    await waitFor(() => {
+      expect(calledUrls.some((url) => url.includes('page=2'))).toBe(true);
+    });
+    expect(screen.queryByText('Start a New Volume')).not.toBeInTheDocument();
   });
 });

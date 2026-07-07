@@ -161,6 +161,65 @@ describe('EditorPage — edit', () => {
     expect(JSON.parse(put!.options!.body as string).title).toBe('Renamed Volume');
   });
 
+  // A real backend reflects the mutation on the very next GET; a mock that
+  // always returns the same fixed album would clobber the optimistic cache
+  // update once useArchiveAlbum's invalidation triggers a refetch — so this
+  // mock tracks archived state statefully, like the real endpoint does.
+  function mockApiWithArchivedState(initialArchived: boolean) {
+    let archived = initialArchived;
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const path = String(url);
+      calls.push({ url: path, options });
+      const method = options?.method ?? 'GET';
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.endsWith('/api/albums/a1') && method === 'PUT') {
+        archived = JSON.parse(options!.body as string).archived;
+      }
+      if (path.endsWith('/api/albums/a1')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ album: { ...ALBUM.album, archived } }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ error: 'Not found' }),
+      } as Response);
+    });
+  }
+
+  test('archives the volume', async () => {
+    mockApiWithArchivedState(false);
+    const user = userEvent.setup();
+    renderEdit();
+    await user.click(await screen.findByRole('button', { name: 'Archive volume' }));
+
+    await waitFor(() => {
+      const put = calls.find((c) => c.url.endsWith('/api/albums/a1') && c.options?.method === 'PUT');
+      expect(put).toBeDefined();
+      expect(JSON.parse(put!.options!.body as string)).toEqual({ archived: true });
+    });
+    expect(await screen.findByRole('button', { name: 'Restore from archive' })).toBeInTheDocument();
+  });
+
+  test('restores an archived volume', async () => {
+    mockApiWithArchivedState(true);
+    const user = userEvent.setup();
+    renderEdit();
+    await user.click(await screen.findByRole('button', { name: 'Restore from archive' }));
+
+    await waitFor(() => {
+      const put = calls.find((c) => c.url.endsWith('/api/albums/a1') && c.options?.method === 'PUT');
+      expect(put).toBeDefined();
+      expect(JSON.parse(put!.options!.body as string)).toEqual({ archived: false });
+    });
+    expect(await screen.findByRole('button', { name: 'Archive volume' })).toBeInTheDocument();
+  });
+
   test('delete asks for confirmation and calls DELETE', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
