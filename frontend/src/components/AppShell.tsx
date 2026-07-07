@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/flipbooks', icon: 'auto_stories', label: 'My Flipbooks' },
   { to: '/explore', icon: 'travel_explore', label: 'Explore' },
   { to: '/editor', icon: 'edit_note', label: 'Create' },
+  { to: '/circles', icon: 'diversity_3', label: 'Circles' },
   { to: '/archive', icon: 'inventory_2', label: 'Archives' },
 ];
 

@@ -8,6 +8,8 @@ const ExplorePage = lazy(() => import('../features/explore/pages/ExplorePage'));
 const ArchivePage = lazy(() => import('../features/archive/pages/ArchivePage'));
 const EditorPage = lazy(() => import('../features/editor/pages/EditorPage'));
 const ViewerPage = lazy(() => import('../features/viewer/pages/ViewerPage'));
+const CirclesPage = lazy(() => import('../features/circles/pages/CirclesPage'));
+const CircleDetailPage = lazy(() => import('../features/circles/pages/CircleDetailPage'));
 
 function Root() {
   // Signed-in users land in their library; visitors see the landing page
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/editor/:id" element={<EditorPage />} />
+          <Route path="/circles" element={<CirclesPage />} />
+          <Route path="/circles/:id" element={<CircleDetailPage />} />
           <Route path="/book/:id" element={<ViewerPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
