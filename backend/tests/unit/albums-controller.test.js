@@ -711,6 +711,27 @@ describe('albums-controller', () => {
       expect(album.save).toHaveBeenCalled();
     });
 
+    test('rejects an Admin setting a new sharedWithCircle to a circle the Admin owns but the album owner does not', async () => {
+      // The album belongs to `owner`; the Admin must not be able to redirect
+      // it to a circle the Admin themselves owns — that would silently grant
+      // the Admin's own circle members access to a stranger's private album.
+      const album = fakeAlbum({ visibility: 'shared' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OTHER_ID } });
+      const res = mockRes();
+      controller.update(
+        {
+          params: { id: ALBUM_ID },
+          body: { sharedWithCircle: '507f1f77bcf86cd799439099' },
+          user: admin,
+        },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(album.save).not.toHaveBeenCalled();
+    });
+
     test('an Admin editing an unrelated field does not re-verify an already-stored sharedWithCircle they do not own', async () => {
       // The circle is owned by the album's real owner, not by the Admin
       // making this request — verifySharedCircleOwnership would reject it if

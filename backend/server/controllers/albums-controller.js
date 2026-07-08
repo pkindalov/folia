@@ -47,13 +47,15 @@ function validateAlbumInput(body, { partial = false } = {}) {
 
 // Sharing an album to a circle only makes sense for a circle the album's
 // owner actually owns — otherwise an accidental or copy-pasted id would
-// silently gate the album behind a stranger's circle. Returns an error
+// silently gate the album behind a stranger's circle. Checked against the
+// album's owner (not the requester) so an Admin editing someone else's
+// album can't grant their own circle read access to it. Returns an error
 // message, or null when sharedWithCircle is absent or valid.
-function verifySharedCircleOwnership(sharedWithCircle, user) {
+function verifySharedCircleOwnership(sharedWithCircle, ownerId) {
   if (!sharedWithCircle) return Promise.resolve(null);
 
   return Circle.findById(sharedWithCircle).then((circle) => {
-    if (!circle || circle.owner.toString() !== user._id.toString()) {
+    if (!circle || circle.owner.toString() !== ownerId.toString()) {
       return 'sharedWithCircle must reference a circle you own';
     }
     return null;
@@ -233,7 +235,7 @@ module.exports = {
     const effectiveSharedWithCircle =
       effectiveVisibility === 'shared' ? (sharedWithCircle ?? null) : null;
 
-    verifySharedCircleOwnership(effectiveSharedWithCircle, req.user).then((circleError) => {
+    verifySharedCircleOwnership(effectiveSharedWithCircle, req.user._id).then((circleError) => {
       if (circleError) return res.status(400).json({ error: circleError });
 
       Album.create({
@@ -288,7 +290,7 @@ module.exports = {
         // editing an unrelated field) would wrongly reject their own edits.
         const circleOwnershipCheck =
           sharedWithCircle !== undefined
-            ? verifySharedCircleOwnership(effectiveSharedWithCircle, req.user)
+            ? verifySharedCircleOwnership(effectiveSharedWithCircle, album.owner)
             : Promise.resolve(null);
 
         return circleOwnershipCheck.then((circleError) => {

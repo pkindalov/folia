@@ -1,10 +1,11 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import ViewerPage from './ViewerPage';
 import { tokenStorage } from '../../../lib/api-client';
-import { renderWithProviders } from '../../../tests/test-utils';
+import { renderWithProviders, createTestQueryClient } from '../../../tests/test-utils';
 
 const ME = { user: { _id: 'id1', username: 'pan', email: 'pan@test.com', roles: ['User'] } };
 
@@ -35,6 +36,15 @@ const PAGE_2 = {
   mimeType: 'image/jpeg',
   size: 2048,
   url: '/uploads/id1/a1/photo2.jpg',
+};
+
+const PAGE_3 = {
+  _id: 'p3',
+  album: 'a1',
+  filename: 'photo3.jpg',
+  mimeType: 'image/jpeg',
+  size: 3072,
+  url: '/uploads/id1/a1/photo3.jpg',
 };
 
 function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
@@ -213,5 +223,37 @@ describe('ViewerPage', () => {
     await screen.findByRole('dialog', { name: /photo viewer/i });
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
+  });
+
+  test('keeps showing the photo the lightbox was opened on, even if the page list changes underneath it', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2, PAGE_3] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/book/a1']}>
+          <Routes>
+            <Route path="/book/:id" element={<ViewerPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await user.click(await screen.findByRole('button', { name: /next photo/i }));
+    await screen.findByAltText('photo2.jpg');
+    await user.click(screen.getByRole('button', { name: /view photo2\.jpg full size/i }));
+    const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+    expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+
+    // Simulate photo1 being removed while the lightbox stays open on photo2.
+    queryClient.setQueryData(['albums', 'a1', 'pages'], [PAGE_2, PAGE_3]);
+
+    expect(await within(dialog).findByText('Photo 1 of 2')).toBeInTheDocument();
+    expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+    expect(within(dialog).queryByAltText('photo3.jpg')).not.toBeInTheDocument();
   });
 });

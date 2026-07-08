@@ -12,9 +12,13 @@ export default function ViewerPage() {
   const pages = pagesData ?? [];
   const hasPhotos = pages.length > 0;
 
-  const [photoIndex, setPhotoIndex] = useState(0);
-  useEffect(() => setPhotoIndex(0), [id]);
-  const currentIndex = Math.min(photoIndex, pages.length - 1);
+  // Tracked by photo id, not array index — a raw index would go stale (and
+  // could silently point at an unrelated photo) if the page list changes
+  // while the lightbox is open.
+  const [photoId, setPhotoId] = useState<string | null>(null);
+  useEffect(() => setPhotoId(null), [id]);
+  const selectedIndex = pages.findIndex((page) => page._id === photoId);
+  const currentIndex = selectedIndex !== -1 ? selectedIndex : 0;
   const currentPhoto = pages[currentIndex];
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -105,7 +109,7 @@ export default function ViewerPage() {
                     {pages.length > 1 && (
                       <div className="flex items-center gap-6">
                         <button
-                          onClick={() => setPhotoIndex((i) => i - 1)}
+                          onClick={() => setPhotoId(pages[currentIndex - 1]._id)}
                           disabled={currentIndex === 0}
                           aria-label="Previous photo"
                           className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
@@ -116,7 +120,7 @@ export default function ViewerPage() {
                           Photo {currentIndex + 1} of {pages.length}
                         </span>
                         <button
-                          onClick={() => setPhotoIndex((i) => i + 1)}
+                          onClick={() => setPhotoId(pages[currentIndex + 1]._id)}
                           disabled={currentIndex === pages.length - 1}
                           aria-label="Next photo"
                           className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
@@ -150,7 +154,7 @@ export default function ViewerPage() {
           photos={pages}
           index={currentIndex}
           onClose={() => setIsLightboxOpen(false)}
-          onNavigate={setPhotoIndex}
+          onNavigate={(nextIndex) => setPhotoId(pages[nextIndex]?._id ?? null)}
         />
       )}
     </AppShell>
