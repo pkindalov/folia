@@ -55,7 +55,11 @@ export default function PagesPanel({
   onCaptionChange,
 }: PagesPanelProps) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Tracked by photo id, not array index — a raw index would go stale (and
+  // could silently point at an unrelated photo) once the currently-open
+  // photo is removed and the list later grows back to that length.
+  const [openPhotoId, setOpenPhotoId] = useState<string | null>(null);
+  const lightboxIndex = openPhotoId ? photos.findIndex((photo) => photo._id === openPhotoId) : -1;
 
   const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
@@ -193,19 +197,19 @@ export default function PagesPanel({
               isSavingCaption={savingCaptionPhotoId === photo._id}
               onRemove={() => onRemovePhoto(photo._id)}
               onSetCover={() => onSetCoverPhoto(photo._id)}
-              onOpenPhoto={() => setLightboxIndex(index)}
+              onOpenPhoto={() => setOpenPhotoId(photo._id)}
               onCaptionChange={(caption) => onCaptionChange(photo._id, caption)}
             />
           ))}
         </div>
       )}
 
-      {lightboxIndex !== null && (
+      {lightboxIndex !== -1 && (
         <PhotoLightbox
           photos={photos}
           index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
+          onClose={() => setOpenPhotoId(null)}
+          onNavigate={(nextIndex) => setOpenPhotoId(photos[nextIndex]?._id ?? null)}
         />
       )}
     </div>

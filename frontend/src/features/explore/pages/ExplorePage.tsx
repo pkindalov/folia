@@ -85,6 +85,13 @@ export default function ExplorePage() {
   const albums = data?.albums;
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
 
+  // An album leaving publication on a later page can leave `page` pointing
+  // past the new last page — fall back to it rather than showing a blank
+  // page with no way back.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   return (
     <AppShell>
       <div className="p-gutter md:p-margin-edge">

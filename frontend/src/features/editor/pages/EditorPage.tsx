@@ -75,7 +75,17 @@ export default function EditorPage() {
   // directly so the picker never silently drops the album's current state.
   const assignedCircleQuery = useCircle(albumQuery.data?.sharedWithCircle ?? undefined);
 
-  const circlesFromList = circlesQuery.data?.pages.flatMap((page) => page.circles) ?? [];
+  // Pages are fetched over time while sorted by a mutable field (updatedAt),
+  // so a circle updated between "page 1" and "load more" can shift and be
+  // returned on both pages — dedupe by id rather than showing it twice.
+  const circlesFromList = Array.from(
+    new Map(
+      (circlesQuery.data?.pages.flatMap((page) => page.circles) ?? []).map((circle) => [
+        circle._id,
+        circle,
+      ])
+    ).values()
+  );
   const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === me?._id);
   const assignedCircle = assignedCircleQuery.data;
   const assignedCircleIsMissing =

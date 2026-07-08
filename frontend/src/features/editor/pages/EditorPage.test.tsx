@@ -230,6 +230,64 @@ describe('EditorPage — edit', () => {
     expect(screen.queryByRole('button', { name: /load more circles/i })).not.toBeInTheDocument();
   });
 
+  test('does not duplicate a circle in the picker when server-side ordering shifts between pages', async () => {
+    // Circles are listed sorted by -updatedAt (a mutable field). If a circle
+    // is updated concurrently between this tab's page-1 fetch and its
+    // "load more" fetch of page 2, an item can shift position and be
+    // returned on both pages — the picker must dedupe by id rather than
+    // rendering it twice.
+    const restrictedAlbum = { album: { ...ALBUM.album, visibility: 'shared' } };
+    const circle = (id: string, name: string) => ({
+      _id: id,
+      name,
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    });
+    // Page 1 as cached by this tab: positions 1..12 of the old ordering.
+    const page1 = Array.from({ length: 12 }, (_, i) => circle(`x${i + 1}`, `Circle ${i + 1}`));
+    // Page 2, freshly fetched after a concurrent update shifted the last
+    // item of page 1 ("Circle 12") down into page 2's first slot.
+    const page2 = [circle('x12', 'Circle 12'), circle('x13', 'Circle 13')];
+
+    vi.mocked(fetch).mockImplementation((url) => {
+      const path = String(url);
+      calls.push({ url: path });
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.endsWith('/api/albums/a1')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(restrictedAlbum),
+        } as Response);
+      }
+      if (path.includes('/api/circles')) {
+        const page = new URL(path, 'http://localhost').searchParams.get('page') ?? '1';
+        const body =
+          page === '2'
+            ? { circles: page2, total: 14, page: 2, limit: 12 }
+            : { circles: page1, total: 13, page: 1, limit: 12 };
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    await screen.findByRole('option', { name: 'Circle 1' });
+    await user.click(screen.getByRole('button', { name: /load more circles/i }));
+    await screen.findByRole('option', { name: 'Circle 13' });
+
+    const select = screen.getByRole('combobox');
+    expect(within(select).getAllByRole('option', { name: 'Circle 12' })).toHaveLength(1);
+  });
+
   test('saves changes with PUT and returns to the gallery', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
