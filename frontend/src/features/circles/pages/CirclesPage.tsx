@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
+import useClampedPage from '../../../hooks/useClampedPage';
 import CreateCircleModal from '../components/CreateCircleModal';
 import { useMe } from '../../auth';
 import { useCircles, useMyInvites, useAcceptInvite, useDeclineInvite } from '../hooks';
@@ -135,15 +136,11 @@ export default function CirclesPage() {
 
   // Deleting the last circle on a later page can leave `page` pointing past
   // the new last page — fall back to it rather than showing a blank grid.
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage);
 
   // Accepting/declining the last invite on a later page can leave
   // `invitesPage` pointing past the new last page.
-  useEffect(() => {
-    if (invitesTotalPages > 0 && invitesPage > invitesTotalPages) setInvitesPage(invitesTotalPages);
-  }, [invitesPage, invitesTotalPages]);
+  useClampedPage(invitesPage, invitesTotalPages, setInvitesPage);
 
   return (
     <AppShell>

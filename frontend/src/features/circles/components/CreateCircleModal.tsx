@@ -37,10 +37,12 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close}>
+    <Modal isOpen={isOpen} onClose={close} labelledBy="create-circle-title">
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h2 className="font-display text-headline-md text-primary mb-2">New Circle</h2>
+          <h2 id="create-circle-title" className="font-display text-headline-md text-primary mb-2">
+            New Circle
+          </h2>
           <p className="font-body italic text-on-surface-variant">
             Define the boundaries of this collection.
           </p>

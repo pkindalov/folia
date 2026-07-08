@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Icon from './Icon';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 type LightboxPhoto = {
   url: string;
@@ -18,6 +19,8 @@ export default function PhotoLightbox({ photos, index, onClose, onNavigate }: Ph
   const photo = photos[index];
   const hasPrevious = index > 0;
   const hasNext = index < photos.length - 1;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, photo !== undefined);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -33,6 +36,7 @@ export default function PhotoLightbox({ photos, index, onClose, onNavigate }: Ph
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Photo viewer"

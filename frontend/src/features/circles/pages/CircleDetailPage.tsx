@@ -37,7 +37,13 @@ export default function CircleDetailPage() {
   }, [search]);
 
   const circle = circleQuery.data;
-  const isOwner = me !== undefined && circle !== undefined && circle.owner === me._id;
+  // The backend already lets an Admin manage a circle they don't own
+  // (isOwnerOrAdmin) — mirror that here so the controls aren't hidden from
+  // an Admin who's landed on someone else's circle.
+  const canManage =
+    me !== undefined &&
+    circle !== undefined &&
+    (circle.owner === me._id || me.roles.includes('Admin'));
   const memberIds = new Set(circle?.members.map((member) => member.user) ?? []);
 
   const {
@@ -180,7 +186,7 @@ export default function CircleDetailPage() {
                   <>
                     <div className="flex items-start justify-between gap-4">
                       <h2 className="font-display text-display-lg text-primary">{circle.name}</h2>
-                      {isOwner && (
+                      {canManage && (
                         <button
                           onClick={() => setIsEditing(true)}
                           aria-label="Edit circle"
@@ -202,7 +208,7 @@ export default function CircleDetailPage() {
                 )}
               </div>
 
-              {isOwner && (
+              {canManage && (
                 <div className="mb-10">
                   <h3 className="font-ui text-ui-label uppercase text-on-surface-variant mb-3">
                     Invite a member
@@ -262,7 +268,7 @@ export default function CircleDetailPage() {
                 ) : (
                   <ul className="border border-outline-variant/40 rounded-paper divide-y divide-outline-variant/40">
                     {circle.members.map((member) => {
-                      const canRemove = isOwner || member.user === me?._id;
+                      const canRemove = canManage || member.user === me?._id;
                       const isPending = member.status === 'pending';
                       return (
                         <li
@@ -304,7 +310,7 @@ export default function CircleDetailPage() {
                 )}
               </div>
 
-              {isOwner && (
+              {canManage && (
                 <div className="pt-6 border-t border-outline-variant/40">
                   <button
                     onClick={onDelete}

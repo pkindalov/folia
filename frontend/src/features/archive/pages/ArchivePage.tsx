@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
+import useClampedPage from '../../../hooks/useClampedPage';
 import { useArchivedAlbums, useArchiveAlbum, coverColor, type Album } from '../../flipbooks';
 
 const VISIBILITY_ICON: Record<Album['visibility'], string> = {
@@ -77,9 +78,7 @@ export default function ArchivePage() {
 
   // Restoring the last album on a later page can leave `page` pointing past
   // the new last page — fall back to it rather than showing a blank page.
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage);
 
   return (
     <AppShell>

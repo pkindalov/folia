@@ -51,4 +51,14 @@ describe('storage utility', () => {
     const path = storage.photoPath('user1', 'album1', 'abc.jpg');
     expect(path).toBe(require('path').join(storage.albumDir('user1', 'album1'), 'abc.jpg'));
   });
+
+  test('photoUrl points at the /uploads route with a verifiable signature', () => {
+    const signedUrl = require('../../server/utilities/signed-url');
+    const url = storage.photoUrl('user1', 'album1', 'abc.jpg');
+    const parsed = new URL(url, 'http://localhost');
+    expect(parsed.pathname).toBe('/uploads/user1/album1/abc.jpg');
+    expect(
+      signedUrl.verify(parsed.pathname, parsed.searchParams.get('exp'), parsed.searchParams.get('sig'))
+    ).toBe(true);
+  });
 });

@@ -16,8 +16,20 @@ describe('album pages routes (integration)', () => {
   let Page;
   let Circle;
   let auth;
+  let signedUrl;
   let token;
   let strangerToken;
+
+  // Photo URLs now carry a signature (see storage.photoUrl / signed-url.js),
+  // so a plain string-equality check against the old unsigned shape no
+  // longer applies — assert the path is right and the signature verifies.
+  function expectSignedUploadUrl(url, expectedPathname) {
+    const parsed = new URL(url, 'http://localhost');
+    expect(parsed.pathname).toBe(expectedPathname);
+    expect(
+      signedUrl.verify(parsed.pathname, parsed.searchParams.get('exp'), parsed.searchParams.get('sig'))
+    ).toBe(true);
+  }
 
   beforeAll(() => {
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'folia-uploads-'));
@@ -26,11 +38,16 @@ describe('album pages routes (integration)', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
 
+    // Required only now, after UPLOADS_DIR is set — settings.js reads env
+    // vars once at first require and caches the result, so requiring any
+    // of these earlier would freeze uploadsDir at its default instead of
+    // this test's tmp directory.
     User = require('../../server/data/User');
     Album = require('../../server/data/Album');
     Page = require('../../server/data/Page');
     Circle = require('../../server/data/Circle');
     auth = require('../../server/config/auth');
+    signedUrl = require('../../server/utilities/signed-url');
 
     const express = require('express');
     app = express();
@@ -163,7 +180,9 @@ describe('album pages routes (integration)', () => {
       expect(res.status).toBe(201);
       expect(res.body.pages).toHaveLength(2);
       for (const page of res.body.pages) {
-        expect(page.url).toMatch(new RegExp(`^/uploads/${OWNER_ID}/${ALBUM_ID}/.+\\.(jpg|png)$`));
+        expect(page.url).toMatch(
+          new RegExp(`^/uploads/${OWNER_ID}/${ALBUM_ID}/.+\\.(jpg|png)\\?exp=\\d+&sig=[0-9a-f]+$`)
+        );
       }
 
       const albumFolder = path.join(tmpRoot, OWNER_ID, ALBUM_ID);
@@ -240,7 +259,7 @@ describe('album pages routes (integration)', () => {
         .get(`/api/albums/${ALBUM_ID}/pages`)
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
-      expect(res.body.pages[0].url).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
+      expectSignedUploadUrl(res.body.pages[0].url, `/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
     });
   });
 
@@ -298,7 +317,7 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.page.caption).toBe('A day at the lake');
-      expect(res.body.page.url).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
+      expectSignedUploadUrl(res.body.page.url, `/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
     });
   });
 
@@ -334,7 +353,7 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.album.coverPage).toBe(PAGE_ID);
-      expect(res.body.album.coverImage).toBe(`/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
+      expectSignedUploadUrl(res.body.album.coverImage, `/uploads/${OWNER_ID}/${ALBUM_ID}/a.jpg`);
     });
   });
 
@@ -374,6 +393,41 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ deleted: true, pageCount: 0 });
+    });
+  });
+
+  describe('GET /uploads/:ownerId/:albumId/:filename (signature enforcement)', () => {
+    const pathname = `/uploads/${OWNER_ID}/${ALBUM_ID}/signature-check.jpg`;
+
+    beforeAll(() => {
+      const dir = path.join(tmpRoot, OWNER_ID, ALBUM_ID);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'signature-check.jpg'), 'fake-jpeg-bytes');
+    });
+
+    test('serves the file when the signature is valid', async () => {
+      const signedPath = signedUrl.sign(pathname);
+      const res = await request(app).get(signedPath);
+      expect(res.status).toBe(200);
+      expect(Buffer.from(res.body).toString()).toBe('fake-jpeg-bytes');
+    });
+
+    test('rejects a request with no signature at all', async () => {
+      const res = await request(app).get(pathname);
+      expect(res.status).toBe(403);
+    });
+
+    test('rejects a signature minted for a different file', async () => {
+      const signedForOtherFile = signedUrl.sign(`/uploads/${OWNER_ID}/${ALBUM_ID}/other.jpg`);
+      const query = signedForOtherFile.slice(signedForOtherFile.indexOf('?'));
+      const res = await request(app).get(`${pathname}${query}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('rejects an expired signature', async () => {
+      const expiredPath = signedUrl.sign(pathname, -1000);
+      const res = await request(app).get(expiredPath);
+      expect(res.status).toBe(403);
     });
   });
 });

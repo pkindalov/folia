@@ -60,6 +60,21 @@ describe('CircleDetailPage', () => {
     expect(screen.getByText('Owned by pan')).toBeInTheDocument();
   });
 
+  test('an Admin who is neither the owner nor a member still sees the management controls', async () => {
+    const ADMIN = { user: { _id: 'a1', username: 'root', email: 'root@test.com', roles: ['User', 'Admin'] } };
+    mockApi([
+      ['/api/users/me', { body: ADMIN }],
+      ['/api/circles/c1', { body: { circle: CIRCLE } }],
+    ]);
+    renderPage();
+    expect(await screen.findByText('The Sterling Family')).toBeInTheDocument();
+
+    expect(screen.getByLabelText('Edit circle')).toBeInTheDocument();
+    expect(screen.getByText('Invite a member')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete circle' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Remove maria')).toBeInTheDocument();
+  });
+
   test('shows a 403 error for a non-member', async () => {
     mockApi([
       ['/api/users/me', { body: ME }],

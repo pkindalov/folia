@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Pagination from '../../../components/Pagination';
+import useClampedPage from '../../../hooks/useClampedPage';
 import { usePublicAlbums, useSharedWithMeAlbums, coverColor, type PublicAlbum } from '../../flipbooks';
 
 function AlbumGrid({ albums }: { albums: PublicAlbum[] }) {
@@ -51,9 +52,7 @@ function SharedWithYouSection() {
   // An album leaving the circle (or being unshared) on a later page can
   // leave `page` pointing past the new last page — fall back to it rather
   // than showing a blank section with no way back.
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage);
 
   if (!isLoading && !isError && data?.total === 0) return null;
 
@@ -88,9 +87,7 @@ export default function ExplorePage() {
   // An album leaving publication on a later page can leave `page` pointing
   // past the new last page — fall back to it rather than showing a blank
   // page with no way back.
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage);
 
   return (
     <AppShell>

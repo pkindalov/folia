@@ -1,13 +1,19 @@
-import { useEffect, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 type ModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  /** id of an element (e.g. the modal's heading) that names it for screen readers. */
+  labelledBy?: string;
   children: ReactNode;
 };
 
-/** Centered overlay modal — closes on Escape or a backdrop click. */
-export default function Modal({ isOpen, onClose, children }: ModalProps) {
+/** Centered overlay modal — closes on Escape or a backdrop click, traps focus while open. */
+export default function Modal({ isOpen, onClose, labelledBy, children }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -29,7 +35,13 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
       className="fixed inset-0 z-100 flex items-center justify-center bg-primary/20 backdrop-blur-md p-gutter"
       onClick={onBackdropClick}
     >
-      <div className="bg-surface-container-lowest w-full max-w-xl p-8 md:p-12 rounded-panel paper-depth border border-outline-variant/40 max-h-[90vh] overflow-y-auto">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        className="bg-surface-container-lowest w-full max-w-xl p-8 md:p-12 rounded-panel paper-depth border border-outline-variant/40 max-h-[90vh] overflow-y-auto"
+      >
         {children}
       </div>
     </div>
