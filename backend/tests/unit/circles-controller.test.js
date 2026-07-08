@@ -1,5 +1,6 @@
 const Circle = require('../../server/data/Circle');
 const User = require('../../server/data/User');
+const Album = require('../../server/data/Album');
 const controller = require('../../server/controllers/circles-controller');
 
 const flush = () => new Promise(setImmediate);
@@ -32,8 +33,7 @@ const mockRes = () => {
 const fakeCircle = (overrides = {}) => ({
   _id: CIRCLE_ID,
   name: 'The Sterling Family',
-  purpose: 'family_lineage',
-  privacy: 'private',
+  description: '',
   owner: OWNER_ID,
   members: [],
   save: jest.fn().mockImplementation(function () {
@@ -57,20 +57,19 @@ const fakeCircle = (overrides = {}) => ({
 
 beforeEach(() => {
   jest.spyOn(User, 'find').mockResolvedValue(ALL_USERS);
+  jest.spyOn(Album, 'updateMany').mockResolvedValue({ acknowledged: true, modifiedCount: 0 });
 });
 
 describe('circles-controller', () => {
   describe('create — validation', () => {
     test.each([
       ['empty body', {}],
-      ['missing name', { purpose: 'family_lineage' }],
-      ['empty name', { name: '', purpose: 'family_lineage' }],
-      ['whitespace-only name', { name: '   ', purpose: 'family_lineage' }],
-      ['non-string name (injection)', { name: { $gt: '' }, purpose: 'family_lineage' }],
-      ['name over 80 chars', { name: 'x'.repeat(81), purpose: 'family_lineage' }],
-      ['missing purpose', { name: 'Family' }],
-      ['invalid purpose', { name: 'Family', purpose: 'book_club' }],
-      ['invalid privacy', { name: 'Family', purpose: 'family_lineage', privacy: 'public' }],
+      ['empty name', { name: '' }],
+      ['whitespace-only name', { name: '   ' }],
+      ['non-string name (injection)', { name: { $gt: '' } }],
+      ['name over 80 chars', { name: 'x'.repeat(81) }],
+      ['description over 300 chars', { name: 'Family', description: 'x'.repeat(301) }],
+      ['non-string description (injection)', { name: 'Family', description: { $gt: '' } }],
     ])('rejects %s with 400', (_name, body) => {
       const create = jest.spyOn(Circle, 'create');
       const res = mockRes();
@@ -84,28 +83,46 @@ describe('circles-controller', () => {
     test('sets the owner from the authenticated user, never from the body', async () => {
       const create = jest.spyOn(Circle, 'create').mockResolvedValue(fakeCircle());
       controller.create(
-        { body: { name: 'Family', purpose: 'family_lineage', owner: OTHER_ID }, user: owner },
+        { body: { name: 'Family', owner: OTHER_ID }, user: owner },
         mockRes()
       );
       await flush();
       expect(create.mock.calls[0][0].owner).toBe(OWNER_ID);
     });
 
-    test('trims the name and defaults privacy to private', async () => {
+    test('trims the name and defaults description to an empty string', async () => {
+      const create = jest.spyOn(Circle, 'create').mockResolvedValue(fakeCircle());
+      controller.create({ body: { name: '  Family  ' }, user: owner }, mockRes());
+      await flush();
+      expect(create.mock.calls[0][0].name).toBe('Family');
+      expect(create.mock.calls[0][0].description).toBe('');
+    });
+
+    test('trims the description on create', async () => {
       const create = jest.spyOn(Circle, 'create').mockResolvedValue(fakeCircle());
       controller.create(
-        { body: { name: '  Family  ', purpose: 'family_lineage' }, user: owner },
+        { body: { name: 'Family', description: '  Reunion crew  ' }, user: owner },
         mockRes()
       );
       await flush();
-      expect(create.mock.calls[0][0].name).toBe('Family');
-      expect(create.mock.calls[0][0].privacy).toBe('private');
+      expect(create.mock.calls[0][0].description).toBe('Reunion crew');
+    });
+
+    test('accepts a description that only exceeds 300 characters before trimming', () => {
+      const create = jest.spyOn(Circle, 'create');
+      const res = mockRes();
+      controller.create(
+        { body: { name: 'Family', description: `${'x'.repeat(300)}   ` }, user: owner },
+        res
+      );
+      expect(res.status).not.toHaveBeenCalledWith(400);
+      expect(create).toHaveBeenCalled();
     });
 
     test('responds 201 with the created circle', async () => {
       jest.spyOn(Circle, 'create').mockResolvedValue(fakeCircle());
       const res = mockRes();
-      controller.create({ body: { name: 'Family', purpose: 'family_lineage' }, user: owner }, res);
+      controller.create({ body: { name: 'Family' }, user: owner }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
@@ -268,24 +285,36 @@ describe('circles-controller', () => {
       const findById = jest.spyOn(Circle, 'findById');
       const res = mockRes();
       controller.update(
-        { params: { id: CIRCLE_ID }, body: { purpose: 'nope' }, user: owner },
+        { params: { id: CIRCLE_ID }, body: { description: 'x'.repeat(301) }, user: owner },
         res
       );
       expect(res.status).toHaveBeenCalledWith(400);
       expect(findById).not.toHaveBeenCalled();
     });
 
-    test('partial update: only provided fields change', async () => {
-      const circle = fakeCircle({ name: 'Old', privacy: 'private' });
+    test('trims the description on update', async () => {
+      const circle = fakeCircle({ name: 'Old', description: 'Original' });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
       const res = mockRes();
       controller.update(
-        { params: { id: CIRCLE_ID }, body: { privacy: 'restricted' }, user: owner },
+        { params: { id: CIRCLE_ID }, body: { description: '  Padded  ' }, user: owner },
+        res
+      );
+      await flush();
+      expect(circle.description).toBe('Padded');
+    });
+
+    test('partial update: only provided fields change', async () => {
+      const circle = fakeCircle({ name: 'Old', description: 'Original' });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.update(
+        { params: { id: CIRCLE_ID }, body: { description: 'Updated' }, user: owner },
         res
       );
       await flush();
       expect(circle.name).toBe('Old');
-      expect(circle.privacy).toBe('restricted');
+      expect(circle.description).toBe('Updated');
       expect(circle.save).toHaveBeenCalled();
     });
   });
@@ -299,6 +328,7 @@ describe('circles-controller', () => {
       await flush();
       expect(res.status).toHaveBeenCalledWith(403);
       expect(circle.deleteOne).not.toHaveBeenCalled();
+      expect(Album.updateMany).not.toHaveBeenCalled();
     });
 
     test('owner can delete the circle', async () => {
@@ -309,6 +339,18 @@ describe('circles-controller', () => {
       await flush();
       expect(circle.deleteOne).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
+
+    test('resets any album shared with the deleted circle back to private', async () => {
+      const circle = fakeCircle();
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Album.updateMany).toHaveBeenCalledWith(
+        { sharedWithCircle: CIRCLE_ID },
+        { sharedWithCircle: null, visibility: 'private' }
+      );
     });
 
     test('an Admin can delete any circle', async () => {
@@ -544,8 +586,7 @@ describe('circles-controller', () => {
           {
             _id: CIRCLE_ID,
             name: 'The Sterling Family',
-            purpose: 'family_lineage',
-            privacy: 'private',
+            description: '',
             ownerUsername: 'pan',
           },
         ],

@@ -1,27 +1,26 @@
 const mongoose = require('mongoose');
 const Circle = require('../data/Circle');
 const User = require('../data/User');
+const Album = require('../data/Album');
 const errorHandler = require('../utilities/error-handler');
 const { isNonEmptyString, parsePage, DELETED_USER_LABEL } = require('../utilities/controller-helpers');
 
-const { PURPOSES, PRIVACY_LEVELS, MAX_MEMBERS } = Circle;
+const { MAX_MEMBERS } = Circle;
 const INVITES_PAGE_SIZE = 12;
 const CIRCLES_PAGE_SIZE = 12;
 
 // Returns an error message, or null when the input is valid.
 // For updates, fields that are undefined are simply skipped.
 function validateCircleInput(body, { partial = false } = {}) {
-  const { name, purpose, privacy } = body || {};
+  const { name, description } = body || {};
 
   if (!partial || name !== undefined) {
     if (!isNonEmptyString(name)) return 'name is required';
     if (name.trim().length > 80) return 'name must be at most 80 characters';
   }
-  if (!partial || purpose !== undefined) {
-    if (!PURPOSES.includes(purpose)) return `purpose must be one of: ${PURPOSES.join(', ')}`;
-  }
-  if (privacy !== undefined && !PRIVACY_LEVELS.includes(privacy)) {
-    return `privacy must be one of: ${PRIVACY_LEVELS.join(', ')}`;
+  if (description !== undefined) {
+    if (typeof description !== 'string') return 'description must be a string';
+    if (description.trim().length > 300) return 'description must be at most 300 characters';
   }
   return null;
 }
@@ -105,12 +104,11 @@ module.exports = {
     const error = validateCircleInput(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { name, purpose, privacy } = req.body;
+    const { name, description } = req.body;
 
     Circle.create({
       name: name.trim(),
-      purpose,
-      privacy: privacy ?? 'private',
+      description: (description ?? '').trim(),
       owner: req.user._id,
       members: [],
     })
@@ -134,10 +132,9 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
 
-        const { name, purpose, privacy } = req.body;
+        const { name, description } = req.body;
         if (name !== undefined) circle.name = name.trim();
-        if (purpose !== undefined) circle.purpose = purpose;
-        if (privacy !== undefined) circle.privacy = privacy;
+        if (description !== undefined) circle.description = description.trim();
 
         return circle
           .save()
@@ -159,7 +156,19 @@ module.exports = {
         if (!canModify(circle, req.user)) {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
-        return circle.deleteOne().then(() => res.json({ deleted: true }));
+        // Any album shared with this circle would otherwise be left
+        // pointing at a deleted circle — reset it to private rather than
+        // leave it in a dangling, effectively-inaccessible-but-still-marked
+        // "shared" state.
+        return circle
+          .deleteOne()
+          .then(() =>
+            Album.updateMany(
+              { sharedWithCircle: id },
+              { sharedWithCircle: null, visibility: 'private' }
+            )
+          )
+          .then(() => res.json({ deleted: true }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete circle' }));
   },
@@ -284,8 +293,7 @@ module.exports = {
           const invites = circles.map((circle) => ({
             _id: circle._id,
             name: circle.name,
-            purpose: circle.purpose,
-            privacy: circle.privacy,
+            description: circle.description,
             ownerUsername: usernameByOwnerId.get(circle.owner.toString()) ?? DELETED_USER_LABEL,
           }));
           return { total, invites };

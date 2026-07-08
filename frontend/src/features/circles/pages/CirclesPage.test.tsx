@@ -10,8 +10,7 @@ const ME = { user: { _id: 'id1', username: 'pan', email: 'pan@test.com', roles: 
 const CIRCLE_1 = {
   _id: 'c1',
   name: 'The Sterling Family',
-  purpose: 'family_lineage',
-  privacy: 'private',
+  description: 'Keeping track of the whole clan',
   owner: 'id1',
   ownerUsername: 'pan',
   members: [
@@ -22,8 +21,7 @@ const CIRCLE_1 = {
 const CIRCLE_2 = {
   _id: 'c2',
   name: 'Oxford Class of 88',
-  purpose: 'academic',
-  privacy: 'restricted',
+  description: '',
   owner: 'id1',
   ownerUsername: 'pan',
   members: [],
@@ -66,6 +64,7 @@ describe('CirclesPage', () => {
     renderPage();
     expect(await screen.findByText('The Sterling Family')).toBeInTheDocument();
     expect(screen.getByText('Oxford Class of 88')).toBeInTheDocument();
+    expect(screen.getByText('Keeping track of the whole clan')).toBeInTheDocument();
     expect(screen.getByText('Create New Circle')).toBeInTheDocument();
   });
 
@@ -131,8 +130,7 @@ describe('CirclesPage', () => {
   const INVITE = {
     _id: 'c9',
     name: 'Distant Cousins',
-    purpose: 'family_lineage',
-    privacy: 'private',
+    description: '',
     ownerUsername: 'zed',
   };
 

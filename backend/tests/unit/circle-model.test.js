@@ -5,43 +5,40 @@ const MEMBER_ID = '507f1f77bcf86cd799439022';
 
 describe('Circle model', () => {
   describe('schema validation (offline)', () => {
-    test('requires name, purpose and owner', () => {
+    test('requires name and owner', () => {
       const err = new Circle({}).validateSync();
       expect(err.errors.name).toBeDefined();
-      expect(err.errors.purpose).toBeDefined();
       expect(err.errors.owner).toBeDefined();
     });
 
-    test('rejects a purpose outside the fixed enum', () => {
-      const err = new Circle({
-        name: 'Family',
-        purpose: 'book_club',
-        owner: OWNER_ID,
-      }).validateSync();
-      expect(err.errors.purpose).toBeDefined();
-    });
-
-    test('rejects a privacy value outside the enum', () => {
-      const err = new Circle({
-        name: 'Family',
-        purpose: 'family_lineage',
-        owner: OWNER_ID,
-        privacy: 'public',
-      }).validateSync();
-      expect(err.errors.privacy).toBeDefined();
-    });
-
-    test('accepts a valid circle and defaults privacy to private', () => {
-      const circle = new Circle({ name: 'Family', purpose: 'family_lineage', owner: OWNER_ID });
+    test('accepts a valid circle and defaults description to an empty string', () => {
+      const circle = new Circle({ name: 'Family', owner: OWNER_ID });
       expect(circle.validateSync()).toBeUndefined();
-      expect(circle.privacy).toBe('private');
+      expect(circle.description).toBe('');
       expect(circle.members).toEqual([]);
+    });
+
+    test('trims the description', () => {
+      const circle = new Circle({
+        name: 'Family',
+        owner: OWNER_ID,
+        description: '  Reunion crew  ',
+      });
+      expect(circle.description).toBe('Reunion crew');
+    });
+
+    test('rejects a description over 300 characters', () => {
+      const err = new Circle({
+        name: 'Family',
+        owner: OWNER_ID,
+        description: 'x'.repeat(301),
+      }).validateSync();
+      expect(err.errors.description).toBeDefined();
     });
 
     test('trims the name', () => {
       const circle = new Circle({
         name: '  The Sterling Family  ',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
       });
       expect(circle.name).toBe('The Sterling Family');
@@ -50,7 +47,6 @@ describe('Circle model', () => {
     test('rejects a name over 80 characters', () => {
       const err = new Circle({
         name: 'x'.repeat(81),
-        purpose: 'family_lineage',
         owner: OWNER_ID,
       }).validateSync();
       expect(err.errors.name).toBeDefined();
@@ -63,7 +59,6 @@ describe('Circle model', () => {
       }));
       const err = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members,
       }).validateSync();
@@ -74,7 +69,6 @@ describe('Circle model', () => {
       const members = Array.from({ length: 200 }, () => ({ user: OWNER_ID }));
       const circle = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members,
       });
@@ -84,7 +78,6 @@ describe('Circle model', () => {
     test('a member subdocument requires a user', () => {
       const err = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members: [{}],
       }).validateSync();
@@ -94,7 +87,6 @@ describe('Circle model', () => {
     test('defaults a member addedAt to now', () => {
       const circle = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members: [{ user: MEMBER_ID }],
       });
@@ -104,7 +96,6 @@ describe('Circle model', () => {
     test('defaults a member status to pending — adding someone never grants access on its own', () => {
       const circle = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members: [{ user: MEMBER_ID }],
       });
@@ -114,7 +105,6 @@ describe('Circle model', () => {
     test('rejects a member status outside the enum', () => {
       const err = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members: [{ user: MEMBER_ID, status: 'invited' }],
       }).validateSync();
@@ -125,7 +115,6 @@ describe('Circle model', () => {
   describe('isOwnerOrMember', () => {
     const circle = new Circle({
       name: 'Family',
-      purpose: 'family_lineage',
       owner: OWNER_ID,
       members: [{ user: MEMBER_ID, status: 'accepted' }],
     });
@@ -145,7 +134,6 @@ describe('Circle model', () => {
     test('is false for a member who has not yet accepted', () => {
       const pending = new Circle({
         name: 'Family',
-        purpose: 'family_lineage',
         owner: OWNER_ID,
         members: [{ user: MEMBER_ID }],
       });
@@ -156,7 +144,7 @@ describe('Circle model', () => {
 
   describe('toJSON', () => {
     test('strips __v from serialized output', () => {
-      const circle = new Circle({ name: 'Family', purpose: 'family_lineage', owner: OWNER_ID });
+      const circle = new Circle({ name: 'Family', owner: OWNER_ID });
       const json = circle.toJSON();
       expect(json).not.toHaveProperty('__v');
       expect(json.name).toBe('Family');

@@ -591,7 +591,6 @@ describe('albums-controller', () => {
       jest.spyOn(Circle, 'findById').mockResolvedValue(
         new Circle({
           name: 'Family',
-          purpose: 'family_lineage',
           owner: OWNER_ID,
           members: [{ user: OTHER_ID, status: 'accepted' }],
         })
@@ -607,7 +606,7 @@ describe('albums-controller', () => {
       const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
       jest.spyOn(Circle, 'findById').mockResolvedValue(
-        new Circle({ name: 'Family', purpose: 'family_lineage', owner: OWNER_ID, members: [] })
+        new Circle({ name: 'Family', owner: OWNER_ID, members: [] })
       );
       const res = mockRes();
       controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);

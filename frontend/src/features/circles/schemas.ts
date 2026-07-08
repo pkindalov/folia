@@ -1,16 +1,7 @@
 import { z } from 'zod';
 
-export const PURPOSES = ['family_lineage', 'academic', 'travel', 'professional'] as const;
-export const PRIVACY_LEVELS = ['private', 'restricted'] as const;
-
-export const PURPOSE_LABELS: Record<(typeof PURPOSES)[number], string> = {
-  family_lineage: 'Family Lineage',
-  academic: 'Academic Memories',
-  travel: 'Travel Log',
-  professional: 'Professional Legacy',
-};
-
 export const MEMBER_STATUSES = ['pending', 'accepted'] as const;
+export const MAX_CIRCLE_DESCRIPTION_LENGTH = 300;
 
 export const circleMemberSchema = z.object({
   user: z.string(),
@@ -23,8 +14,7 @@ export const circleSchema = z
   .object({
     _id: z.string(),
     name: z.string(),
-    purpose: z.enum(PURPOSES),
-    privacy: z.enum(PRIVACY_LEVELS),
+    description: z.string().default(''),
     owner: z.string(),
     ownerUsername: z.string(),
     members: z.array(circleMemberSchema).default([]),
@@ -52,8 +42,13 @@ export const circleFormSchema = z.object({
     .trim()
     .min(1, 'Give this circle a name')
     .max(80, 'Name must be at most 80 characters'),
-  purpose: z.enum(PURPOSES),
-  privacy: z.enum(PRIVACY_LEVELS),
+  description: z
+    .string()
+    .trim()
+    .max(
+      MAX_CIRCLE_DESCRIPTION_LENGTH,
+      `Description must be at most ${MAX_CIRCLE_DESCRIPTION_LENGTH} characters`
+    ),
 });
 
 export type CircleFormInput = z.infer<typeof circleFormSchema>;
@@ -67,8 +62,7 @@ export type UserSearchResult = z.infer<typeof userSearchResultSchema>;
 export const circleInviteSchema = z.object({
   _id: z.string(),
   name: z.string(),
-  purpose: z.enum(PURPOSES),
-  privacy: z.enum(PRIVACY_LEVELS),
+  description: z.string().default(''),
   ownerUsername: z.string(),
 });
 export const circleInvitesResponseSchema = z.object({

@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 
-const PURPOSES = ['family_lineage', 'academic', 'travel', 'professional'];
-const PRIVACY_LEVELS = ['private', 'restricted'];
 // A member starts 'pending' until they accept the invitation themselves —
 // the owner adding someone is never enough on its own to grant access.
 const MEMBER_STATUSES = ['pending', 'accepted'];
@@ -17,15 +15,11 @@ const circleSchema = new mongoose.Schema(
       trim: true,
       maxlength: [80, 'name must be at most 80 characters'],
     },
-    purpose: {
+    description: {
       type: String,
-      enum: PURPOSES,
-      required: '{PATH} is required',
-    },
-    privacy: {
-      type: String,
-      enum: PRIVACY_LEVELS,
-      default: 'private',
+      trim: true,
+      default: '',
+      maxlength: [300, 'description must be at most 300 characters'],
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
@@ -84,7 +78,5 @@ circleSchema.method({
 const Circle = mongoose.model('Circle', circleSchema);
 
 module.exports = Circle;
-module.exports.PURPOSES = PURPOSES;
-module.exports.PRIVACY_LEVELS = PRIVACY_LEVELS;
 module.exports.MEMBER_STATUSES = MEMBER_STATUSES;
 module.exports.MAX_MEMBERS = MAX_MEMBERS;

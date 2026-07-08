@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Modal from '../../../components/Modal';
 import Icon from '../../../components/Icon';
 import { useCreateCircle } from '../hooks';
-import { circleFormSchema, PURPOSE_LABELS, PURPOSES, type CircleFormInput } from '../schemas';
+import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
 
 type CreateCircleModalProps = {
   isOpen: boolean;
@@ -21,11 +21,10 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
     formState: { errors },
   } = useForm<CircleFormInput>({
     resolver: zodResolver(circleFormSchema),
-    defaultValues: { name: '', purpose: 'family_lineage', privacy: 'private' },
+    defaultValues: { name: '', description: '' },
   });
 
-  const purpose = watch('purpose');
-  const privacy = watch('privacy');
+  const descriptionLength = watch('description').trim().length;
 
   const close = () => {
     reset();
@@ -88,56 +87,41 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
           )}
         </div>
 
-        <fieldset>
-          <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
-            Purpose
-          </legend>
-          <div className="grid grid-cols-2 gap-3">
-            {PURPOSES.map((value) => (
-              <label
-                key={value}
-                className={`flex items-center gap-3 p-4 rounded-paper border cursor-pointer transition-colors ${
-                  purpose === value
-                    ? 'border-secondary bg-secondary/5 text-primary'
-                    : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface-container-low'
-                }`}
-              >
-                <input type="radio" value={value} className="sr-only" {...register('purpose')} />
-                <span className="font-body text-sm">{PURPOSE_LABELS[value]}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
-            Privacy level
-          </legend>
-          <div className="flex gap-4">
-            <label
-              className={`flex-1 py-3 px-4 rounded-paper border font-ui text-ui-label uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-colors ${
-                privacy === 'private'
-                  ? 'border-primary bg-primary text-on-primary'
-                  : 'border-outline-variant/50 hover:bg-surface-container-low'
+        <div className="flex flex-col gap-1">
+          <label
+            className="font-ui text-ui-label uppercase text-on-surface-variant"
+            htmlFor="circle-description"
+          >
+            Description
+          </label>
+          <textarea
+            id="circle-description"
+            rows={3}
+            className="line-input w-full py-2 text-body-text resize-none"
+            placeholder="What's this circle for?"
+            aria-invalid={!!errors.description}
+            aria-describedby={errors.description ? 'circle-description-error' : undefined}
+            {...register('description')}
+          />
+          <div className="flex justify-between items-start mt-1">
+            {errors.description ? (
+              <span id="circle-description-error" role="alert" className="text-sm text-error font-ui">
+                {errors.description.message}
+              </span>
+            ) : (
+              <span />
+            )}
+            <span
+              className={`font-ui text-[11px] ${
+                descriptionLength > MAX_CIRCLE_DESCRIPTION_LENGTH
+                  ? 'text-error'
+                  : 'text-on-surface-variant'
               }`}
             >
-              <input type="radio" value="private" className="sr-only" {...register('privacy')} />
-              <Icon name="lock" className="text-sm" filled={privacy === 'private'} />
-              Private
-            </label>
-            <label
-              className={`flex-1 py-3 px-4 rounded-paper border font-ui text-ui-label uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-colors ${
-                privacy === 'restricted'
-                  ? 'border-primary bg-primary text-on-primary'
-                  : 'border-outline-variant/50 hover:bg-surface-container-low'
-              }`}
-            >
-              <input type="radio" value="restricted" className="sr-only" {...register('privacy')} />
-              <Icon name="group" className="text-sm" filled={privacy === 'restricted'} />
-              Restricted
-            </label>
+              {descriptionLength}/{MAX_CIRCLE_DESCRIPTION_LENGTH}
+            </span>
           </div>
-        </fieldset>
+        </div>
 
         <button
           type="submit"

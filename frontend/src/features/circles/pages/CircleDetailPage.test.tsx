@@ -12,8 +12,7 @@ const MEMBER_ME = { user: { _id: 'u2', username: 'maria', email: 'maria@test.com
 const CIRCLE = {
   _id: 'c1',
   name: 'The Sterling Family',
-  purpose: 'family_lineage',
-  privacy: 'private',
+  description: 'Keeping track of the whole clan',
   owner: 'id1',
   ownerUsername: 'pan',
   members: [{ user: 'u2', username: 'maria', status: 'accepted' }],
@@ -123,12 +122,11 @@ describe('CircleDetailPage', () => {
     expect(screen.queryByText('Delete circle')).not.toBeInTheDocument();
   });
 
-  test('the owner can edit the circle name, purpose, and privacy', async () => {
+  test('the owner can edit the circle name and description', async () => {
     const updatedCircle = {
       ...CIRCLE,
       name: 'Renamed Circle',
-      purpose: 'academic',
-      privacy: 'restricted',
+      description: 'Updated description',
     };
     vi.mocked(fetch).mockImplementation((url, options) => {
       const path = String(url);
@@ -158,8 +156,9 @@ describe('CircleDetailPage', () => {
     const nameInput = screen.getByLabelText('Circle name');
     await user.clear(nameInput);
     await user.type(nameInput, 'Renamed Circle');
-    await user.click(screen.getByText('Academic Memories'));
-    await user.click(screen.getByText('Restricted'));
+    const descriptionInput = screen.getByLabelText('Description');
+    await user.clear(descriptionInput);
+    await user.type(descriptionInput, 'Updated description');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {

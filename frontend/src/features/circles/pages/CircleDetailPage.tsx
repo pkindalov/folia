@@ -13,7 +13,7 @@ import {
   useUpdateCircle,
   useSearchUsers,
 } from '../hooks';
-import { circleFormSchema, PURPOSE_LABELS, PURPOSES, type CircleFormInput } from '../schemas';
+import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
 
 export default function CircleDetailPage() {
   const { id } = useParams();
@@ -48,16 +48,15 @@ export default function CircleDetailPage() {
     formState: { errors: editErrors },
   } = useForm<CircleFormInput>({
     resolver: zodResolver(circleFormSchema),
-    defaultValues: { name: '', purpose: 'family_lineage', privacy: 'private' },
+    defaultValues: { name: '', description: '' },
   });
 
   // Fill the edit form whenever the circle loads or editing starts.
   useEffect(() => {
-    if (circle) resetEdit({ name: circle.name, purpose: circle.purpose, privacy: circle.privacy });
+    if (circle) resetEdit({ name: circle.name, description: circle.description });
   }, [circle, resetEdit]);
 
-  const editPurpose = watchEdit('purpose');
-  const editPrivacy = watchEdit('privacy');
+  const editDescriptionLength = watchEdit('description').trim().length;
 
   const onAddMember = (userId: string) => {
     addMember.mutate(userId, {
@@ -119,75 +118,40 @@ export default function CircleDetailPage() {
                       )}
                     </div>
 
-                    <fieldset>
-                      <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-3">
-                        Purpose
-                      </legend>
-                      <div className="grid grid-cols-2 gap-3">
-                        {PURPOSES.map((value) => (
-                          <label
-                            key={value}
-                            className={`flex items-center gap-3 p-3 rounded-paper border cursor-pointer transition-colors ${
-                              editPurpose === value
-                                ? 'border-secondary bg-secondary/5 text-primary'
-                                : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface-container-low'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              value={value}
-                              className="sr-only"
-                              {...registerEdit('purpose')}
-                            />
-                            <span className="font-body text-sm">{PURPOSE_LABELS[value]}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-
-                    <fieldset>
-                      <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-3">
-                        Privacy level
-                      </legend>
-                      <div className="flex gap-4">
-                        <label
-                          className={`flex-1 py-2 px-4 rounded-paper border font-ui text-ui-label uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-colors ${
-                            editPrivacy === 'private'
-                              ? 'border-primary bg-primary text-on-primary'
-                              : 'border-outline-variant/50 hover:bg-surface-container-low'
+                    <div className="flex flex-col gap-1">
+                      <label
+                        className="font-ui text-ui-label uppercase text-on-surface-variant"
+                        htmlFor="edit-circle-description"
+                      >
+                        Description
+                      </label>
+                      <textarea
+                        id="edit-circle-description"
+                        rows={3}
+                        className="line-input w-full py-2 text-body-text resize-none"
+                        placeholder="What's this circle for?"
+                        aria-invalid={!!editErrors.description}
+                        {...registerEdit('description')}
+                      />
+                      <div className="flex justify-between items-start mt-1">
+                        {editErrors.description ? (
+                          <span role="alert" className="text-sm text-error font-ui">
+                            {editErrors.description.message}
+                          </span>
+                        ) : (
+                          <span />
+                        )}
+                        <span
+                          className={`font-ui text-[11px] ${
+                            editDescriptionLength > MAX_CIRCLE_DESCRIPTION_LENGTH
+                              ? 'text-error'
+                              : 'text-on-surface-variant'
                           }`}
                         >
-                          <input
-                            type="radio"
-                            value="private"
-                            className="sr-only"
-                            {...registerEdit('privacy')}
-                          />
-                          <Icon name="lock" className="text-sm" filled={editPrivacy === 'private'} />
-                          Private
-                        </label>
-                        <label
-                          className={`flex-1 py-2 px-4 rounded-paper border font-ui text-ui-label uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-colors ${
-                            editPrivacy === 'restricted'
-                              ? 'border-primary bg-primary text-on-primary'
-                              : 'border-outline-variant/50 hover:bg-surface-container-low'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            value="restricted"
-                            className="sr-only"
-                            {...registerEdit('privacy')}
-                          />
-                          <Icon
-                            name="group"
-                            className="text-sm"
-                            filled={editPrivacy === 'restricted'}
-                          />
-                          Restricted
-                        </label>
+                          {editDescriptionLength}/{MAX_CIRCLE_DESCRIPTION_LENGTH}
+                        </span>
                       </div>
-                    </fieldset>
+                    </div>
 
                     {updateCircle.isError && (
                       <p role="alert" className="text-sm text-error font-ui">
@@ -215,9 +179,7 @@ export default function CircleDetailPage() {
                 ) : (
                   <>
                     <div className="flex items-start justify-between gap-4">
-                      <span className="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-paper font-ui text-[11px] uppercase tracking-wider">
-                        {PURPOSE_LABELS[circle.purpose]}
-                      </span>
+                      <h2 className="font-display text-display-lg text-primary">{circle.name}</h2>
                       {isOwner && (
                         <button
                           onClick={() => setIsEditing(true)}
@@ -228,10 +190,14 @@ export default function CircleDetailPage() {
                         </button>
                       )}
                     </div>
-                    <h2 className="font-display text-display-lg text-primary mt-4">{circle.name}</h2>
                     <p className="font-body text-body-text text-on-surface-variant mt-2">
                       Owned by {circle.ownerUsername}
                     </p>
+                    {circle.description && (
+                      <p className="font-body text-body-text text-on-surface-variant mt-2">
+                        {circle.description}
+                      </p>
+                    )}
                   </>
                 )}
               </div>

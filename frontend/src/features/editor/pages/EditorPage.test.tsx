@@ -148,8 +148,6 @@ describe('EditorPage — edit', () => {
     const otherCircle = {
       _id: 'c1',
       name: 'Other Circle',
-      purpose: 'travel',
-      privacy: 'private',
       owner: 'id1',
       ownerUsername: 'pan',
       members: [],
@@ -157,8 +155,6 @@ describe('EditorPage — edit', () => {
     const assignedCircle = {
       _id: 'c99',
       name: 'Assigned Circle',
-      purpose: 'family_lineage',
-      privacy: 'private',
       owner: 'id1',
       ownerUsername: 'pan',
       members: [],

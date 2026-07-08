@@ -26,7 +26,7 @@ import {
 
 const VISIBILITY_OPTIONS = [
   ['private', 'lock', 'Private — only you'],
-  ['shared', 'group', 'Shared — family circle'],
+  ['shared', 'group', 'Shared — signed-in users, or a circle'],
   ['public', 'public', 'Public — community table'],
 ] as const;
 

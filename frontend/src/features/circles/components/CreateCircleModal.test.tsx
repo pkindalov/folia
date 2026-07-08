@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateCircleModal from './CreateCircleModal';
 import { tokenStorage } from '../../../lib/api-client';
@@ -26,8 +26,7 @@ function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
 const CREATED_CIRCLE = {
   _id: 'c1',
   name: 'The Sterling Family',
-  purpose: 'family_lineage',
-  privacy: 'private',
+  description: 'Reunion crew',
   owner: 'id1',
   ownerUsername: 'pan',
   members: [],
@@ -69,16 +68,35 @@ describe('CreateCircleModal', () => {
     });
 
     await user.type(screen.getByLabelText('Circle name'), 'The Sterling Family');
-    await user.click(screen.getByText('Academic Memories'));
-    await user.click(screen.getByText('Restricted'));
+    await user.type(screen.getByLabelText('Description'), 'Reunion crew');
     await user.click(screen.getByRole('button', { name: 'Create Circle' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(calledBodies[0]).toEqual({
       name: 'The Sterling Family',
-      purpose: 'academic',
-      privacy: 'restricted',
+      description: 'Reunion crew',
     });
+  });
+
+  test('accepts a description that only exceeds the limit before trimming', async () => {
+    mockApi({ '/api/circles': { body: { circle: CREATED_CIRCLE }, status: 201 } });
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<CreateCircleModal isOpen onClose={onClose} />, {
+      route: '/circles',
+      path: '/circles',
+    });
+
+    await user.type(screen.getByLabelText('Circle name'), 'The Sterling Family');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: `${'x'.repeat(300)}   ` },
+    });
+    await user.click(screen.getByRole('button', { name: 'Create Circle' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(
+      screen.queryByText('Description must be at most 300 characters')
+    ).not.toBeInTheDocument();
   });
 
   test('shows the API error message on failure', async () => {

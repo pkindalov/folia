@@ -43,8 +43,17 @@ export function useDeleteCircle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: circlesApi.deleteCircle,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      // Evict the deleted circle's own cache entry rather than just
+      // invalidating it — a background refetch of a 404'd query keeps
+      // showing its last-known (pre-deletion) data, so anything that reads
+      // this circle by id elsewhere (e.g. the editor's "share with circle"
+      // picker) would keep rendering the deleted circle until a hard reload.
+      queryClient.removeQueries({ queryKey: ['circles', id] });
       queryClient.invalidateQueries({ queryKey: ['circles'] });
+      // Deleting a circle cascades to any album shared with it (reset to
+      // private server-side) — refetch album data so that shows up too.
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
   });
 }

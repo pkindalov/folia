@@ -6,7 +6,7 @@ import Pagination from '../../../components/Pagination';
 import CreateCircleModal from '../components/CreateCircleModal';
 import { useMe } from '../../auth';
 import { useCircles, useMyInvites, useAcceptInvite, useDeclineInvite } from '../hooks';
-import { PURPOSE_LABELS, type Circle, type CircleInvite } from '../schemas';
+import type { Circle, CircleInvite } from '../schemas';
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -42,20 +42,16 @@ function CircleCard({ circle }: { circle: Circle }) {
   return (
     <div className="bg-surface-container-lowest rounded-card p-8 border border-outline-variant/40 paper-depth flex flex-col justify-between">
       <div>
-        <div className="flex justify-between items-start mb-6">
-          <span className="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-paper font-ui text-[11px] uppercase tracking-wider">
-            {PURPOSE_LABELS[circle.purpose]}
-          </span>
-          <span className="flex items-center gap-1 text-on-surface-variant text-xs font-ui uppercase">
-            <Icon
-              name={circle.privacy === 'private' ? 'lock' : 'group'}
-              className="text-sm"
-              filled={circle.privacy === 'private'}
-            />
-            {circle.privacy === 'private' ? 'Private' : 'Restricted'}
-          </span>
-        </div>
-        <h3 className="font-display text-headline-md text-primary mb-6">{circle.name}</h3>
+        <h3
+          className={`font-display text-headline-md text-primary ${circle.description ? 'mb-2' : 'mb-6'}`}
+        >
+          {circle.name}
+        </h3>
+        {circle.description && (
+          <p className="font-body italic text-on-surface-variant text-sm mb-6 line-clamp-2">
+            {circle.description}
+          </p>
+        )}
       </div>
       <div className="border-b border-outline-variant/40 pb-4 mb-4 flex justify-between items-center">
         <MemberAvatars members={acceptedMembers} />
@@ -96,10 +92,12 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
   return (
     <div className="bg-surface-container-low rounded-card p-6 border border-outline-variant/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <span className="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-paper font-ui text-[11px] uppercase tracking-wider">
-          {PURPOSE_LABELS[invite.purpose]}
-        </span>
-        <h3 className="font-display text-headline-md text-primary mt-2">{invite.name}</h3>
+        <h3 className="font-display text-headline-md text-primary">{invite.name}</h3>
+        {invite.description && (
+          <p className="font-body italic text-on-surface-variant text-sm mt-1 line-clamp-2">
+            {invite.description}
+          </p>
+        )}
         <p className="font-body text-sm text-on-surface-variant mt-1">
           Invited by {invite.ownerUsername}
         </p>
