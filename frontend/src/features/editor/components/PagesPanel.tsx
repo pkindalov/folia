@@ -18,10 +18,10 @@ type PagesPanelProps = {
   isUploading: boolean;
   uploadError?: string;
   rejections: string[];
-  deletingPhotoId?: string;
+  deletingPhotoIds?: Set<string>;
   coverPhotoId?: string;
-  settingCoverPhotoId?: string;
-  savingCaptionPhotoId?: string;
+  settingCoverPhotoIds?: Set<string>;
+  savingCaptionPhotoIds?: Set<string>;
   onFilesSelected: (files: File[]) => void;
   onRemovePhoto: (photoId: string) => void;
   onSetCoverPhoto: (photoId: string) => void;
@@ -30,6 +30,7 @@ type PagesPanelProps = {
 };
 
 const ACCEPTED_FILE_TYPES = 'image/jpeg,image/png,image/webp,image/gif';
+const EMPTY_ID_SET: Set<string> = new Set();
 
 function getDropzoneColorClasses(isDraggingOver: boolean, isUploading: boolean) {
   if (!isUploading && isDraggingOver) {
@@ -44,10 +45,10 @@ export default function PagesPanel({
   isUploading,
   uploadError,
   rejections,
-  deletingPhotoId,
+  deletingPhotoIds = EMPTY_ID_SET,
   coverPhotoId,
-  settingCoverPhotoId,
-  savingCaptionPhotoId,
+  settingCoverPhotoIds = EMPTY_ID_SET,
+  savingCaptionPhotoIds = EMPTY_ID_SET,
   onFilesSelected,
   onRemovePhoto,
   onSetCoverPhoto,
@@ -191,10 +192,10 @@ export default function PagesPanel({
               key={photo._id}
               photo={photo}
               index={index}
-              isDeleting={deletingPhotoId === photo._id}
+              isDeleting={deletingPhotoIds.has(photo._id)}
               isCover={photo._id === coverPhotoId}
-              isSettingCover={settingCoverPhotoId === photo._id}
-              isSavingCaption={savingCaptionPhotoId === photo._id}
+              isSettingCover={settingCoverPhotoIds.has(photo._id)}
+              isSavingCaption={savingCaptionPhotoIds.has(photo._id)}
               onRemove={() => onRemovePhoto(photo._id)}
               onSetCover={() => onSetCoverPhoto(photo._id)}
               onOpenPhoto={() => setOpenPhotoId(photo._id)}

@@ -174,6 +174,35 @@ describe('EditorPage — edit', () => {
     expect(screen.getByRole('option', { name: 'Other Circle' })).toBeInTheDocument();
   });
 
+  test("an Admin editing another user's album still sees the assigned circle as an option, even though they don't own it", async () => {
+    const restrictedAlbum = {
+      album: { ...ALBUM.album, owner: 'owner-id', visibility: 'shared', sharedWithCircle: 'c99' },
+    };
+    const assignedCircle = {
+      _id: 'c99',
+      name: "Owner's Circle",
+      owner: 'owner-id',
+      ownerUsername: 'someoneElse',
+      members: [],
+    };
+    mockApi({
+      'GET /api/users/me': { body: { user: { ...ME.user, roles: ['User', 'Admin'] } } },
+      'GET /api/albums/a1': { body: restrictedAlbum },
+      'GET /api/circles/c99': { body: { circle: assignedCircle } },
+      'GET /api/circles': { body: { circles: [], total: 0, page: 1, limit: 12 } },
+    });
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    // Without this option, the uncontrolled <select> has no matching value
+    // for the album's actual sharedWithCircle, so it would render as "Open
+    // to any signed-in user" and silently submit null (widening access) the
+    // next time the Admin saves any unrelated field.
+    expect(await screen.findByRole('option', { name: "Owner's Circle" })).toBeInTheDocument();
+  });
+
   test('loads more circles into the picker when "Load more circles" is clicked', async () => {
     const restrictedAlbum = { album: { ...ALBUM.album, visibility: 'shared' } };
     const page1Circle = {
@@ -615,6 +644,74 @@ describe('EditorPage — pages panel', () => {
     expect(putCallsInFlight).toHaveLength(1);
 
     resolvePut({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ page: { ...PAGE, caption: 'A day at the lake' } }),
+    } as Response);
+  });
+
+  test('saving one photo\'s caption does not re-enable a different photo\'s still-pending save button', async () => {
+    let resolvePutP1!: (value: Response) => void;
+    const putP1Promise = new Promise<Response>((resolve) => {
+      resolvePutP1 = resolve;
+    });
+
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      calls.push({ url: String(url), options });
+      const method = options?.method ?? 'GET';
+      const path = String(url);
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.includes('/api/albums/a1/pages') && method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ pages: [PAGE, PAGE_2] }),
+        } as Response);
+      }
+      if (path.endsWith('/api/albums/a1') && method === 'GET') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ALBUM) } as Response);
+      }
+      if (path.includes('/api/albums/a1/pages/p1') && method === 'PUT') {
+        return putP1Promise;
+      }
+      if (path.includes('/api/albums/a1/pages/p2') && method === 'PUT') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ page: { ...PAGE_2, caption: 'Second photo' } }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderEdit();
+
+    const captionField1 = await screen.findByLabelText(/caption for photo1\.jpg/i);
+    await user.type(captionField1, 'A day at the lake');
+    const saveButton1 = await screen.findByRole('button', { name: /save caption for photo1\.jpg/i });
+    await user.click(saveButton1);
+    await waitFor(() => expect(saveButton1).toBeDisabled());
+
+    const captionField2 = await screen.findByLabelText(/caption for photo2\.jpg/i);
+    await user.type(captionField2, 'Second photo');
+    const saveButton2 = await screen.findByRole('button', { name: /save caption for photo2\.jpg/i });
+    await user.click(saveButton2);
+
+    // Photo 2's save resolves, but photo 1's request is still in flight —
+    // photo 1's button must stay disabled/showing "Saving…" until its own
+    // request settles, not clear just because a different photo's did.
+    await waitFor(() => {
+      const putP2 = calls.find(
+        (c) => c.url.includes('/api/albums/a1/pages/p2') && c.options?.method === 'PUT'
+      );
+      expect(putP2).toBeDefined();
+    });
+    expect(screen.getByRole('button', { name: /save caption for photo1\.jpg/i })).toBeDisabled();
+
+    resolvePutP1({
       ok: true,
       status: 200,
       json: () => Promise.resolve({ page: { ...PAGE, caption: 'A day at the lake' } }),

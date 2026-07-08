@@ -36,6 +36,16 @@ function isAllowedPhotoType(type: string): type is (typeof ALLOWED_PHOTO_MIME_TY
   return (ALLOWED_PHOTO_MIME_TYPES as readonly string[]).includes(type);
 }
 
+function withId(ids: Set<string>, id: string): Set<string> {
+  return new Set(ids).add(id);
+}
+
+function withoutId(ids: Set<string>, id: string): Set<string> {
+  const next = new Set(ids);
+  next.delete(id);
+  return next;
+}
+
 function describeRejections(rejected: Rejection[]): string[] {
   if (rejected.length === 0) return [];
 
@@ -88,11 +98,14 @@ export default function EditorPage() {
   );
   const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === me?._id);
   const assignedCircle = assignedCircleQuery.data;
+  // Include the assigned circle even when the requester doesn't own it (an
+  // Admin editing someone else's album) — otherwise the <select> has no
+  // <option> for the album's actual value and silently submits a different
+  // one (typically null) on the next unrelated save, quietly widening access.
   const assignedCircleIsMissing =
     assignedCircle !== undefined &&
-    assignedCircle.owner === me?._id &&
     !ownedCirclesFromList.some((circle) => circle._id === assignedCircle._id);
-  const ownedCircles = assignedCircleIsMissing
+  const circleOptions = assignedCircleIsMissing
     ? [...ownedCirclesFromList, assignedCircle]
     : ownedCirclesFromList;
 
@@ -102,9 +115,12 @@ export default function EditorPage() {
   const updateCaption = useUpdatePageCaption(id ?? '');
   const setCoverPhoto = useSetCoverPhoto(id ?? '');
   const [rejections, setRejections] = useState<string[]>([]);
-  const [deletingPhotoId, setDeletingPhotoId] = useState<string>();
-  const [settingCoverPhotoId, setSettingCoverPhotoId] = useState<string>();
-  const [savingCaptionPhotoId, setSavingCaptionPhotoId] = useState<string>();
+  // Sets, not single ids — several photos can each have their own in-flight
+  // delete/cover/caption request at once, and one photo settling must not
+  // clear another photo's still-pending busy state.
+  const [deletingPhotoIds, setDeletingPhotoIds] = useState<Set<string>>(new Set());
+  const [settingCoverPhotoIds, setSettingCoverPhotoIds] = useState<Set<string>>(new Set());
+  const [savingCaptionPhotoIds, setSavingCaptionPhotoIds] = useState<Set<string>>(new Set());
 
   // The cover is whichever photo was explicitly chosen; absent that, the
   // earliest-uploaded one — pagesQuery is already sorted oldest-first.
@@ -165,21 +181,25 @@ export default function EditorPage() {
 
   const onRemovePhoto = (photoId: string) => {
     if (!window.confirm("Remove this photo from the volume? This can't be undone.")) return;
-    setDeletingPhotoId(photoId);
-    deletePage.mutate(photoId, { onSettled: () => setDeletingPhotoId(undefined) });
+    setDeletingPhotoIds((prev) => withId(prev, photoId));
+    deletePage.mutate(photoId, {
+      onSettled: () => setDeletingPhotoIds((prev) => withoutId(prev, photoId)),
+    });
   };
 
   const onCaptionChange = (photoId: string, caption: string) => {
-    setSavingCaptionPhotoId(photoId);
+    setSavingCaptionPhotoIds((prev) => withId(prev, photoId));
     updateCaption.mutate(
       { pageId: photoId, caption },
-      { onSettled: () => setSavingCaptionPhotoId(undefined) }
+      { onSettled: () => setSavingCaptionPhotoIds((prev) => withoutId(prev, photoId)) }
     );
   };
 
   const onSetCoverPhoto = (photoId: string) => {
-    setSettingCoverPhotoId(photoId);
-    setCoverPhoto.mutate(photoId, { onSettled: () => setSettingCoverPhotoId(undefined) });
+    setSettingCoverPhotoIds((prev) => withId(prev, photoId));
+    setCoverPhoto.mutate(photoId, {
+      onSettled: () => setSettingCoverPhotoIds((prev) => withoutId(prev, photoId)),
+    });
   };
 
   return (
@@ -281,7 +301,7 @@ export default function EditorPage() {
                 <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
                   Share with circle
                 </legend>
-                {ownedCircles.length === 0 ? (
+                {circleOptions.length === 0 ? (
                   <p className="font-body italic text-sm text-on-surface-variant">
                     You don't have any circles yet.{' '}
                     <Link to="/circles" className="underline hover:text-secondary">
@@ -298,7 +318,7 @@ export default function EditorPage() {
                       })}
                     >
                       <option value="">Open to any signed-in user</option>
-                      {ownedCircles.map((circle) => (
+                      {circleOptions.map((circle) => (
                         <option key={circle._id} value={circle._id}>
                           {circle.name}
                         </option>
@@ -404,10 +424,10 @@ export default function EditorPage() {
                             : undefined
                   }
                   rejections={rejections}
-                  deletingPhotoId={deletingPhotoId}
+                  deletingPhotoIds={deletingPhotoIds}
                   coverPhotoId={coverPhotoId}
-                  settingCoverPhotoId={settingCoverPhotoId}
-                  savingCaptionPhotoId={savingCaptionPhotoId}
+                  settingCoverPhotoIds={settingCoverPhotoIds}
+                  savingCaptionPhotoIds={savingCaptionPhotoIds}
                   onFilesSelected={onFilesSelected}
                   onRemovePhoto={onRemovePhoto}
                   onSetCoverPhoto={onSetCoverPhoto}
