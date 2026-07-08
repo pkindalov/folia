@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
@@ -74,6 +74,12 @@ export default function ArchivePage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useArchivedAlbums(page);
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+
+  // Restoring the last album on a later page can leave `page` pointing past
+  // the new last page — fall back to it rather than showing a blank page.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell>

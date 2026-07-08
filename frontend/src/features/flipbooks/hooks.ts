@@ -71,7 +71,13 @@ export function useDeleteAlbum() {
   const navigate = useNavigate();
   return useMutation({
     mutationFn: albumsApi.deleteAlbum,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      // Evict the deleted album's own cache entry rather than just
+      // invalidating it — a background refetch of a 404'd query keeps
+      // showing its last-known (pre-deletion) data, so navigating back to
+      // /editor/:id or /book/:id for this album would keep rendering the
+      // deleted album until a hard reload.
+      queryClient.removeQueries({ queryKey: ['albums', id] });
       queryClient.invalidateQueries({ queryKey: ['albums'] });
       navigate('/flipbooks');
     },

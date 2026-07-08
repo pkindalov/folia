@@ -567,6 +567,20 @@ describe('circles-controller', () => {
       expect(res.status).toHaveBeenCalledWith(404);
       expect(findOneAndUpdate).not.toHaveBeenCalled();
     });
+
+    test('404 (not a 500) when the circle is deleted by a concurrent request before the $pull lands', async () => {
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValue(fakeCircle({ members: [{ user: MEMBER_ID, addedAt: new Date() }] }));
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(null);
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
   });
 
   describe('listInvites', () => {

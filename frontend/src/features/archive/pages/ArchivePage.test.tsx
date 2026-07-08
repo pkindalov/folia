@@ -104,4 +104,59 @@ describe('ArchivePage', () => {
       expect(calledUrls.some((url) => url.includes('page=2'))).toBe(true);
     });
   });
+
+  test('falls back to the last valid page after restoring the only album on a later page', async () => {
+    // 13 albums total: a full page 1 (a1..a12) and a lone album on page 2 (a13).
+    const page1Albums = Array.from({ length: 12 }, (_, i) => ({
+      ...ARCHIVED_ALBUM,
+      _id: `a${i + 1}`,
+      title: `Volume ${i + 1}`,
+    }));
+    const page2Album = { ...ARCHIVED_ALBUM, _id: 'a13', title: 'Volume 13' };
+    let total = 13;
+
+    vi.stubGlobal('fetch', vi.fn());
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const path = String(url);
+      calledUrls.push(path);
+
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.includes('/api/albums/archived')) {
+        const page = new URL(path, 'http://localhost').searchParams.get('page') ?? '1';
+        const albums = page === '2' ? (total === 13 ? [page2Album] : []) : page1Albums;
+        const body = { albums, total, page: Number(page), limit: 12 };
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
+      }
+      if (path.includes('/api/albums/a13') && options?.method === 'PUT') {
+        total = 12;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ album: { ...page2Album, archived: false } }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Volume 1');
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    await screen.findByText('Volume 13');
+
+    await user.click(screen.getByRole('button', { name: 'Restore Volume 13' }));
+
+    // Once the restore drops total to 12 (a single page), the page should
+    // clamp back to 1 instead of showing a blank page 2 with no way back.
+    // The stale (pre-restore) page-1 cache entry renders first with its old
+    // total, so wait for its background refetch to settle on the new total
+    // before asserting pagination is gone.
+    await waitFor(() => {
+      expect(screen.getByText('Volume 1')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+    });
+  });
 });

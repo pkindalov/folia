@@ -3,6 +3,7 @@ const fs = require('fs');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const storage = require('../utilities/storage');
+const { canAccessSharedAlbum } = require('../utilities/controller-helpers');
 
 const env = process.env.NODE_ENV || 'development';
 const settings = require('../config/settings')[env];
@@ -55,23 +56,34 @@ module.exports = {
       return res.status(404).json({ error: 'Album not found' });
     }
 
+    const respondWithPages = (album) =>
+      Page.find({ album: id })
+        .sort('createdAt')
+        .then((pages) => {
+          res.json({
+            pages: pages.map((page) => ({
+              ...page.toJSON(),
+              url: storage.photoUrl(album.owner, album._id, page.filename),
+            })),
+          });
+        });
+
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
         if (album.visibility === 'private' && !canModify(album, req.user)) {
           return res.status(403).json({ error: 'This album is private' });
         }
-
-        return Page.find({ album: id })
-          .sort('createdAt')
-          .then((pages) => {
-            res.json({
-              pages: pages.map((page) => ({
-                ...page.toJSON(),
-                url: storage.photoUrl(album.owner, album._id, page.filename),
-              })),
-            });
+        if (album.visibility === 'shared' && !canModify(album, req.user)) {
+          return canAccessSharedAlbum(album, req.user).then((allowed) => {
+            if (!allowed) {
+              return res.status(403).json({ error: 'This album is shared with a specific circle' });
+            }
+            return respondWithPages(album);
           });
+        }
+
+        return respondWithPages(album);
       })
       .catch(() => res.status(500).json({ error: 'Failed to load pages' }));
   },

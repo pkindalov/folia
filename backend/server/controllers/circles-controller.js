@@ -267,7 +267,12 @@ module.exports = {
           { _id: id },
           { $pull: { members: { user: userId } } },
           { new: true }
-        ).then((updated) => withUsernames(updated).then((circle) => res.json({ circle })));
+        ).then((updated) => {
+          // The circle was deleted by a concurrent request between the read
+          // above and this update.
+          if (!updated) return res.status(404).json({ error: 'Circle not found' });
+          return withUsernames(updated).then((circle) => res.json({ circle }));
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to remove member' }));
   },

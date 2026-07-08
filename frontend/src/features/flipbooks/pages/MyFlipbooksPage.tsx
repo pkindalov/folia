@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
@@ -31,6 +31,13 @@ export default function MyFlipbooksPage() {
     setFilter(nextFilter);
     setPage(1);
   };
+
+  // Deleting/archiving the last album on a later page can leave `page`
+  // pointing past the new last page — fall back to it rather than showing a
+  // blank grid with no way back.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell>

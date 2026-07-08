@@ -14,6 +14,7 @@ describe('album pages routes (integration)', () => {
   let User;
   let Album;
   let Page;
+  let Circle;
   let auth;
   let token;
   let strangerToken;
@@ -28,6 +29,7 @@ describe('album pages routes (integration)', () => {
     User = require('../../server/data/User');
     Album = require('../../server/data/Album');
     Page = require('../../server/data/Page');
+    Circle = require('../../server/data/Circle');
     auth = require('../../server/config/auth');
 
     const express = require('express');
@@ -178,6 +180,45 @@ describe('album pages routes (integration)', () => {
         .get(`/api/albums/${ALBUM_ID}/pages`)
         .set('Authorization', `Bearer ${strangerToken}`);
       expect(res.status).toBe(403);
+    });
+
+    test('403 when a stranger requests a shared album restricted to a circle they are not in', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({ name: 'Family', owner: OWNER_ID, members: [] })
+      );
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('200 when a circle member requests a shared album restricted to their circle', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({
+          name: 'Family',
+          owner: OWNER_ID,
+          members: [{ user: OTHER_ID, status: 'accepted' }],
+        })
+      );
+      jest.spyOn(Page, 'find').mockReturnValue({
+        sort: jest.fn().mockResolvedValue([]),
+      });
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(200);
     });
 
     test('200 with the owner\'s pages', async () => {

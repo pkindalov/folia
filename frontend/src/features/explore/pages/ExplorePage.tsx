@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Pagination from '../../../components/Pagination';
@@ -47,6 +47,13 @@ function SharedWithYouSection() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useSharedWithMeAlbums(page);
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+
+  // An album leaving the circle (or being unshared) on a later page can
+  // leave `page` pointing past the new last page — fall back to it rather
+  // than showing a blank section with no way back.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   if (!isLoading && !isError && data?.total === 0) return null;
 

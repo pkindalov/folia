@@ -5,7 +5,12 @@ const User = require('../data/User');
 const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
-const { isNonEmptyString, parsePage, DELETED_USER_LABEL } = require('../utilities/controller-helpers');
+const {
+  isNonEmptyString,
+  parsePage,
+  DELETED_USER_LABEL,
+  canAccessSharedAlbum,
+} = require('../utilities/controller-helpers');
 
 const VISIBILITIES = ['private', 'shared', 'public'];
 const ALBUMS_PAGE_SIZE = 12;
@@ -55,19 +60,6 @@ function verifySharedCircleOwnership(sharedWithCircle, user) {
       return 'sharedWithCircle must reference a circle you own';
     }
     return null;
-  });
-}
-
-// A 'shared' album with no circle attached keeps the legacy behavior of
-// being open to any authenticated user. Once a circle is attached, access
-// narrows to that circle's owner and members. A dangling reference (the
-// circle was deleted) is treated as "no access" rather than throwing.
-function canAccessSharedAlbum(album, user) {
-  if (!album.sharedWithCircle) return Promise.resolve(true);
-
-  return Circle.findById(album.sharedWithCircle).then((circle) => {
-    if (!circle) return false;
-    return circle.isOwnerOrMember(user._id);
   });
 }
 
@@ -300,7 +292,17 @@ module.exports = {
               : album.sharedWithCircle
             : null;
 
-        return verifySharedCircleOwnership(effectiveSharedWithCircle, req.user).then((circleError) => {
+        // Only re-verify ownership when sharedWithCircle is a genuinely new
+        // value from this request — a carried-forward stored value was
+        // already valid when the owner originally set it, and re-checking it
+        // against whoever happens to be making this request (e.g. an Admin
+        // editing an unrelated field) would wrongly reject their own edits.
+        const circleOwnershipCheck =
+          sharedWithCircle !== undefined
+            ? verifySharedCircleOwnership(effectiveSharedWithCircle, req.user)
+            : Promise.resolve(null);
+
+        return circleOwnershipCheck.then((circleError) => {
           if (circleError) return res.status(400).json({ error: circleError });
 
           if (title !== undefined) album.title = title.trim();

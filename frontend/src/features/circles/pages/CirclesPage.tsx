@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
@@ -128,6 +128,12 @@ export default function CirclesPage() {
   const { data, isLoading, isError, error } = useCircles(page);
   const invitesQuery = useMyInvites(1);
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+
+  // Deleting the last circle on a later page can leave `page` pointing past
+  // the new last page — fall back to it rather than showing a blank grid.
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <AppShell>

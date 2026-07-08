@@ -711,6 +711,29 @@ describe('albums-controller', () => {
       expect(album.save).toHaveBeenCalled();
     });
 
+    test('an Admin editing an unrelated field does not re-verify an already-stored sharedWithCircle they do not own', async () => {
+      // The circle is owned by the album's real owner, not by the Admin
+      // making this request — verifySharedCircleOwnership would reject it if
+      // it were (wrongly) re-run against req.user for an untouched value.
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { description: 'new description' }, user: admin },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(album.description).toBe('new description');
+      expect(album.sharedWithCircle).toBe('507f1f77bcf86cd799439099');
+      expect(res.status).not.toHaveBeenCalledWith(400);
+      expect(album.save).toHaveBeenCalled();
+    });
+
     test('clears sharedWithCircle when visibility moves away from shared', async () => {
       const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
