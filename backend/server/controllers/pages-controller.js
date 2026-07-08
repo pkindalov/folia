@@ -3,13 +3,10 @@ const fs = require('fs');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const storage = require('../utilities/storage');
-const { canAccessSharedAlbum } = require('../utilities/controller-helpers');
+const { isOwnerOrAdmin, checkAlbumReadAccess } = require('../utilities/controller-helpers');
 
 const env = process.env.NODE_ENV || 'development';
 const settings = require('../config/settings')[env];
-
-const canModify = (album, user) =>
-  album.owner.toString() === user._id.toString() || user.roles.includes('Admin');
 
 // Recomputes and persists pageCount from the real Page count — never
 // hand-incremented, so it can't drift from what's actually on disk/in Mongo.
@@ -41,7 +38,7 @@ module.exports = {
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
-        if (!canModify(album, req.user)) {
+        if (!isOwnerOrAdmin(album, req.user)) {
           return res.status(403).json({ error: 'You do not own this album' });
         }
         req.album = album;
@@ -71,19 +68,10 @@ module.exports = {
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
-        if (album.visibility === 'private' && !canModify(album, req.user)) {
-          return res.status(403).json({ error: 'This album is private' });
-        }
-        if (album.visibility === 'shared' && !canModify(album, req.user)) {
-          return canAccessSharedAlbum(album, req.user).then((allowed) => {
-            if (!allowed) {
-              return res.status(403).json({ error: 'This album is shared with a specific circle' });
-            }
-            return respondWithPages(album);
-          });
-        }
-
-        return respondWithPages(album);
+        return checkAlbumReadAccess(album, req.user).then((denied) => {
+          if (denied) return res.status(denied.status).json({ error: denied.error });
+          return respondWithPages(album);
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load pages' }));
   },

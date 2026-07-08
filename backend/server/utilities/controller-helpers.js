@@ -13,6 +13,34 @@ function canAccessSharedAlbum(album, user) {
   });
 }
 
+// Shared by every controller that gates a mutation behind ownership of an
+// `owner`-bearing resource (an album or a circle) — kept as one definition
+// so a future edit to one controller's copy can't silently diverge from the
+// others and reopen an access-control hole (see the authorization bypass
+// fixed in commit d2a602a).
+function isOwnerOrAdmin(resource, user) {
+  return resource.owner.toString() === user._id.toString() || user.roles.includes('Admin');
+}
+
+// Resolves to null when `user` may read `album` (its owner/an Admin, a
+// public album, an unrestricted 'shared' album, or an accepted member of
+// the circle it's restricted to), or a { status, error } response
+// descriptor when they may not. Shared between the albums and pages
+// controllers so "who can read an album" can't drift between the two.
+function checkAlbumReadAccess(album, user) {
+  if (isOwnerOrAdmin(album, user)) return Promise.resolve(null);
+
+  if (album.visibility === 'private') {
+    return Promise.resolve({ status: 403, error: 'This album is private' });
+  }
+  if (album.visibility === 'shared') {
+    return canAccessSharedAlbum(album, user).then((allowed) =>
+      allowed ? null : { status: 403, error: 'This album is shared with a specific circle' }
+    );
+  }
+  return Promise.resolve(null);
+}
+
 module.exports = {
   isNonEmptyString: (v) => typeof v === 'string' && v.trim().length > 0,
 
@@ -28,4 +56,6 @@ module.exports = {
   DELETED_USER_LABEL: 'Deleted user',
 
   canAccessSharedAlbum,
+  isOwnerOrAdmin,
+  checkAlbumReadAccess,
 };

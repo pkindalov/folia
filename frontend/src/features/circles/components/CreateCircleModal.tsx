@@ -76,7 +76,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             id="circle-name"
             className="line-input w-full py-2 text-headline-md font-display"
             placeholder="e.g., The Sterling Family"
-            aria-invalid={!!errors.name}
+            aria-invalid={errors.name !== undefined}
             aria-describedby={errors.name ? 'circle-name-error' : undefined}
             {...register('name')}
           />
@@ -99,7 +99,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             rows={3}
             className="line-input w-full py-2 text-body-text resize-none"
             placeholder="What's this circle for?"
-            aria-invalid={!!errors.description}
+            aria-invalid={errors.description !== undefined}
             aria-describedby={errors.description ? 'circle-description-error' : undefined}
             {...register('description')}
           />

@@ -4,10 +4,11 @@ import { tokenStorage, ApiError } from '../../lib/api-client';
 import * as authApi from './api';
 
 export function useMe() {
+  const token = tokenStorage.get();
   return useQuery({
     queryKey: ['me'],
     queryFn: authApi.fetchMe,
-    enabled: !!tokenStorage.get(),
+    enabled: token !== null && token !== '',
     retry: (failureCount, error) =>
       error instanceof ApiError && error.status === 401 ? false : failureCount < 2,
   });
@@ -48,5 +49,6 @@ export function useLogout() {
 }
 
 export function isAuthenticated(): boolean {
-  return !!tokenStorage.get();
+  const token = tokenStorage.get();
+  return token !== null && token !== '';
 }

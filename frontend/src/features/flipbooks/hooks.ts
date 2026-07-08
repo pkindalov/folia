@@ -35,7 +35,7 @@ export function useAlbum(id: string | undefined) {
   return useQuery({
     queryKey: ['albums', id],
     queryFn: () => albumsApi.getAlbum(id!),
-    enabled: !!id,
+    enabled: id !== undefined,
   });
 }
 
@@ -88,7 +88,7 @@ export function usePages(albumId: string | undefined) {
   return useQuery({
     queryKey: ['albums', albumId, 'pages'],
     queryFn: () => albumsApi.listPages(albumId!),
-    enabled: !!albumId,
+    enabled: albumId !== undefined,
   });
 }
 

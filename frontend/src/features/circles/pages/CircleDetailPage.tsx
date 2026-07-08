@@ -37,7 +37,7 @@ export default function CircleDetailPage() {
   }, [search]);
 
   const circle = circleQuery.data;
-  const isOwner = !!me && !!circle && circle.owner === me._id;
+  const isOwner = me !== undefined && circle !== undefined && circle.owner === me._id;
   const memberIds = new Set(circle?.members.map((member) => member.user) ?? []);
 
   const {
@@ -108,7 +108,7 @@ export default function CircleDetailPage() {
                       <input
                         id="edit-circle-name"
                         className="line-input w-full py-2 text-headline-md font-display"
-                        aria-invalid={!!editErrors.name}
+                        aria-invalid={editErrors.name !== undefined}
                         {...registerEdit('name')}
                       />
                       {editErrors.name && (
@@ -130,7 +130,7 @@ export default function CircleDetailPage() {
                         rows={3}
                         className="line-input w-full py-2 text-body-text resize-none"
                         placeholder="What's this circle for?"
-                        aria-invalid={!!editErrors.description}
+                        aria-invalid={editErrors.description !== undefined}
                         {...registerEdit('description')}
                       />
                       <div className="flex justify-between items-start mt-1">

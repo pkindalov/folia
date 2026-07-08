@@ -29,7 +29,7 @@ export function useCircle(id: string | undefined) {
   return useQuery({
     queryKey: ['circles', id],
     queryFn: () => circlesApi.getCircle(id!),
-    enabled: !!id,
+    enabled: id !== undefined,
   });
 }
 

@@ -9,7 +9,8 @@ const {
   isNonEmptyString,
   parsePage,
   DELETED_USER_LABEL,
-  canAccessSharedAlbum,
+  isOwnerOrAdmin,
+  checkAlbumReadAccess,
 } = require('../utilities/controller-helpers');
 
 const VISIBILITIES = ['private', 'shared', 'public'];
@@ -42,10 +43,6 @@ function validateAlbumInput(body, { partial = false } = {}) {
     return 'sharedWithCircle must be a valid circle id or null';
   }
   return null;
-}
-
-function canModify(album, user) {
-  return album.owner.toString() === user._id.toString() || user.roles.includes('Admin');
 }
 
 // Sharing an album to a circle only makes sense for a circle the album's
@@ -217,18 +214,10 @@ module.exports = {
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
-        if (album.visibility === 'private' && !canModify(album, req.user)) {
-          return res.status(403).json({ error: 'This album is private' });
-        }
-        if (album.visibility === 'shared' && !canModify(album, req.user)) {
-          return canAccessSharedAlbum(album, req.user).then((allowed) => {
-            if (!allowed) {
-              return res.status(403).json({ error: 'This album is shared with a specific circle' });
-            }
-            return withCoverImage(album).then((album) => res.json({ album }));
-          });
-        }
-        return withCoverImage(album).then((album) => res.json({ album }));
+        return checkAlbumReadAccess(album, req.user).then((denied) => {
+          if (denied) return res.status(denied.status).json({ error: denied.error });
+          return withCoverImage(album).then((album) => res.json({ album }));
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load album' }));
   },
@@ -276,7 +265,7 @@ module.exports = {
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
-        if (!canModify(album, req.user)) {
+        if (!isOwnerOrAdmin(album, req.user)) {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
@@ -329,7 +318,7 @@ module.exports = {
     Album.findById(id)
       .then((album) => {
         if (!album) return res.status(404).json({ error: 'Album not found' });
-        if (!canModify(album, req.user)) {
+        if (!isOwnerOrAdmin(album, req.user)) {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 

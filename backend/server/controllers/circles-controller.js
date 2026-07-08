@@ -3,7 +3,12 @@ const Circle = require('../data/Circle');
 const User = require('../data/User');
 const Album = require('../data/Album');
 const errorHandler = require('../utilities/error-handler');
-const { isNonEmptyString, parsePage, DELETED_USER_LABEL } = require('../utilities/controller-helpers');
+const {
+  isNonEmptyString,
+  parsePage,
+  DELETED_USER_LABEL,
+  isOwnerOrAdmin,
+} = require('../utilities/controller-helpers');
 
 const { MAX_MEMBERS } = Circle;
 const INVITES_PAGE_SIZE = 12;
@@ -25,10 +30,6 @@ function validateCircleInput(body, { partial = false } = {}) {
   return null;
 }
 
-function canModify(circle, user) {
-  return circle.owner.toString() === user._id.toString() || user.roles.includes('Admin');
-}
-
 // Distinct from isOwnerOrMember on the model: this checks whether a specific
 // *target* user (not necessarily the requester) is already a member — used
 // to guard against double-adding, not to authorize a view.
@@ -37,7 +38,7 @@ function isMember(circle, user) {
 }
 
 function canView(circle, user) {
-  return canModify(circle, user) || circle.isOwnerOrMember(user._id);
+  return isOwnerOrAdmin(circle, user) || circle.isOwnerOrMember(user._id);
 }
 
 // Attaches usernames to the owner and each member, without changing the
@@ -128,7 +129,7 @@ module.exports = {
     Circle.findById(id)
       .then((circle) => {
         if (!circle) return res.status(404).json({ error: 'Circle not found' });
-        if (!canModify(circle, req.user)) {
+        if (!isOwnerOrAdmin(circle, req.user)) {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
 
@@ -153,7 +154,7 @@ module.exports = {
     Circle.findById(id)
       .then((circle) => {
         if (!circle) return res.status(404).json({ error: 'Circle not found' });
-        if (!canModify(circle, req.user)) {
+        if (!isOwnerOrAdmin(circle, req.user)) {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
         // Any album shared with this circle would otherwise be left
@@ -187,7 +188,7 @@ module.exports = {
     Circle.findById(id)
       .then((circle) => {
         if (!circle) return res.status(404).json({ error: 'Circle not found' });
-        if (!canModify(circle, req.user)) {
+        if (!isOwnerOrAdmin(circle, req.user)) {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
         if (circle.owner.toString() === userId) {
@@ -254,7 +255,7 @@ module.exports = {
 
         // Either the owner removes any member, or a member removes themselves.
         const isSelfRemoval = req.user._id.toString() === userId;
-        if (!canModify(circle, req.user) && !isSelfRemoval) {
+        if (!isOwnerOrAdmin(circle, req.user) && !isSelfRemoval) {
           return res.status(403).json({ error: 'You cannot remove this member' });
         }
         if (!isMember(circle, { _id: userId })) {

@@ -44,4 +44,31 @@ describe('Pagination', () => {
     await user.click(screen.getByRole('button', { name: 'Previous page' }));
     expect(onPageChange).toHaveBeenCalledWith(1);
   });
+
+  test('collapses a large page count into first/last plus neighbors of the current page', () => {
+    render(<Pagination page={50} totalPages={200} onPageChange={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Page 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 49' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 50' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Page 51' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 200' })).toBeInTheDocument();
+
+    // Only the numbered buttons above, plus Previous/Next, should render —
+    // not one button per page.
+    expect(screen.getAllByRole('button')).toHaveLength(7);
+    expect(screen.queryByRole('button', { name: 'Page 2' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Page 199' })).not.toBeInTheDocument();
+  });
+
+  test('does not collapse pages near either end of a large page count', () => {
+    render(<Pagination page={2} totalPages={200} onPageChange={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Page 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Page 3' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 200' })).toBeInTheDocument();
+    // Only one ellipsis is needed — the gap toward the end.
+    expect(screen.getAllByText('…')).toHaveLength(1);
+  });
 });

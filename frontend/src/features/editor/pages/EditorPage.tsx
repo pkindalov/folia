@@ -61,7 +61,7 @@ function describeRejections(rejected: Rejection[]): string[] {
 
 export default function EditorPage() {
   const { id } = useParams();
-  const isEdit = !!id;
+  const isEdit = id !== undefined;
 
   const albumQuery = useAlbum(id);
   const createAlbum = useCreateAlbum();
@@ -89,7 +89,7 @@ export default function EditorPage() {
   const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === me?._id);
   const assignedCircle = assignedCircleQuery.data;
   const assignedCircleIsMissing =
-    !!assignedCircle &&
+    assignedCircle !== undefined &&
     assignedCircle.owner === me?._id &&
     !ownedCirclesFromList.some((circle) => circle._id === assignedCircle._id);
   const ownedCircles = assignedCircleIsMissing
@@ -224,7 +224,7 @@ export default function EditorPage() {
                 id="album-title"
                 className="line-input w-full py-2 text-body-text"
                 placeholder="Name this volume…"
-                aria-invalid={!!errors.title}
+                aria-invalid={errors.title !== undefined}
                 aria-describedby={errors.title ? 'album-title-error' : undefined}
                 {...register('title')}
               />
@@ -244,7 +244,7 @@ export default function EditorPage() {
                 rows={3}
                 className="line-input w-full py-2 text-body-text resize-none"
                 placeholder="A few words about this story…"
-                aria-invalid={!!errors.description}
+                aria-invalid={errors.description !== undefined}
                 {...register('description')}
               />
               {errors.description && (
