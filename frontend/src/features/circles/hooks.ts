@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as circlesApi from './api';
 import type { CircleFormInput } from './schemas';
 
@@ -6,6 +6,22 @@ export function useCircles(page: number) {
   return useQuery({
     queryKey: ['circles', 'list', { page }],
     queryFn: () => circlesApi.listCircles(page),
+  });
+}
+
+// For pickers (e.g. the editor's "share with circle" dropdown) that need to
+// list every circle rather than one fixed-size page at a time — pages are
+// fetched on demand via fetchNextPage and accumulated, instead of the caller
+// juggling a page number that a dropdown has no natural UI for.
+export function useCirclesInfinite() {
+  return useInfiniteQuery({
+    queryKey: ['circles', 'list', 'infinite'],
+    queryFn: ({ pageParam }) => circlesApi.listCircles(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.total / lastPage.limit);
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined;
+    },
   });
 }
 

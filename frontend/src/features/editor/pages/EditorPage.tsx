@@ -6,7 +6,7 @@ import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PagesPanel from '../components/PagesPanel';
 import { useMe } from '../../auth';
-import { useCircle, useCircles } from '../../circles';
+import { useCircle, useCirclesInfinite } from '../../circles';
 import {
   albumFormSchema,
   type AlbumFormInput,
@@ -69,15 +69,14 @@ export default function EditorPage() {
   const deleteAlbum = useDeleteAlbum();
   const archiveAlbum = useArchiveAlbum(id ?? '');
   const { data: me } = useMe();
-  const circlesQuery = useCircles(1);
+  const circlesQuery = useCirclesInfinite();
   // The circle the album is already restricted to might not be on the first
   // page of the general list (or might have fallen off it) — fetch it
   // directly so the picker never silently drops the album's current state.
   const assignedCircleQuery = useCircle(albumQuery.data?.sharedWithCircle ?? undefined);
 
-  const ownedCirclesFromList = (circlesQuery.data?.circles ?? []).filter(
-    (circle) => circle.owner === me?._id
-  );
+  const circlesFromList = circlesQuery.data?.pages.flatMap((page) => page.circles) ?? [];
+  const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === me?._id);
   const assignedCircle = assignedCircleQuery.data;
   const assignedCircleIsMissing =
     !!assignedCircle &&
@@ -95,6 +94,7 @@ export default function EditorPage() {
   const [rejections, setRejections] = useState<string[]>([]);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string>();
   const [settingCoverPhotoId, setSettingCoverPhotoId] = useState<string>();
+  const [savingCaptionPhotoId, setSavingCaptionPhotoId] = useState<string>();
 
   // The cover is whichever photo was explicitly chosen; absent that, the
   // earliest-uploaded one — pagesQuery is already sorted oldest-first.
@@ -160,7 +160,11 @@ export default function EditorPage() {
   };
 
   const onCaptionChange = (photoId: string, caption: string) => {
-    updateCaption.mutate({ pageId: photoId, caption });
+    setSavingCaptionPhotoId(photoId);
+    updateCaption.mutate(
+      { pageId: photoId, caption },
+      { onSettled: () => setSavingCaptionPhotoId(undefined) }
+    );
   };
 
   const onSetCoverPhoto = (photoId: string) => {
@@ -276,19 +280,31 @@ export default function EditorPage() {
                     to restrict who can see this album.
                   </p>
                 ) : (
-                  <select
-                    className="line-input w-full py-2 text-body-text"
-                    {...register('sharedWithCircle', {
-                      setValueAs: (value) => (value === '' ? null : value),
-                    })}
-                  >
-                    <option value="">Open to any signed-in user</option>
-                    {ownedCircles.map((circle) => (
-                      <option key={circle._id} value={circle._id}>
-                        {circle.name}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      className="line-input w-full py-2 text-body-text"
+                      {...register('sharedWithCircle', {
+                        setValueAs: (value) => (value === '' ? null : value),
+                      })}
+                    >
+                      <option value="">Open to any signed-in user</option>
+                      {ownedCircles.map((circle) => (
+                        <option key={circle._id} value={circle._id}>
+                          {circle.name}
+                        </option>
+                      ))}
+                    </select>
+                    {circlesQuery.hasNextPage && (
+                      <button
+                        type="button"
+                        onClick={() => circlesQuery.fetchNextPage()}
+                        disabled={circlesQuery.isFetchingNextPage}
+                        className="mt-2 font-ui text-ui-label uppercase text-xs text-secondary hover:text-primary disabled:opacity-50 transition-colors"
+                      >
+                        {circlesQuery.isFetchingNextPage ? 'Loading…' : 'Load more circles'}
+                      </button>
+                    )}
+                  </>
                 )}
               </fieldset>
             )}
@@ -381,6 +397,7 @@ export default function EditorPage() {
                   deletingPhotoId={deletingPhotoId}
                   coverPhotoId={coverPhotoId}
                   settingCoverPhotoId={settingCoverPhotoId}
+                  savingCaptionPhotoId={savingCaptionPhotoId}
                   onFilesSelected={onFilesSelected}
                   onRemovePhoto={onRemovePhoto}
                   onSetCoverPhoto={onSetCoverPhoto}

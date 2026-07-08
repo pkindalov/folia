@@ -124,16 +124,26 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
 
 export default function CirclesPage() {
   const [page, setPage] = useState(1);
+  const [invitesPage, setInvitesPage] = useState(1);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const { data, isLoading, isError, error } = useCircles(page);
-  const invitesQuery = useMyInvites(1);
+  const invitesQuery = useMyInvites(invitesPage);
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const invitesTotalPages = invitesQuery.data
+    ? Math.ceil(invitesQuery.data.total / invitesQuery.data.limit)
+    : 0;
 
   // Deleting the last circle on a later page can leave `page` pointing past
   // the new last page — fall back to it rather than showing a blank grid.
   useEffect(() => {
     if (totalPages > 0 && page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
+
+  // Accepting/declining the last invite on a later page can leave
+  // `invitesPage` pointing past the new last page.
+  useEffect(() => {
+    if (invitesTotalPages > 0 && invitesPage > invitesTotalPages) setInvitesPage(invitesTotalPages);
+  }, [invitesPage, invitesTotalPages]);
 
   return (
     <AppShell>
@@ -157,6 +167,11 @@ export default function CirclesPage() {
                   <InviteCard key={invite._id} invite={invite} />
                 ))}
               </div>
+              <Pagination
+                page={invitesPage}
+                totalPages={invitesTotalPages}
+                onPageChange={setInvitesPage}
+              />
             </div>
           )}
 

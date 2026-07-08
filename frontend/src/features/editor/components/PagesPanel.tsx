@@ -21,6 +21,7 @@ type PagesPanelProps = {
   deletingPhotoId?: string;
   coverPhotoId?: string;
   settingCoverPhotoId?: string;
+  savingCaptionPhotoId?: string;
   onFilesSelected: (files: File[]) => void;
   onRemovePhoto: (photoId: string) => void;
   onSetCoverPhoto: (photoId: string) => void;
@@ -46,6 +47,7 @@ export default function PagesPanel({
   deletingPhotoId,
   coverPhotoId,
   settingCoverPhotoId,
+  savingCaptionPhotoId,
   onFilesSelected,
   onRemovePhoto,
   onSetCoverPhoto,
@@ -188,6 +190,7 @@ export default function PagesPanel({
               isDeleting={deletingPhotoId === photo._id}
               isCover={photo._id === coverPhotoId}
               isSettingCover={settingCoverPhotoId === photo._id}
+              isSavingCaption={savingCaptionPhotoId === photo._id}
               onRemove={() => onRemovePhoto(photo._id)}
               onSetCover={() => onSetCoverPhoto(photo._id)}
               onOpenPhoto={() => setLightboxIndex(index)}

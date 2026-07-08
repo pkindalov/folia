@@ -174,6 +174,62 @@ describe('EditorPage — edit', () => {
     expect(screen.getByRole('option', { name: 'Other Circle' })).toBeInTheDocument();
   });
 
+  test('loads more circles into the picker when "Load more circles" is clicked', async () => {
+    const restrictedAlbum = { album: { ...ALBUM.album, visibility: 'shared' } };
+    const page1Circle = {
+      _id: 'c1',
+      name: 'Circle One',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+    const page2Circle = {
+      _id: 'c2',
+      name: 'Circle Two',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+
+    vi.mocked(fetch).mockImplementation((url) => {
+      const path = String(url);
+      calls.push({ url: path });
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.endsWith('/api/albums/a1')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(restrictedAlbum),
+        } as Response);
+      }
+      if (path.includes('/api/circles')) {
+        const page = new URL(path, 'http://localhost').searchParams.get('page') ?? '1';
+        const body =
+          page === '2'
+            ? { circles: [page2Circle], total: 13, page: 2, limit: 12 }
+            : { circles: [page1Circle], total: 13, page: 1, limit: 12 };
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    expect(await screen.findByRole('option', { name: 'Circle One' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Circle Two' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /load more circles/i }));
+
+    expect(await screen.findByRole('option', { name: 'Circle Two' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /load more circles/i })).not.toBeInTheDocument();
+  });
+
   test('saves changes with PUT and returns to the gallery', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
@@ -385,7 +441,7 @@ describe('EditorPage — pages panel', () => {
     expect(await screen.findByText('Photo not found')).toBeInTheDocument();
   });
 
-  test('saves a caption when the field loses focus', async () => {
+  test('saves a caption when the Save caption button is clicked', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
       'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
@@ -399,7 +455,9 @@ describe('EditorPage — pages panel', () => {
 
     const captionField = await screen.findByLabelText(/caption for photo1\.jpg/i);
     await user.type(captionField, 'A day at the lake');
-    await user.tab();
+    await user.click(
+      await screen.findByRole('button', { name: /save caption for photo1\.jpg/i })
+    );
 
     await waitFor(() => {
       const put = calls.find(
@@ -423,9 +481,86 @@ describe('EditorPage — pages panel', () => {
     await user.click(captionField);
     await user.tab();
 
+    expect(
+      screen.queryByRole('button', { name: /save caption for photo1\.jpg/i })
+    ).not.toBeInTheDocument();
     expect(calls.some((c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT')).toBe(
       false
     );
+  });
+
+  test('leaving the caption field without clicking Save does not save it', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderEdit();
+
+    const captionField = await screen.findByLabelText(/caption for photo1\.jpg/i);
+    await user.type(captionField, 'A day at the lake');
+    await user.tab();
+
+    expect(calls.some((c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT')).toBe(
+      false
+    );
+    expect(
+      await screen.findByRole('button', { name: /save caption for photo1\.jpg/i })
+    ).toBeInTheDocument();
+  });
+
+  test('cannot fire a second caption save while the first is still in flight', async () => {
+    let resolvePut!: (value: Response) => void;
+    const putPromise = new Promise<Response>((resolve) => {
+      resolvePut = resolve;
+    });
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      calls.push({ url: String(url), options });
+      const method = options?.method ?? 'GET';
+      const path = String(url);
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.includes('/api/albums/a1/pages') && method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ pages: [PAGE] }),
+        } as Response);
+      }
+      if (path.endsWith('/api/albums/a1') && method === 'GET') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ALBUM) } as Response);
+      }
+      if (path.includes('/api/albums/a1/pages/p1') && method === 'PUT') {
+        return putPromise;
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderEdit();
+
+    const captionField = await screen.findByLabelText(/caption for photo1\.jpg/i);
+    await user.type(captionField, 'A day at the lake');
+    const saveButton = await screen.findByRole('button', {
+      name: /save caption for photo1\.jpg/i,
+    });
+    await user.click(saveButton);
+
+    await waitFor(() => expect(saveButton).toBeDisabled());
+    await user.click(saveButton);
+
+    const putCallsInFlight = calls.filter(
+      (c) => c.url.includes('/api/albums/a1/pages/p1') && c.options?.method === 'PUT'
+    );
+    expect(putCallsInFlight).toHaveLength(1);
+
+    resolvePut({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ page: { ...PAGE, caption: 'A day at the lake' } }),
+    } as Response);
   });
 
   test('marks the earliest-uploaded photo as the cover by default', async () => {

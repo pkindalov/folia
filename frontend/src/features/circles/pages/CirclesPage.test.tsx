@@ -178,6 +178,42 @@ describe('CirclesPage', () => {
     });
   });
 
+  test('shows numbered pagination for invites and requests the clicked page', async () => {
+    vi.mocked(fetch).mockImplementation((url) => {
+      const path = String(url);
+      calledUrls.push(path);
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.includes('/api/circles/invites')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ invites: [INVITE], total: 30, page: 1, limit: 12 }),
+        } as Response);
+      }
+      // No circles of its own — keeps the circles grid's Pagination from
+      // also rendering, so the invites Pagination is unambiguous.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ circles: [], total: 0, page: 1, limit: 12 }),
+      } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Distant Cousins');
+    expect(screen.getByRole('button', { name: 'Page 3' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+    await waitFor(() => {
+      expect(
+        calledUrls.some((url) => url.includes('/api/circles/invites') && url.includes('page=2'))
+      ).toBe(true);
+    });
+  });
+
   test('declines a pending invitation', async () => {
     vi.mocked(fetch).mockImplementation((url, options) => {
       const path = String(url);

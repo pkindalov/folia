@@ -15,6 +15,7 @@ type PageThumbnailProps = {
   isDeleting: boolean;
   isCover: boolean;
   isSettingCover: boolean;
+  isSavingCaption: boolean;
   onRemove: () => void;
   onSetCover: () => void;
   onOpenPhoto: () => void;
@@ -29,6 +30,7 @@ export default function PageThumbnail({
   isDeleting,
   isCover,
   isSettingCover,
+  isSavingCaption,
   onRemove,
   onSetCover,
   onOpenPhoto,
@@ -45,8 +47,14 @@ export default function PageThumbnail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photo._id]);
 
-  const handleBlur = () => {
-    if (caption !== (photo.caption ?? '')) onCaptionChange(caption);
+  // Saved explicitly rather than on blur, so only one save is ever in
+  // flight for this caption — two quick blurs used to be able to fire two
+  // overlapping requests, and whichever the server saw last would win,
+  // sometimes silently reverting a newer edit.
+  const hasUnsavedCaption = caption !== (photo.caption ?? '');
+
+  const handleSaveCaption = () => {
+    if (hasUnsavedCaption) onCaptionChange(caption);
   };
 
   return (
@@ -86,13 +94,28 @@ export default function PageThumbnail({
       <textarea
         value={caption}
         onChange={(event) => setCaption(event.target.value)}
-        onBlur={handleBlur}
         rows={2}
         maxLength={MAX_CAPTION_LENGTH}
         placeholder="Tell its story…"
         aria-label={`Caption for ${photo.filename || 'this photo'}`}
         className="mt-1.5 w-full px-1 py-0.5 font-body italic text-xs text-on-surface-variant text-center bg-transparent border-none resize-none focus:outline-none focus-visible:ring-1 focus-visible:ring-secondary/50 rounded-xs"
       />
+      {hasUnsavedCaption && (
+        <button
+          type="button"
+          onClick={handleSaveCaption}
+          disabled={isSavingCaption}
+          aria-label={`Save caption for ${photo.filename || 'this photo'}`}
+          className="mt-0.5 w-full flex items-center justify-center gap-1 font-ui text-[10px] uppercase tracking-wide text-secondary hover:text-primary disabled:opacity-50 transition-colors"
+        >
+          {isSavingCaption ? (
+            <Icon name="progress_activity" className="text-xs animate-spin" />
+          ) : (
+            <Icon name="save" className="text-xs" />
+          )}
+          {isSavingCaption ? 'Saving…' : 'Save caption'}
+        </button>
+      )}
       <button
         type="button"
         onClick={onRemove}
