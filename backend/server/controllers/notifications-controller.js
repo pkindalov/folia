@@ -39,7 +39,7 @@ module.exports = {
 
     Notification.findOneAndUpdate(
       { _id: id, recipient: req.user._id },
-      { $set: { read: true } },
+      { $set: { read: true, readAt: new Date() } },
       { new: true }
     )
       .then((updated) => {

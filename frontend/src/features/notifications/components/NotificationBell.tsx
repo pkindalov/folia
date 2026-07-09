@@ -28,6 +28,7 @@ type NotificationBellProps = {
   onPageChange: (page: number) => void;
   onItemClick: (notification: NotificationItemData) => void;
   onDismiss: (id: string) => void;
+  dismissingIds: Set<string>;
 };
 
 const MAX_DISPLAYED_UNREAD_COUNT = 9;
@@ -82,6 +83,7 @@ export default function NotificationBell({
   onPageChange,
   onItemClick,
   onDismiss,
+  dismissingIds,
 }: NotificationBellProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -215,6 +217,7 @@ export default function NotificationBell({
                     isLast={index === notifications.length - 1}
                     onItemClick={handleItemClick}
                     onDismiss={onDismiss}
+                    isDismissing={dismissingIds.has(notification._id)}
                   />
                 ))}
               </ul>

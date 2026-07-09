@@ -10,9 +10,20 @@ import { formatRelativeTime } from '../relativeTime';
 import { toast } from '../../../lib/toast';
 import useClampedPage from '../../../hooks/useClampedPage';
 
+function withId(ids: Set<string>, id: string): Set<string> {
+  return new Set(ids).add(id);
+}
+
+function withoutId(ids: Set<string>, id: string): Set<string> {
+  const next = new Set(ids);
+  next.delete(id);
+  return next;
+}
+
 export default function NotificationBellContainer({ variant }: { variant: 'sidebar' | 'mobile' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
 
   const unreadCountQuery = useUnreadNotificationCount();
   const notificationsQuery = useNotifications(page, isOpen);
@@ -33,9 +44,16 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
     }
   };
 
+  // Guards against a fast double-click firing a second DELETE for the same
+  // notification — without this, the second request lands after the first
+  // already removed it and surfaces a spurious "not found" error toast.
   const onDismiss = (id: string) => {
+    if (dismissingIds.has(id)) return;
+
+    setDismissingIds((prev) => withId(prev, id));
     dismiss.mutate(id, {
       onError: (error) => toast.error(error.message),
+      onSettled: () => setDismissingIds((prev) => withoutId(prev, id)),
     });
   };
 
@@ -72,6 +90,7 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
       onPageChange={setPage}
       onItemClick={onItemClick}
       onDismiss={onDismiss}
+      dismissingIds={dismissingIds}
     />
   );
 }

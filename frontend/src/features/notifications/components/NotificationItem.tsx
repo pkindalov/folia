@@ -9,12 +9,19 @@ type NotificationItemProps = {
   isLast: boolean;
   onItemClick: (notification: NotificationItemData) => void;
   onDismiss: (id: string) => void;
+  isDismissing: boolean;
 };
 
 // Two sibling interactive elements, not a nested button-in-link: the row
 // Link is the primary click target, and the dismiss button sits beside it
 // (never inside it) to keep Tab order sane and the markup valid.
-export default function NotificationItem({ notification, isLast, onItemClick, onDismiss }: NotificationItemProps) {
+export default function NotificationItem({
+  notification,
+  isLast,
+  onItemClick,
+  onDismiss,
+  isDismissing,
+}: NotificationItemProps) {
   const { _id, actorUsername, circleName, read, relativeTime } = notification;
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -60,8 +67,9 @@ export default function NotificationItem({ notification, isLast, onItemClick, on
       <button
         type="button"
         onClick={onDismissClick}
+        disabled={isDismissing}
         aria-label={`Dismiss notification from ${actorUsername}`}
-        className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
+        className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
       >
         <Icon name="close" className="text-base" />
       </button>

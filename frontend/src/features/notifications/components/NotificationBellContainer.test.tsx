@@ -177,6 +177,48 @@ describe('NotificationBellContainer', () => {
     await waitFor(() => expect(screen.getByText('No notifications yet.')).toBeInTheDocument());
   });
 
+  test('a second click on dismiss while the first is still in flight does not fire a second request or an error toast', async () => {
+    notifications = [baseNotification];
+    let resolveDelete: (() => void) | undefined;
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const path = String(url);
+      const method = (options?.method ?? 'GET').toUpperCase();
+
+      if (method === 'GET' && path.includes('/unread-count')) {
+        return respond({ count: notifications.filter((n) => !n.read).length });
+      }
+      if (method === 'GET' && path.startsWith('/api/notifications?')) {
+        return respond({ notifications, total: notifications.length, page: 1, limit: 1 });
+      }
+      if (method === 'DELETE') {
+        return new Promise((resolve) => {
+          resolveDelete = () => {
+            notifications = [];
+            resolve({ ok: true, status: 200, json: () => Promise.resolve({ deleted: true }) } as Response);
+          };
+        });
+      }
+      return respond({ error: 'Not found' }, 404);
+    });
+
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    const dismissButton = await screen.findByLabelText('Dismiss notification from maria');
+    await user.click(dismissButton);
+    await user.click(dismissButton);
+
+    resolveDelete?.();
+    await waitFor(() => expect(screen.getByText('No notifications yet.')).toBeInTheDocument());
+
+    const deleteCalls = vi
+      .mocked(fetch)
+      .mock.calls.filter(([, options]) => (options?.method ?? '').toUpperCase() === 'DELETE');
+    expect(deleteCalls).toHaveLength(1);
+    expect(screen.queryByText('Notification not found')).not.toBeInTheDocument();
+  });
+
   test('clamps back to the last valid page after dismissing the only item on a later page', async () => {
     notifications = [
       { ...baseNotification, _id: 'n1', actorUsername: 'maria', circleName: 'The Sterling Family' },

@@ -138,7 +138,7 @@ describe('notifications-controller', () => {
 
       expect(findOneAndUpdate).toHaveBeenCalledWith(
         { _id: NOTIFICATION_ID, recipient: USER_ID },
-        { $set: { read: true } },
+        { $set: { read: true, readAt: expect.any(Date) } },
         expect.objectContaining({ new: true })
       );
       expect(res.json).toHaveBeenCalledWith(
