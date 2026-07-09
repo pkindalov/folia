@@ -3,6 +3,7 @@ const users = require('./users-controller');
 const albums = require('./albums-controller');
 const pages = require('./pages-controller');
 const circles = require('./circles-controller');
+const notifications = require('./notifications-controller');
 
 module.exports = {
   home,
@@ -10,4 +11,5 @@ module.exports = {
   albums,
   pages,
   circles,
+  notifications,
 };

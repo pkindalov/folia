@@ -1,5 +1,6 @@
-import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useRef, type MouseEvent, type ReactNode } from 'react';
 import useFocusTrap from '../hooks/useFocusTrap';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 type ModalProps = {
   isOpen: boolean;
@@ -13,16 +14,7 @@ type ModalProps = {
 export default function Modal({ isOpen, onClose, labelledBy, children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(panelRef, isOpen);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose]);
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

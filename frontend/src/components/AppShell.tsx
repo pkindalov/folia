@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useMe, useLogout } from '../features/auth';
+import { NotificationBellContainer } from '../features/notifications';
 import Icon from './Icon';
 
 const NAV_ITEMS = [
@@ -50,6 +51,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           >
             {user.username.charAt(0).toUpperCase()}
           </span>
+          <NotificationBellContainer variant="mobile" />
           <button
             onClick={logout}
             className="text-on-surface-variant hover:text-secondary transition-colors"
@@ -85,6 +87,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto pt-8 border-t border-outline-variant/50 flex flex-col gap-6">
+          <NotificationBellContainer variant="sidebar" />
           <p className="font-body text-sm text-on-surface-variant px-4">
             Signed in as <strong>{user.username}</strong> ({user.email})
             {user.roles.includes('Admin') && ' — Admin'}

@@ -101,6 +101,20 @@ module.exports = (app) => {
     controllers.circles.removeMember
   );
 
+  // Notifications
+  app.get('/api/notifications', auth.isAuthenticated, controllers.notifications.list);
+  app.get(
+    '/api/notifications/unread-count',
+    auth.isAuthenticated,
+    controllers.notifications.unreadCount
+  );
+  app.put(
+    '/api/notifications/:id/read',
+    auth.isAuthenticated,
+    controllers.notifications.markRead
+  );
+  app.delete('/api/notifications/:id', auth.isAuthenticated, controllers.notifications.dismiss);
+
   // 404 for unknown routes
   app.all('*', (req, res) => {
     res.status(404).json({ error: 'Not found' });

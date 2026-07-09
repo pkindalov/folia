@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Circle = require('../data/Circle');
 const User = require('../data/User');
 const Album = require('../data/Album');
+const Notification = require('../data/Notification');
 const errorHandler = require('../utilities/error-handler');
 const {
   isNonEmptyString,
@@ -59,6 +60,28 @@ function withUsernames(circle) {
       })),
     };
   });
+}
+
+// Fire-and-forget: notification bookkeeping must never turn an otherwise
+// successful circle-membership response into a failure, so every call site
+// below logs and swallows rather than propagating into the response chain.
+function notifyCircleInvite({ circleId, circleName, actorUsername, recipientId }) {
+  Notification.create({
+    recipient: recipientId,
+    type: 'circle_invite',
+    circle: circleId,
+    circleName,
+    actorUsername,
+  })
+    .then(() => Notification.pruneExcessForRecipient(recipientId))
+    .catch((err) => console.error('Failed to create/prune circle-invite notification', err));
+}
+
+function markCircleInviteRead({ circleId, recipientId }) {
+  Notification.updateMany(
+    { recipient: recipientId, circle: circleId, type: 'circle_invite', read: false },
+    { $set: { read: true } }
+  ).catch((err) => console.error('Failed to mark circle-invite notification read', err));
 }
 
 module.exports = {
@@ -245,6 +268,12 @@ module.exports = {
             { new: true }
           ).then((updated) => {
             if (updated) {
+              notifyCircleInvite({
+                circleId: id,
+                circleName: updated.name,
+                actorUsername: req.user.username,
+                recipientId: userId,
+              });
               return withUsernames(updated).then((circle) => res.status(201).json({ circle }));
             }
             // Someone else's concurrent request already changed the
@@ -282,9 +311,16 @@ module.exports = {
         if (!isOwnerOrAdmin(circle, req.user) && !isSelfRemoval) {
           return res.status(403).json({ error: 'You cannot remove this member' });
         }
-        if (!isMember(circle, { _id: userId })) {
+        const targetMember = circle.members.find(
+          (member) => member.user.toString() === userId
+        );
+        if (!targetMember) {
           return res.status(404).json({ error: 'Member not found in this circle' });
         }
+        // Read before the $pull below removes it — this is a self-decline
+        // of a still-pending invite (not an accepted member leaving), so the
+        // matching invite notification should flip to read too.
+        const isSelfDeclineOfPendingInvite = isSelfRemoval && targetMember.status === 'pending';
 
         // Atomic $pull — avoids a stale-array race against a concurrent
         // add/remove on the same circle, mirroring addMember's approach.
@@ -296,6 +332,9 @@ module.exports = {
           // The circle was deleted by a concurrent request between the read
           // above and this update.
           if (!updated) return res.status(404).json({ error: 'Circle not found' });
+          if (isSelfDeclineOfPendingInvite) {
+            markCircleInviteRead({ circleId: id, recipientId: userId });
+          }
           return withUsernames(updated).then((circle) => res.json({ circle }));
         });
       })
@@ -361,6 +400,7 @@ module.exports = {
     )
       .then((updated) => {
         if (!updated) return res.status(404).json({ error: 'Invitation not found' });
+        markCircleInviteRead({ circleId: id, recipientId: userId });
         return withUsernames(updated).then((circle) => res.json({ circle }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to accept invitation' }));
