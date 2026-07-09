@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as circlesApi from './api';
 import type { CircleFormInput } from './schemas';
 
@@ -6,6 +12,7 @@ export function useCircles(page: number) {
   return useQuery({
     queryKey: ['circles', 'list', { page }],
     queryFn: () => circlesApi.listCircles(page),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -109,6 +116,7 @@ export function useMyInvites(page: number) {
   return useQuery({
     queryKey: ['circles', 'invites', { page }],
     queryFn: () => circlesApi.listMyInvites(page),
+    placeholderData: keepPreviousData,
   });
 }
 

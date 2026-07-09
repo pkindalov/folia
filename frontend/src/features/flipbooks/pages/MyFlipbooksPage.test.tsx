@@ -179,6 +179,53 @@ describe('MyFlipbooksPage', () => {
     });
   });
 
+  test('keeps the current page and pagination mounted while the next page loads', async () => {
+    let resolvePage2!: (response: Response) => void;
+    const page2Promise = new Promise<Response>((resolve) => {
+      resolvePage2 = resolve;
+    });
+    vi.mocked(fetch).mockImplementation((url) => {
+      const path = String(url);
+      calledUrls.push(path);
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.includes('page=2')) {
+        return page2Promise;
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ...ALBUMS, total: 30 }),
+      } as Response);
+    });
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Summer in the Valley');
+
+    const page2Button = screen.getByRole('button', { name: 'Page 2' });
+    await user.click(page2Button);
+    await waitFor(() => {
+      expect(calledUrls.some((url) => url.includes('page=2'))).toBe(true);
+    });
+
+    // The page-2 request is still in flight: the previous page's content and
+    // the pager itself must stay mounted (and focus must stay put) instead of
+    // unmounting into a bare loading state.
+    expect(screen.getByText('Summer in the Valley')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 2' })).toBe(document.activeElement);
+
+    resolvePage2({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ albums: [ALBUM_2], total: 30, page: 2, limit: 12 }),
+    } as Response);
+    await waitFor(() => {
+      expect(screen.queryByText('Summer in the Valley')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Letters from Home')).toBeInTheDocument();
+  });
+
   test('only shows the create-volume tile on the first page', async () => {
     mockApi({ '/api/users/me': { body: ME }, '/api/albums': { body: { ...ALBUMS, total: 30 } } });
     const user = userEvent.setup();

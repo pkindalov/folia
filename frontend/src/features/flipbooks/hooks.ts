@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as albumsApi from './api';
 import type { Album, AlbumFormInput } from './schemas';
@@ -7,6 +7,7 @@ export function useAlbums(page: number, visibility?: Album['visibility']) {
   return useQuery({
     queryKey: ['albums', 'list', { page, visibility }],
     queryFn: () => albumsApi.listAlbums(page, visibility),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -14,6 +15,7 @@ export function usePublicAlbums(page: number) {
   return useQuery({
     queryKey: ['albums', 'public', page],
     queryFn: () => albumsApi.listPublicAlbums(page),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -21,6 +23,7 @@ export function useArchivedAlbums(page: number) {
   return useQuery({
     queryKey: ['albums', 'archived', page],
     queryFn: () => albumsApi.listArchivedAlbums(page),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -28,6 +31,7 @@ export function useSharedWithMeAlbums(page: number) {
   return useQuery({
     queryKey: ['albums', 'shared-with-me', page],
     queryFn: () => albumsApi.listSharedWithMeAlbums(page),
+    placeholderData: keepPreviousData,
   });
 }
 
