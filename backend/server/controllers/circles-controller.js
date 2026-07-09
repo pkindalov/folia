@@ -157,18 +157,18 @@ module.exports = {
         if (!isOwnerOrAdmin(circle, req.user)) {
           return res.status(403).json({ error: 'You do not own this circle' });
         }
-        // Any album shared with this circle would otherwise be left
-        // pointing at a deleted circle — reset it to private rather than
-        // leave it in a dangling, effectively-inaccessible-but-still-marked
-        // "shared" state.
-        return circle
-          .deleteOne()
-          .then(() =>
-            Album.updateMany(
-              { sharedWithCircle: id },
-              { sharedWithCircle: null, visibility: 'private' }
-            )
-          )
+        // Unshare albums *before* deleting the circle (not after): these are
+        // two separate writes with no surrounding transaction, so if the
+        // second one failed after the first had already succeeded, an album
+        // would be left pointing at a deleted circle. Doing it in this order
+        // means the circle is only ever deleted once no album still
+        // references it — if the update fails, the circle (and its
+        // now-still-valid reference) simply survives for a retry.
+        return Album.updateMany(
+          { sharedWithCircle: id },
+          { sharedWithCircle: null, visibility: 'private' }
+        )
+          .then(() => circle.deleteOne())
           .then(() => res.json({ deleted: true }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete circle' }));

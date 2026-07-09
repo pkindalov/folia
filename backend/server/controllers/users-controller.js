@@ -2,11 +2,9 @@ const User = require('mongoose').model('User');
 const encryption = require('../utilities/encryption');
 const errorHandler = require('../utilities/error-handler');
 const auth = require('../config/auth');
+const { isNonEmptyString } = require('../utilities/controller-helpers');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Reject objects like {"$gt": ""} — prevents NoSQL injection via JSON body
-const isNonEmptyString = (v) => typeof v === 'string' && v.length > 0;
 
 module.exports = {
   register: (req, res) => {

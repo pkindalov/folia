@@ -109,3 +109,4 @@ Full endpoint list: `backend/README.md`.
 - `JWT_SECRET` is required — compose refuses to start without it in `.env`
 - `ADMIN_PASSWORD` controls the seeded `Admin` account; reset anytime with `set-admin-password` (see above)
 - Set `CORS_ORIGIN` to your frontend URL once it exists (default allows all origins)
+- Photo URLs are signed for 24h (`backend/server/utilities/signed-url.js`) and can't be revoked early — if an album is made private (or a circle member removed) mid-window, anyone who already has a link keeps access until it expires. Accepted tradeoff for this app's scale; revisit if that window becomes a real concern.
