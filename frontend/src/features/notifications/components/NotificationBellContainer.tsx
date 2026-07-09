@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import NotificationBell, { type NotificationItemData } from './NotificationBell';
 import {
   useUnreadNotificationCount,
@@ -12,7 +11,6 @@ import { toast } from '../../../lib/toast';
 import useClampedPage from '../../../hooks/useClampedPage';
 
 export default function NotificationBellContainer({ variant }: { variant: 'sidebar' | 'mobile' }) {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -33,7 +31,6 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
         onError: (error) => toast.error(error.message),
       });
     }
-    navigate('/circles');
   };
 
   const onDismiss = (id: string) => {

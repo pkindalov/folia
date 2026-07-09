@@ -60,7 +60,7 @@ export default function NotificationItem({ notification, isLast, onItemClick, on
       <button
         type="button"
         onClick={onDismissClick}
-        aria-label="Dismiss notification"
+        aria-label={`Dismiss notification from ${actorUsername}`}
         className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
       >
         <Icon name="close" className="text-base" />

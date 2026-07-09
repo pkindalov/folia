@@ -166,7 +166,7 @@ describe('NotificationBellContainer', () => {
     await screen.findByText(
       (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
     );
-    await user.click(screen.getByLabelText('Dismiss notification'));
+    await user.click(screen.getByLabelText('Dismiss notification from maria'));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
@@ -195,7 +195,7 @@ describe('NotificationBellContainer', () => {
       (_, element) => element?.textContent === 'sam invited you to Book Club'
     );
 
-    await user.click(screen.getByLabelText('Dismiss notification'));
+    await user.click(screen.getByLabelText('Dismiss notification from sam'));
 
     await waitFor(() =>
       expect(

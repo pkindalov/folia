@@ -182,7 +182,10 @@ export default function NotificationBell({
             )}
 
             {!isLoading && errorMessage !== null && (
-              <p className="mx-4 mt-4 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
+              <p
+                role="alert"
+                className="mx-4 mt-4 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm"
+              >
                 {errorMessage}
               </p>
             )}
