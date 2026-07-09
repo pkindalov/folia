@@ -96,7 +96,12 @@ export default function EditorPage() {
       ])
     ).values()
   );
-  const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === me?._id);
+  // When an Admin edits someone else's album, the circles this filter should
+  // match are the album owner's, not the Admin's own — the Admin's circles
+  // would fail the backend's ownership check on save (see
+  // verifySharedCircleOwnership in albums-controller.js).
+  const relevantOwnerId = isEdit ? albumQuery.data?.owner : me?._id;
+  const ownedCirclesFromList = circlesFromList.filter((circle) => circle.owner === relevantOwnerId);
   const assignedCircle = assignedCircleQuery.data;
   // Include the assigned circle even when the requester doesn't own it (an
   // Admin editing someone else's album) — otherwise the <select> has no

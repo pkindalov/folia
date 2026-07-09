@@ -375,6 +375,21 @@ describe('circles-controller', () => {
       expect(circle.deleteOne).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    test('reports the specific partial-failure state when albums are unshared but the delete itself fails', async () => {
+      const circle = fakeCircle();
+      circle.deleteOne.mockRejectedValue(new Error('db down'));
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Album.updateMany).toHaveBeenCalled();
+      expect(circle.deleteOne).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "This circle's albums were unshared, but deleting the circle failed. Please try again.",
+      });
+    });
   });
 
   describe('addMember', () => {

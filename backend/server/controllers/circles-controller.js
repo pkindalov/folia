@@ -176,10 +176,23 @@ module.exports = {
           { sharedWithCircle: id },
           { sharedWithCircle: null, visibility: 'private' }
         )
-          .then(() => circle.deleteOne())
+          .then(() =>
+            // Unsharing already succeeded by this point, so a failure here must
+            // be reported differently: the circle survives, but its albums are
+            // no longer shared with it, and a generic "failed to delete" message
+            // would hide that from the caller.
+            circle.deleteOne().catch(() => Promise.reject(new Error('DELETE_AFTER_UNSHARE_FAILED')))
+          )
           .then(() => res.json({ deleted: true }));
       })
-      .catch(() => res.status(500).json({ error: 'Failed to delete circle' }));
+      .catch((err) => {
+        if (err instanceof Error && err.message === 'DELETE_AFTER_UNSHARE_FAILED') {
+          return res.status(500).json({
+            error: "This circle's albums were unshared, but deleting the circle failed. Please try again.",
+          });
+        }
+        return res.status(500).json({ error: 'Failed to delete circle' });
+      });
   },
 
   addMember: (req, res) => {

@@ -203,6 +203,43 @@ describe('EditorPage — edit', () => {
     expect(await screen.findByRole('option', { name: "Owner's Circle" })).toBeInTheDocument();
   });
 
+  test("an Admin editing another user's album does not see their own circle as a selectable option", async () => {
+    const restrictedAlbum = {
+      album: { ...ALBUM.album, owner: 'owner-id', visibility: 'shared', sharedWithCircle: 'c99' },
+    };
+    const assignedCircle = {
+      _id: 'c99',
+      name: "Owner's Circle",
+      owner: 'owner-id',
+      ownerUsername: 'someoneElse',
+      members: [],
+    };
+    const adminsOwnCircle = {
+      _id: 'c1',
+      name: "Admin's Circle",
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+    mockApi({
+      'GET /api/users/me': { body: { user: { ...ME.user, roles: ['User', 'Admin'] } } },
+      'GET /api/albums/a1': { body: restrictedAlbum },
+      'GET /api/circles/c99': { body: { circle: assignedCircle } },
+      'GET /api/circles': {
+        body: { circles: [adminsOwnCircle], total: 1, page: 1, limit: 12 },
+      },
+    });
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    // The Admin's own circle would fail the backend's ownership check if
+    // picked for someone else's album, so it must not be offered here.
+    expect(await screen.findByRole('option', { name: "Owner's Circle" })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: "Admin's Circle" })).not.toBeInTheDocument();
+  });
+
   test('loads more circles into the picker when "Load more circles" is clicked', async () => {
     const restrictedAlbum = { album: { ...ALBUM.album, visibility: 'shared' } };
     const page1Circle = {
