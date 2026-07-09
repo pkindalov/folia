@@ -610,6 +610,17 @@ describe('circles-controller', () => {
       await flush();
       expect(res.status).toHaveBeenCalledWith(404);
     });
+
+    test('404 for a malformed userId, without touching the DB', () => {
+      const findById = jest.spyOn(Circle, 'findById');
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: 'not-an-id' }, user: owner },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findById).not.toHaveBeenCalled();
+    });
   });
 
   describe('listInvites', () => {
@@ -655,6 +666,17 @@ describe('circles-controller', () => {
       const res = mockRes();
       controller.respondToInvite(
         { params: { id: 'not-an-id', userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('404 for a malformed userId, without touching the DB', () => {
+      const findOneAndUpdate = jest.spyOn(Circle, 'findOneAndUpdate');
+      const res = mockRes();
+      controller.respondToInvite(
+        { params: { id: CIRCLE_ID, userId: 'not-an-id' }, body: { status: 'accepted' }, user: member },
         res
       );
       expect(res.status).toHaveBeenCalledWith(404);

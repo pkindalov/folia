@@ -269,6 +269,9 @@ module.exports = {
     if (!mongoose.isValidObjectId(id)) {
       return res.status(404).json({ error: 'Circle not found' });
     }
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(404).json({ error: 'Member not found in this circle' });
+    }
 
     Circle.findById(id)
       .then((circle) => {
@@ -340,6 +343,9 @@ module.exports = {
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(404).json({ error: 'Circle not found' });
+    }
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(404).json({ error: 'Invitation not found' });
     }
     if (status !== 'accepted') {
       return res.status(400).json({ error: "status must be 'accepted'" });
