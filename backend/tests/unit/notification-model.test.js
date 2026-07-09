@@ -85,6 +85,17 @@ describe('Notification model', () => {
       expect(deleteMany).toHaveBeenCalledWith({ _id: { $in: ['a', 'b', 'c'] } });
     });
 
+    test('prunes already-read notifications before unread ones, oldest first within each group', async () => {
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(203);
+      const query = mockFindQuery([{ _id: 'a' }, { _id: 'b' }, { _id: 'c' }]);
+      jest.spyOn(Notification, 'find').mockReturnValue(query);
+      jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});
+
+      await Notification.pruneExcessForRecipient(RECIPIENT_ID);
+
+      expect(query.sort).toHaveBeenCalledWith({ read: -1, createdAt: 1 });
+    });
+
     test("scopes the count and prune to the given recipient, not other recipients' notifications", async () => {
       const countDocuments = jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
 

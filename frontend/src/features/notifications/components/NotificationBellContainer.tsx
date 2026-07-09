@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import NotificationBell, { type NotificationItemData } from './NotificationBell';
 import {
   useUnreadNotificationCount,
@@ -23,7 +23,7 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
     if (!isOpen) setPage(1);
     setIsOpen(!isOpen);
   };
-  const onClose = () => setIsOpen(false);
+  const onClose = useCallback(() => setIsOpen(false), []);
 
   const onItemClick = (notification: NotificationItemData) => {
     if (!notification.read) {

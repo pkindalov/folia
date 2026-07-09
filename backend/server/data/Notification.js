@@ -16,7 +16,6 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     type: {
       type: String,
@@ -60,18 +59,24 @@ notificationSchema.method({
   },
 });
 
-// Deletes the oldest notifications for a recipient beyond the per-user cap.
-// Best-effort and non-blocking by design (see circles-controller.js) — a
-// failure here should never affect the request that triggered it.
+// Deletes the lowest-priority notifications for a recipient beyond the
+// per-user cap: already-read ones are pruned before unread ones (an unread
+// notification is still actionable and shouldn't disappear just because
+// older read ones are sitting around), and within each group the oldest
+// goes first. Best-effort and non-blocking by design (see
+// circles-controller.js) — a failure here should never affect the request
+// that triggered it.
 notificationSchema.statics.pruneExcessForRecipient = function (recipientId) {
   return this.countDocuments({ recipient: recipientId }).then((count) => {
     const excess = count - MAX_NOTIFICATIONS_PER_USER;
     if (excess <= 0) return null;
 
     return this.find({ recipient: recipientId }, '_id')
-      .sort('createdAt')
+      .sort({ read: -1, createdAt: 1 })
       .limit(excess)
-      .then((oldest) => this.deleteMany({ _id: { $in: oldest.map((doc) => doc._id) } }));
+      .then((lowestPriority) =>
+        this.deleteMany({ _id: { $in: lowestPriority.map((doc) => doc._id) } })
+      );
   });
 };
 

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
 import useFocusTrap from '../../../hooks/useFocusTrap';
@@ -87,8 +87,15 @@ export default function NotificationBell({
   const panelRef = useRef<HTMLDivElement>(null);
   const [anchorStyle, setAnchorStyle] = useState<CSSProperties>({});
 
+  // panelRef/triggerRef are stable across renders (useRef never changes
+  // identity), so this only needs to be computed once — without it, a new
+  // array literal on every render would make useOutsideClick tear down and
+  // re-attach its listener on every re-render while the panel is open (e.g.
+  // each unread-count poll).
+  const outsideClickRefs = useMemo(() => [panelRef, triggerRef], [panelRef, triggerRef]);
+
   useFocusTrap(panelRef, isOpen);
-  useOutsideClick([panelRef, triggerRef], onClose, isOpen);
+  useOutsideClick(outsideClickRefs, onClose, isOpen);
   useEscapeKey(isOpen, onClose);
 
   // The trigger row's exact position on screen depends on layout the bell

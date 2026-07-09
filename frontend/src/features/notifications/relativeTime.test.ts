@@ -27,4 +27,12 @@ describe('formatRelativeTime', () => {
   test('includes the year when the date falls in a previous year', () => {
     expect(formatRelativeTime('2025-06-01T12:00:00.000Z', NOW)).toBe('Jun 1, 2025');
   });
+
+  test('clamps a future timestamp (clock skew) to "Just now" instead of a negative duration', () => {
+    expect(formatRelativeTime('2026-07-09T12:05:00.000Z', NOW)).toBe('Just now');
+  });
+
+  test('renders "Just now" for an unparseable timestamp instead of "Invalid Date"', () => {
+    expect(formatRelativeTime('not-a-date', NOW)).toBe('Just now');
+  });
 });

@@ -84,6 +84,16 @@ function markCircleInviteRead({ circleId, recipientId }) {
   ).catch((err) => console.error('Failed to mark circle-invite notification read', err));
 }
 
+// Used when the circle itself stops existing (deleted, or every pending
+// invite on it revoked) — there is no longer a single recipient to scope to,
+// so every still-unread invite notification for the circle is cleared.
+function markAllCircleInvitesRead(circleId) {
+  Notification.updateMany(
+    { circle: circleId, type: 'circle_invite', read: false },
+    { $set: { read: true } }
+  ).catch((err) => console.error('Failed to mark circle-invite notifications read', err));
+}
+
 module.exports = {
   list: (req, res) => {
     const page = parsePage(req.query);
@@ -206,7 +216,10 @@ module.exports = {
             // would hide that from the caller.
             circle.deleteOne().catch(() => Promise.reject(new Error('DELETE_AFTER_UNSHARE_FAILED')))
           )
-          .then(() => res.json({ deleted: true }));
+          .then(() => {
+            markAllCircleInvitesRead(id);
+            return res.json({ deleted: true });
+          });
       })
       .catch((err) => {
         if (err instanceof Error && err.message === 'DELETE_AFTER_UNSHARE_FAILED') {
@@ -317,10 +330,11 @@ module.exports = {
         if (!targetMember) {
           return res.status(404).json({ error: 'Member not found in this circle' });
         }
-        // Read before the $pull below removes it — this is a self-decline
-        // of a still-pending invite (not an accepted member leaving), so the
-        // matching invite notification should flip to read too.
-        const isSelfDeclineOfPendingInvite = isSelfRemoval && targetMember.status === 'pending';
+        // Read before the $pull below removes it — a still-pending invite is
+        // being revoked (whether the invitee declines it or the owner
+        // cancels it), as opposed to an accepted member leaving, so the
+        // matching invite notification should flip to read too either way.
+        const isPendingInviteRemoval = targetMember.status === 'pending';
 
         // Atomic $pull — avoids a stale-array race against a concurrent
         // add/remove on the same circle, mirroring addMember's approach.
@@ -332,7 +346,7 @@ module.exports = {
           // The circle was deleted by a concurrent request between the read
           // above and this update.
           if (!updated) return res.status(404).json({ error: 'Circle not found' });
-          if (isSelfDeclineOfPendingInvite) {
+          if (isPendingInviteRemoval) {
             markCircleInviteRead({ circleId: id, recipientId: userId });
           }
           return withUsernames(updated).then((circle) => res.json({ circle }));

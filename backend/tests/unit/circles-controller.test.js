@@ -394,6 +394,29 @@ describe('circles-controller', () => {
         error: "This circle's albums were unshared, but deleting the circle failed. Please try again.",
       });
     });
+
+    test('marks any still-pending invite notifications for the circle as read once it is deleted', async () => {
+      const circle = fakeCircle();
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.updateMany).toHaveBeenCalledWith(
+        { circle: CIRCLE_ID, type: 'circle_invite', read: false },
+        { $set: { read: true } }
+      );
+    });
+
+    test('still responds with deleted:true when marking invite notifications read fails', async () => {
+      const circle = fakeCircle();
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      Notification.updateMany.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
   });
 
   describe('addMember', () => {
@@ -716,7 +739,7 @@ describe('circles-controller', () => {
       );
     });
 
-    test('does not touch notifications when the owner removes a pending member (not a self-decline)', async () => {
+    test('marks the invite notification as read when the owner cancels a pending invite (not a self-decline)', async () => {
       jest.spyOn(Circle, 'findById').mockResolvedValue(
         fakeCircle({ members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date() }] })
       );
@@ -727,7 +750,10 @@ describe('circles-controller', () => {
         res
       );
       await flush();
-      expect(Notification.updateMany).not.toHaveBeenCalled();
+      expect(Notification.updateMany).toHaveBeenCalledWith(
+        { recipient: MEMBER_ID, circle: CIRCLE_ID, type: 'circle_invite', read: false },
+        { $set: { read: true } }
+      );
     });
   });
 
