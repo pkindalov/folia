@@ -148,7 +148,10 @@ describe('circles-controller', () => {
       controller.list({ user: owner, query: {} }, res);
       await flush();
       expect(find).toHaveBeenCalledWith({
-        $or: [{ owner: OWNER_ID }, { 'members.user': OWNER_ID }],
+        $or: [
+          { owner: OWNER_ID },
+          { members: { $elemMatch: { user: OWNER_ID, status: 'accepted' } } },
+        ],
       });
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ total: 1, page: 1, limit: 12 })

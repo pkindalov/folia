@@ -64,8 +64,16 @@ function withUsernames(circle) {
 module.exports = {
   list: (req, res) => {
     const page = parsePage(req.query);
+    // A pending (not-yet-accepted) invitee must not show up here: this list
+    // returns the full member array, and isOwnerOrMember/canView already
+    // treat pending members as having no access — surfacing the circle here
+    // would both leak its member list to them and dead-end into a 403 the
+    // moment they open it. listInvites is where pending invites belong.
     const filter = {
-      $or: [{ owner: req.user._id }, { 'members.user': req.user._id }],
+      $or: [
+        { owner: req.user._id },
+        { members: { $elemMatch: { user: req.user._id, status: 'accepted' } } },
+      ],
     };
 
     Promise.all([
