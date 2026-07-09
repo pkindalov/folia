@@ -8,6 +8,7 @@ import CreateCircleModal from '../components/CreateCircleModal';
 import { useMe } from '../../auth';
 import { useCircles, useMyInvites, useAcceptInvite, useDeclineInvite } from '../hooks';
 import type { Circle, CircleInvite } from '../schemas';
+import { toast } from '../../../lib/toast';
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -84,10 +85,24 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
   const busy = acceptInvite.isPending || declineInvite.isPending;
 
   const onAccept = () => {
-    if (me) acceptInvite.mutate({ circleId: invite._id, userId: me._id });
+    if (!me) return;
+    acceptInvite.mutate(
+      { circleId: invite._id, userId: me._id },
+      {
+        onSuccess: () => toast.success(`Joined ${invite.name}.`),
+        onError: (error) => toast.error(error.message),
+      }
+    );
   };
   const onDecline = () => {
-    if (me) declineInvite.mutate({ circleId: invite._id, userId: me._id });
+    if (!me) return;
+    declineInvite.mutate(
+      { circleId: invite._id, userId: me._id },
+      {
+        onSuccess: () => toast.success(`Declined ${invite.name}.`),
+        onError: (error) => toast.error(error.message),
+      }
+    );
   };
 
   return (

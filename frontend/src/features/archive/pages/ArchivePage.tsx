@@ -5,6 +5,7 @@ import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
 import useClampedPage from '../../../hooks/useClampedPage';
 import { useArchivedAlbums, useArchiveAlbum, coverColor, type Album } from '../../flipbooks';
+import { toast } from '../../../lib/toast';
 
 const VISIBILITY_ICON: Record<Album['visibility'], string> = {
   private: 'lock',
@@ -53,7 +54,12 @@ function ArchivedVolumeCard({ album }: { album: Album }) {
           {album.pageCount} pages
         </span>
         <button
-          onClick={() => restoreAlbum.mutate(false)}
+          onClick={() =>
+            restoreAlbum.mutate(false, {
+              onSuccess: () => toast.success(`"${album.title}" restored.`),
+              onError: (error) => toast.error(error.message),
+            })
+          }
           disabled={restoreAlbum.isPending}
           aria-label={`Restore ${album.title}`}
           className="flex items-center gap-1 font-ui text-ui-label uppercase text-on-surface-variant hover:text-secondary transition-colors disabled:opacity-50"
@@ -62,11 +68,6 @@ function ArchivedVolumeCard({ album }: { album: Album }) {
           {restoreAlbum.isPending ? 'Restoring…' : 'Restore'}
         </button>
       </div>
-      {restoreAlbum.isError && (
-        <p role="alert" className="mt-2 w-full px-2 text-sm text-error font-ui">
-          {restoreAlbum.error.message}
-        </p>
-      )}
     </div>
   );
 }

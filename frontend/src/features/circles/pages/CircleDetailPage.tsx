@@ -14,6 +14,7 @@ import {
   useSearchUsers,
 } from '../hooks';
 import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
+import { toast } from '../../../lib/toast';
 
 export default function CircleDetailPage() {
   const { id } = useParams();
@@ -64,17 +65,33 @@ export default function CircleDetailPage() {
 
   const editDescriptionLength = watchEdit('description').trim().length;
 
-  const onAddMember = (userId: string) => {
+  const onAddMember = (userId: string, username: string) => {
     addMember.mutate(userId, {
       onSuccess: () => {
+        toast.success(`Invited ${username}.`);
         setSearch('');
         setDebouncedSearch('');
       },
+      onError: (error) => toast.error(error.message),
     });
   };
 
   const onSaveEdit = (data: CircleFormInput) => {
-    updateCircle.mutate(data, { onSuccess: () => setIsEditing(false) });
+    updateCircle.mutate(data, {
+      onSuccess: () => {
+        toast.success('Circle updated.');
+        setIsEditing(false);
+      },
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
+  const onRemoveMember = (userId: string, username: string, isPendingInvite: boolean) => {
+    removeMember.mutate(userId, {
+      onSuccess: () =>
+        toast.success(isPendingInvite ? `Cancelled invite to ${username}.` : `Removed ${username}.`),
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   const onDelete = () => {
@@ -82,7 +99,13 @@ export default function CircleDetailPage() {
     if (
       window.confirm('Delete this circle? Members will lose access to anything shared with it.')
     ) {
-      deleteCircle.mutate(id, { onSuccess: () => navigate('/circles') });
+      deleteCircle.mutate(id, {
+        onSuccess: () => {
+          toast.success('Circle deleted.');
+          navigate('/circles');
+        },
+        onError: (error) => toast.error(error.message),
+      });
     }
   };
 
@@ -159,12 +182,6 @@ export default function CircleDetailPage() {
                       </div>
                     </div>
 
-                    {updateCircle.isError && (
-                      <p role="alert" className="text-sm text-error font-ui">
-                        {updateCircle.error.message}
-                      </p>
-                    )}
-
                     <div className="flex gap-3">
                       <button
                         type="submit"
@@ -222,11 +239,6 @@ export default function CircleDetailPage() {
                     placeholder="Search by username…"
                     className="line-input w-full py-2 text-body-text"
                   />
-                  {addMember.isError && (
-                    <p role="alert" className="mt-2 text-sm text-error font-ui">
-                      {addMember.error.message}
-                    </p>
-                  )}
                   {searchQuery.data && searchQuery.data.length > 0 && (
                     <ul className="mt-3 border border-outline-variant/40 rounded-paper divide-y divide-outline-variant/40">
                       {searchQuery.data.map((user) => {
@@ -238,7 +250,7 @@ export default function CircleDetailPage() {
                           >
                             <span className="font-body">{user.username}</span>
                             <button
-                              onClick={() => onAddMember(user._id)}
+                              onClick={() => onAddMember(user._id, user.username)}
                               disabled={alreadyInvited || addMember.isPending}
                               className="font-ui text-ui-label uppercase text-secondary hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
@@ -288,7 +300,7 @@ export default function CircleDetailPage() {
                           </div>
                           {canRemove && (
                             <button
-                              onClick={() => removeMember.mutate(member.user)}
+                              onClick={() => onRemoveMember(member.user, member.username, isPending)}
                               disabled={removeMember.isPending}
                               aria-label={
                                 isPending ? `Cancel invite to ${member.username}` : `Remove ${member.username}`
@@ -303,11 +315,6 @@ export default function CircleDetailPage() {
                     })}
                   </ul>
                 )}
-                {removeMember.isError && (
-                  <p role="alert" className="mt-2 text-sm text-error font-ui">
-                    {removeMember.error.message}
-                  </p>
-                )}
               </div>
 
               {canManage && (
@@ -320,11 +327,6 @@ export default function CircleDetailPage() {
                     <Icon name="delete" className="text-lg" />
                     {deleteCircle.isPending ? 'Deleting…' : 'Delete circle'}
                   </button>
-                  {deleteCircle.isError && (
-                    <p role="alert" className="mt-2 text-sm text-error font-ui">
-                      {deleteCircle.error.message}
-                    </p>
-                  )}
                 </div>
               )}
             </>

@@ -5,6 +5,7 @@ import { loginSchema, type LoginInput } from '../schemas';
 import { useLogin } from '../hooks';
 import FormField from '../../../components/FormField';
 import AuthLayout from './AuthLayout';
+import { toast } from '../../../lib/toast';
 
 export default function LoginPage() {
   const login = useLogin();
@@ -23,13 +24,12 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {login.isError && (
-        <p className="mb-8 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
-          {login.error.message}
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit((data) => login.mutate(data))} noValidate>
+      <form
+        onSubmit={handleSubmit((data) =>
+          login.mutate(data, { onError: (error) => toast.error(error.message) })
+        )}
+        noValidate
+      >
         <FormField
           label="Email or username"
           autoComplete="username"

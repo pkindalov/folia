@@ -4,6 +4,7 @@ import Modal from '../../../components/Modal';
 import Icon from '../../../components/Icon';
 import { useCreateCircle } from '../hooks';
 import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
+import { toast } from '../../../lib/toast';
 
 type CreateCircleModalProps = {
   isOpen: boolean;
@@ -37,7 +38,13 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
   };
 
   const onSubmit = (data: CircleFormInput) => {
-    createCircle.mutate(data, { onSuccess: close });
+    createCircle.mutate(data, {
+      onSuccess: () => {
+        toast.success('Circle created.');
+        close();
+      },
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   return (
@@ -60,15 +67,6 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
           <Icon name="close" className="text-2xl" />
         </button>
       </div>
-
-      {createCircle.isError && (
-        <p
-          role="alert"
-          className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm"
-        >
-          {createCircle.error.message}
-        </p>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-8">
         <div className="flex flex-col gap-1">

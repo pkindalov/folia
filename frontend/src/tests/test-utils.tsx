@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastContainer } from 'react-toastify';
 
 export function createTestQueryClient() {
   return new QueryClient({
@@ -32,6 +33,7 @@ export function renderWithProviders(
           {extraRoutes}
         </Routes>
       </MemoryRouter>
+      <ToastContainer />
     </QueryClientProvider>
   );
 }

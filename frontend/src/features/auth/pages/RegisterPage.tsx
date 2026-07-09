@@ -5,6 +5,7 @@ import { registerSchema, type RegisterInput } from '../schemas';
 import { useRegister } from '../hooks';
 import FormField from '../../../components/FormField';
 import AuthLayout from './AuthLayout';
+import { toast } from '../../../lib/toast';
 
 export default function RegisterPage() {
   const registerMutation = useRegister();
@@ -23,13 +24,12 @@ export default function RegisterPage() {
         </p>
       </header>
 
-      {registerMutation.isError && (
-        <p className="mb-8 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
-          {registerMutation.error.message}
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit((data) => registerMutation.mutate(data))} noValidate>
+      <form
+        onSubmit={handleSubmit((data) =>
+          registerMutation.mutate(data, { onError: (error) => toast.error(error.message) })
+        )}
+        noValidate
+      >
         <FormField
           label="Username"
           autoComplete="username"

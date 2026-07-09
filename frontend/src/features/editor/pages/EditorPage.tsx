@@ -23,6 +23,7 @@ import {
   ALLOWED_PHOTO_MIME_TYPES,
   MAX_PHOTO_SIZE_BYTES,
 } from '../../flipbooks';
+import { toast } from '../../../lib/toast';
 
 const VISIBILITY_OPTIONS = [
   ['private', 'lock', 'Private — only you'],
@@ -158,12 +159,19 @@ export default function EditorPage() {
   const onDelete = () => {
     if (!id) return;
     if (window.confirm('Delete this volume? Its pages and photos are removed permanently.')) {
-      deleteAlbum.mutate(id);
+      deleteAlbum.mutate(id, {
+        onSuccess: () => toast.success('Volume deleted.'),
+        onError: (error) => toast.error(error.message),
+      });
     }
   };
 
   const onToggleArchived = () => {
-    archiveAlbum.mutate(!albumQuery.data?.archived);
+    const nextArchived = !albumQuery.data?.archived;
+    archiveAlbum.mutate(nextArchived, {
+      onSuccess: () => toast.success(nextArchived ? 'Volume archived.' : 'Volume restored.'),
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   const onFilesSelected = (files: File[]) => {
@@ -181,13 +189,21 @@ export default function EditorPage() {
     }
 
     setRejections(describeRejections(rejected));
-    if (accepted.length > 0) uploadPages.mutate(accepted);
+    if (accepted.length > 0) {
+      uploadPages.mutate(accepted, {
+        onSuccess: () =>
+          toast.success(`Added ${accepted.length} photo${accepted.length === 1 ? '' : 's'}.`),
+        onError: (error) => toast.error(error.message),
+      });
+    }
   };
 
   const onRemovePhoto = (photoId: string) => {
     if (!window.confirm("Remove this photo from the volume? This can't be undone.")) return;
     setDeletingPhotoIds((prev) => withId(prev, photoId));
     deletePage.mutate(photoId, {
+      onSuccess: () => toast.success('Photo removed.'),
+      onError: (error) => toast.error(error.message),
       onSettled: () => setDeletingPhotoIds((prev) => withoutId(prev, photoId)),
     });
   };
@@ -196,13 +212,18 @@ export default function EditorPage() {
     setSavingCaptionPhotoIds((prev) => withId(prev, photoId));
     updateCaption.mutate(
       { pageId: photoId, caption },
-      { onSettled: () => setSavingCaptionPhotoIds((prev) => withoutId(prev, photoId)) }
+      {
+        onError: (error) => toast.error(error.message),
+        onSettled: () => setSavingCaptionPhotoIds((prev) => withoutId(prev, photoId)),
+      }
     );
   };
 
   const onSetCoverPhoto = (photoId: string) => {
     setSettingCoverPhotoIds((prev) => withId(prev, photoId));
     setCoverPhoto.mutate(photoId, {
+      onSuccess: () => toast.success('Cover photo updated.'),
+      onError: (error) => toast.error(error.message),
       onSettled: () => setSettingCoverPhotoIds((prev) => withoutId(prev, photoId)),
     });
   };
@@ -224,23 +245,16 @@ export default function EditorPage() {
               {albumQuery.error.message}
             </p>
           )}
-          {mutation.isError && (
-            <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
-              {mutation.error.message}
-            </p>
-          )}
-          {deleteAlbum.isError && (
-            <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
-              {deleteAlbum.error.message}
-            </p>
-          )}
-          {archiveAlbum.isError && (
-            <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
-              {archiveAlbum.error.message}
-            </p>
-          )}
-
-          <form id="album-form" onSubmit={handleSubmit((data) => mutation.mutate(data))} noValidate>
+          <form
+            id="album-form"
+            onSubmit={handleSubmit((data) =>
+              mutation.mutate(data, {
+                onSuccess: () => toast.success(isEdit ? 'Changes saved.' : 'Volume created.'),
+                onError: (error) => toast.error(error.message),
+              })
+            )}
+            noValidate
+          >
             <div className="flex flex-col gap-1 mb-8">
               <label className="font-ui text-ui-label uppercase text-on-surface-variant" htmlFor="album-title">
                 Volume title
@@ -417,17 +431,6 @@ export default function EditorPage() {
                   locked={!isEdit}
                   photos={pagesQuery.data ?? []}
                   isUploading={uploadPages.isPending}
-                  uploadError={
-                    uploadPages.isError
-                      ? uploadPages.error.message
-                      : deletePage.isError
-                        ? deletePage.error.message
-                        : updateCaption.isError
-                          ? updateCaption.error.message
-                          : setCoverPhoto.isError
-                            ? setCoverPhoto.error.message
-                            : undefined
-                  }
                   rejections={rejections}
                   deletingPhotoIds={deletingPhotoIds}
                   coverPhotoId={coverPhotoId}

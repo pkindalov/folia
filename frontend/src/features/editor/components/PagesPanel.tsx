@@ -16,7 +16,6 @@ type PagesPanelProps = {
   locked: boolean;
   photos: Photo[];
   isUploading: boolean;
-  uploadError?: string;
   rejections: string[];
   deletingPhotoIds?: Set<string>;
   coverPhotoId?: string;
@@ -43,7 +42,6 @@ export default function PagesPanel({
   locked,
   photos,
   isUploading,
-  uploadError,
   rejections,
   deletingPhotoIds = EMPTY_ID_SET,
   coverPhotoId,
@@ -173,15 +171,6 @@ export default function PagesPanel({
               <p key={index}>{message}</p>
             ))}
           </div>
-        </div>
-      )}
-
-      {uploadError && (
-        <div
-          role="alert"
-          className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm"
-        >
-          {uploadError}
         </div>
       )}
 

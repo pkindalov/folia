@@ -29,6 +29,9 @@
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
+  --color-success: #2e6b30;
+  --color-success-container: #d9f2d4;
+  --color-on-success-container: #0c3b0c;
   --color-inverse-surface: #313030;
   --color-inverse-on-surface: #f4f0ef;
 
@@ -68,6 +71,22 @@ body {
   background-color: var(--color-surface);
   background-image: url('https://www.transparenttextures.com/patterns/felt.png');
   color: var(--color-on-background);
+}
+
+/* Match react-toastify's theming to the Folia design tokens. react-toastify
+   injects its own default stylesheet into <head> at runtime when
+   <ToastContainer> mounts, always landing after this file — !important is
+   the only way for these overrides to win instead of losing that race. */
+:root {
+  --toastify-color-success: var(--color-success-container) !important;
+  --toastify-text-color-success: var(--color-on-success-container) !important;
+  --toastify-color-progress-success: var(--color-success) !important;
+  --toastify-color-error: var(--color-error-container) !important;
+  --toastify-text-color-error: var(--color-on-error-container) !important;
+  --toastify-color-progress-error: var(--color-error) !important;
+  --toastify-font-family: var(--font-ui) !important;
+  --toastify-toast-bd-radius: var(--radius-panel) !important;
+  --toastify-toast-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Shared craft utilities from the design system */
