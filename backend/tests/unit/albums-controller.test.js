@@ -58,6 +58,10 @@ const mockNoPages = () => {
 
 beforeEach(() => {
   mockNoPages();
+  // Default: the referenced circle still exists, so healDanglingCircleReference
+  // is a no-op unless a test deliberately overrides this to exercise the
+  // self-heal path.
+  jest.spyOn(Circle, 'exists').mockResolvedValue(true);
 });
 
 describe('albums-controller', () => {
@@ -189,6 +193,36 @@ describe('albums-controller', () => {
         res
       );
       await flush();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test('self-heals a circle deleted between the ownership check and the save', async () => {
+      // The circle existed when verifySharedCircleOwnership checked it, but a
+      // concurrent circle delete finished before this album's own document
+      // was persisted — the album must not keep pointing at it.
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Circle, 'exists').mockResolvedValue(false);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'create').mockResolvedValue(album);
+      const res = mockRes();
+      controller.create(
+        {
+          body: {
+            title: 'Summer',
+            visibility: 'shared',
+            sharedWithCircle: '507f1f77bcf86cd799439099',
+          },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(album.sharedWithCircle).toBeNull();
+      expect(album.visibility).toBe('private');
+      expect(album.save).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -729,6 +763,25 @@ describe('albums-controller', () => {
       await flush();
       expect(album.sharedWithCircle).toBe('507f1f77bcf86cd799439099');
       expect(album.save).toHaveBeenCalled();
+    });
+
+    test('self-heals a circle deleted between the ownership check and the save', async () => {
+      // Mirrors the same race on the update path: the circle passed
+      // verifySharedCircleOwnership, but was deleted by a concurrent request
+      // before this album's save() actually persisted the reference.
+      const album = fakeAlbum({ visibility: 'shared' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Circle, 'exists').mockResolvedValue(false);
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { sharedWithCircle: '507f1f77bcf86cd799439099' }, user: owner },
+        res
+      );
+      await flush();
+      expect(album.sharedWithCircle).toBeNull();
+      expect(album.visibility).toBe('private');
+      expect(res.status).not.toHaveBeenCalledWith(400);
     });
 
     test('rejects an Admin setting a new sharedWithCircle to a circle the Admin owns but the album owner does not', async () => {

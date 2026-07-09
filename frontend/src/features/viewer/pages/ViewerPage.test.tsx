@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -255,5 +255,35 @@ describe('ViewerPage', () => {
     expect(await within(dialog).findByText('Photo 1 of 2')).toBeInTheDocument();
     expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
     expect(within(dialog).queryByAltText('photo3.jpg')).not.toBeInTheDocument();
+  });
+
+  test('closes the lightbox if the photo it is showing is itself removed', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/book/a1']}>
+          <Routes>
+            <Route path="/book/:id" element={<ViewerPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    await screen.findByRole('dialog', { name: /photo viewer/i });
+
+    // Simulate photo1 — the one the lightbox is open on — being deleted from
+    // another tab. It must close instead of silently swapping to photo2.
+    queryClient.setQueryData(['albums', 'a1', 'pages'], [PAGE_2]);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument()
+    );
   });
 });

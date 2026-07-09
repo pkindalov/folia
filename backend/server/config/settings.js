@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -12,11 +13,30 @@ if (env === 'production' && (!jwtSecret || jwtSecret.length < 32)) {
       'Generate one with: openssl rand -hex 32'
   );
 }
+if (env === 'production' && process.env.PHOTO_URL_SECRET && process.env.PHOTO_URL_SECRET.length < 32) {
+  throw new Error(
+    'PHOTO_URL_SECRET must be at least 32 characters in production. ' +
+      'Generate one with: openssl rand -hex 32'
+  );
+}
+
+// Signing photo URLs is a distinct purpose from signing session JWTs, so it
+// gets its own secret rather than reusing jwtSecret — a weakness or rotation
+// on one no longer automatically carries over to the other. An explicit
+// PHOTO_URL_SECRET always wins; falling back to a value derived from
+// jwtSecret keeps existing deployments working without a new required env var.
+const photoUrlSecret =
+  process.env.PHOTO_URL_SECRET ||
+  crypto
+    .createHmac('sha256', jwtSecret || 'dev-only-secret')
+    .update('folia-photo-url')
+    .digest('hex');
 
 const base = {
   db: process.env.DB_URL || 'mongodb://localhost:27017/folia',
   port: process.env.PORT || 1337,
   jwtSecret: jwtSecret || 'dev-only-secret',
+  photoUrlSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   uploadsDir: process.env.UPLOADS_DIR || 'uploads',
   corsOrigin: process.env.CORS_ORIGIN || '*',

@@ -22,6 +22,20 @@ export default function ViewerPage() {
   const currentPhoto = pages[currentIndex];
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const openLightbox = () => {
+    // Pin the lightbox to this specific photo (not just "whatever index 0
+    // currently is") so the effect below can tell a real removal apart from
+    // an ordinary refetch that leaves the same photo in place.
+    setPhotoId(currentPhoto._id);
+    setIsLightboxOpen(true);
+  };
+  // If the photo the lightbox is showing disappears from the list while it's
+  // open (e.g. deleted from another tab), close it instead of silently
+  // falling back to whatever photo now occupies index 0 — mirrors the
+  // editor's own PagesPanel, which unmounts its lightbox the same way.
+  useEffect(() => {
+    if (isLightboxOpen && selectedIndex === -1) setIsLightboxOpen(false);
+  }, [isLightboxOpen, selectedIndex]);
 
   return (
     <AppShell>
@@ -90,7 +104,7 @@ export default function ViewerPage() {
                   <div className="flex flex-col items-center gap-6 w-full">
                     <button
                       type="button"
-                      onClick={() => setIsLightboxOpen(true)}
+                      onClick={openLightbox}
                       aria-label={`View ${currentPhoto.filename || 'this photo'} full size`}
                       className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full cursor-zoom-in"
                     >

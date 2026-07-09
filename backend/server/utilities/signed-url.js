@@ -12,7 +12,7 @@ const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
 function hmac(pathname, expiresAt) {
   return crypto
-    .createHmac('sha256', settings.jwtSecret)
+    .createHmac('sha256', settings.photoUrlSecret)
     .update(`${pathname}:${expiresAt}`)
     .digest('hex');
 }

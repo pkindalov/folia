@@ -62,6 +62,27 @@ function verifySharedCircleOwnership(sharedWithCircle, ownerId) {
   });
 }
 
+// verifySharedCircleOwnership and this album's own save() are two separate
+// writes with no shared transaction, so a circle deleted in between (its own
+// delete unshares every album that already points at it, but this one hasn't
+// saved that yet) can leave the just-saved album pointing at a circle that no
+// longer exists. Re-checking right after save closes that window: if the
+// circle is already gone, immediately fall back to private instead of
+// leaving a dangling reference for someone to notice later.
+function healDanglingCircleReference(album) {
+  if (album.visibility !== 'shared' || !album.sharedWithCircle) {
+    return Promise.resolve(album);
+  }
+
+  return Circle.exists({ _id: album.sharedWithCircle }).then((stillExists) => {
+    if (stillExists) return album;
+
+    album.sharedWithCircle = null;
+    album.visibility = 'private';
+    return album.save();
+  });
+}
+
 // The cover is whichever page the user explicitly picked; absent that,
 // it's the earliest-uploaded page. Falls back to null for an empty album.
 function resolveCoverImage(album) {
@@ -290,6 +311,7 @@ module.exports = {
         sharedWithCircle: effectiveSharedWithCircle,
         owner: req.user._id,
       })
+        .then(healDanglingCircleReference)
         .then((album) => {
           // Every user gets their own folder under uploads/, one subfolder per album
           storage.ensureAlbumDir(req.user._id, album._id);
@@ -349,6 +371,7 @@ module.exports = {
 
           return album
             .save()
+            .then(healDanglingCircleReference)
             .then((saved) => withCoverImage(saved).then((album) => res.json({ album })))
             .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
         });

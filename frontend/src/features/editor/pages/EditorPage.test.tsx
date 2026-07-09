@@ -164,7 +164,9 @@ describe('EditorPage — edit', () => {
       'GET /api/albums/a1': { body: restrictedAlbum },
       'GET /api/circles/c99': { body: { circle: assignedCircle } },
       'GET /api/circles': { body: { circles: [otherCircle], total: 1, page: 1, limit: 12 } },
+      'PUT /api/albums/a1': { body: restrictedAlbum },
     });
+    const user = userEvent.setup();
     renderEdit();
     await waitFor(() =>
       expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
@@ -172,6 +174,16 @@ describe('EditorPage — edit', () => {
 
     expect(await screen.findByRole('option', { name: 'Assigned Circle' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Other Circle' })).toBeInTheDocument();
+
+    // Not just present in the DOM — actually the <select>'s current value,
+    // so a save that doesn't touch this field submits it unchanged instead
+    // of silently reverting to "Open to any signed-in user" (null).
+    expect(screen.getByRole('combobox')).toHaveValue('c99');
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    const put = calls.find((c) => c.options?.method === 'PUT');
+    expect(put).toBeDefined();
+    expect(JSON.parse(put!.options!.body as string).sharedWithCircle).toBe('c99');
   });
 
   test("an Admin editing another user's album still sees the assigned circle as an option, even though they don't own it", async () => {
