@@ -27,6 +27,10 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
   const descriptionLength = watch('description').trim().length;
 
   const close = () => {
+    // A pending create keeps running server-side even if the modal closes —
+    // block Escape/backdrop/X until it settles so its success or error is
+    // never silently discarded (see the submit button's own disabled state).
+    if (createCircle.isPending) return;
     reset();
     createCircle.reset();
     onClose();

@@ -123,4 +123,36 @@ describe('CreateCircleModal', () => {
     await user.click(screen.getByLabelText('Close'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  test('ignores close attempts while the create request is still pending', async () => {
+    let resolveRequest: (() => void) | undefined;
+    vi.mocked(fetch).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRequest = () =>
+            resolve({
+              ok: true,
+              status: 201,
+              json: () => Promise.resolve({ circle: CREATED_CIRCLE }),
+            } as Response);
+        })
+    );
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<CreateCircleModal isOpen onClose={onClose} />, {
+      route: '/circles',
+      path: '/circles',
+    });
+
+    await user.type(screen.getByLabelText('Circle name'), 'The Sterling Family');
+    await user.click(screen.getByRole('button', { name: 'Create Circle' }));
+    await screen.findByRole('button', { name: 'Creating…' });
+
+    await user.click(screen.getByLabelText('Close'));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('New Circle')).toBeInTheDocument();
+
+    resolveRequest?.();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
 });
