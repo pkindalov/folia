@@ -36,7 +36,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
-        disabled={page === 1}
+        disabled={page <= 1}
         aria-label="Previous page"
         className="w-10 h-10 rounded-full border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >
@@ -73,7 +73,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
       <button
         type="button"
         onClick={() => onPageChange(page + 1)}
-        disabled={page === totalPages}
+        disabled={page >= totalPages}
         aria-label="Next page"
         className="w-10 h-10 rounded-full border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >

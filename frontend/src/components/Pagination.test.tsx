@@ -45,6 +45,16 @@ describe('Pagination', () => {
     expect(onPageChange).toHaveBeenCalledWith(1);
   });
 
+  test('disables Previous defensively if page is ever below the first page', () => {
+    render(<Pagination page={0} totalPages={3} onPageChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+  });
+
+  test('disables Next defensively if page is ever beyond the last page', () => {
+    render(<Pagination page={4} totalPages={3} onPageChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+  });
+
   test('collapses a large page count into first/last plus neighbors of the current page', () => {
     render(<Pagination page={50} totalPages={200} onPageChange={vi.fn()} />);
 
