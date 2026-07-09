@@ -43,6 +43,10 @@ function checkAlbumReadAccess(album, user) {
   return Promise.resolve(null);
 }
 
+// Caps how far a caller can page in, so an arbitrarily large page number
+// can't force a huge, wasteful .skip() on the underlying query.
+const MAX_PAGE = 100000;
+
 module.exports = {
   isNonEmptyString: (v) => typeof v === 'string' && v.trim().length > 0,
 
@@ -50,7 +54,8 @@ module.exports = {
   // so a client can't request an unbounded page of results.
   parsePage: (query) => {
     const page = parseInt(query?.page, 10);
-    return Number.isInteger(page) && page > 0 ? page : 1;
+    if (!Number.isInteger(page) || page < 1) return 1;
+    return Math.min(page, MAX_PAGE);
   },
 
   // Shown in place of a username when the referenced User document no longer

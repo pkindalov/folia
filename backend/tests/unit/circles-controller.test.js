@@ -364,6 +364,17 @@ describe('circles-controller', () => {
       await flush();
       expect(circle.deleteOne).toHaveBeenCalled();
     });
+
+    test('never deletes the circle when unsharing its albums fails, so no album is left pointing at a deleted circle', async () => {
+      const circle = fakeCircle();
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Album, 'updateMany').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(circle.deleteOne).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
   });
 
   describe('addMember', () => {

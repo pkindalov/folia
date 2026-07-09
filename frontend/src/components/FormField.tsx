@@ -21,10 +21,10 @@ const FormField = forwardRef<HTMLInputElement, Props>(({ label, error, id, ...re
         id={inputId}
         className="line-input w-full py-2 text-body-text font-body"
         aria-invalid={error !== undefined && error !== ''}
-        aria-describedby={error ? `${inputId}-error` : undefined}
+        aria-describedby={error !== undefined && error !== '' ? `${inputId}-error` : undefined}
         {...rest}
       />
-      {error && (
+      {error !== undefined && error !== '' && (
         <span id={`${inputId}-error`} className="text-sm text-error mt-1 font-ui" role="alert">
           {error}
         </span>
