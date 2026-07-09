@@ -403,7 +403,7 @@ describe('circles-controller', () => {
       await flush();
       expect(Notification.updateMany).toHaveBeenCalledWith(
         { circle: CIRCLE_ID, type: 'circle_invite', read: false },
-        { $set: { read: true } }
+        { $set: { read: true, readAt: expect.any(Date) } }
       );
     });
 
@@ -703,7 +703,7 @@ describe('circles-controller', () => {
       await flush();
       expect(Notification.updateMany).toHaveBeenCalledWith(
         { recipient: MEMBER_ID, circle: CIRCLE_ID, type: 'circle_invite', read: false },
-        { $set: { read: true } }
+        { $set: { read: true, readAt: expect.any(Date) } }
       );
     });
 
@@ -752,7 +752,7 @@ describe('circles-controller', () => {
       await flush();
       expect(Notification.updateMany).toHaveBeenCalledWith(
         { recipient: MEMBER_ID, circle: CIRCLE_ID, type: 'circle_invite', read: false },
-        { $set: { read: true } }
+        { $set: { read: true, readAt: expect.any(Date) } }
       );
     });
   });
@@ -888,7 +888,7 @@ describe('circles-controller', () => {
       await flush();
       expect(Notification.updateMany).toHaveBeenCalledWith(
         { recipient: MEMBER_ID, circle: CIRCLE_ID, type: 'circle_invite', read: false },
-        { $set: { read: true } }
+        { $set: { read: true, readAt: expect.any(Date) } }
       );
     });
 

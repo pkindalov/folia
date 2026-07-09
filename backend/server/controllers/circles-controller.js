@@ -80,7 +80,7 @@ function notifyCircleInvite({ circleId, circleName, actorUsername, recipientId }
 function markCircleInviteRead({ circleId, recipientId }) {
   Notification.updateMany(
     { recipient: recipientId, circle: circleId, type: 'circle_invite', read: false },
-    { $set: { read: true } }
+    { $set: { read: true, readAt: new Date() } }
   ).catch((err) => console.error('Failed to mark circle-invite notification read', err));
 }
 
@@ -90,7 +90,7 @@ function markCircleInviteRead({ circleId, recipientId }) {
 function markAllCircleInvitesRead(circleId) {
   Notification.updateMany(
     { circle: circleId, type: 'circle_invite', read: false },
-    { $set: { read: true } }
+    { $set: { read: true, readAt: new Date() } }
   ).catch((err) => console.error('Failed to mark circle-invite notifications read', err));
 }
 

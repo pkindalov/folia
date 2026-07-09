@@ -10,6 +10,12 @@ const NOTIFICATION_TYPES = ['circle_invite'];
 // each insert instead.
 const MAX_NOTIFICATIONS_PER_USER = 200;
 
+// How long a read notification is kept before MongoDB's TTL monitor
+// deletes it automatically. Unread notifications are never touched by
+// this — the TTL index below only fires on documents that have `readAt`
+// set.
+const READ_NOTIFICATION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
 const notificationSchema = new mongoose.Schema(
   {
     recipient: {
@@ -44,12 +50,19 @@ const notificationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Set the moment a notification is marked read; drives the TTL index
+    // below. Left unset for unread notifications, which the TTL monitor
+    // ignores.
+    readAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
 
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, read: 1 });
+notificationSchema.index({ readAt: 1 }, { expireAfterSeconds: READ_NOTIFICATION_TTL_SECONDS });
 
 notificationSchema.method({
   toJSON: function () {
