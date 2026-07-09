@@ -4,6 +4,8 @@ const Circle = require('../data/Circle');
 // being open to any authenticated user. Once a circle is attached, access
 // narrows to that circle's owner and members. A dangling reference (the
 // circle was deleted) is treated as "no access" rather than throwing.
+// Intentionally reachable only via direct link — no listing endpoint
+// surfaces these albums to other users, by design.
 function canAccessSharedAlbum(album, user) {
   if (!album.sharedWithCircle) return Promise.resolve(true);
 

@@ -83,22 +83,71 @@ function withCoverImage(album) {
   return resolveCoverImage(album).then((coverImage) => ({ ...album.toJSON(), coverImage }));
 }
 
+// Batched counterpart to resolveCoverImage for a page of albums — two
+// queries total (explicit covers + earliest-page-per-album) instead of
+// resolveCoverImage's up to two queries per album, avoiding an N+1 as list
+// pages grow. Returns a Map from album id (string) to coverImage url or null.
+function resolveCoverImages(albums) {
+  const albumIds = albums.map((album) => album._id);
+  const coverPageIds = albums.filter((album) => album.coverPage).map((album) => album.coverPage);
+
+  return Promise.all([
+    coverPageIds.length > 0 ? Page.find({ _id: { $in: coverPageIds } }) : Promise.resolve([]),
+    albumIds.length > 0
+      ? Page.aggregate([
+          { $match: { album: { $in: albumIds } } },
+          { $sort: { album: 1, createdAt: 1 } },
+          { $group: { _id: '$album', filename: { $first: '$filename' } } },
+        ])
+      : Promise.resolve([]),
+  ]).then(([explicitPages, firstPages]) => {
+    const explicitPageById = new Map(explicitPages.map((page) => [page._id.toString(), page]));
+    const firstFilenameByAlbumId = new Map(
+      firstPages.map((entry) => [entry._id.toString(), entry.filename])
+    );
+
+    return new Map(
+      albums.map((album) => {
+        const explicitPage = album.coverPage
+          ? explicitPageById.get(album.coverPage.toString())
+          : undefined;
+        // Guard against a coverPage that (somehow) belongs to a different
+        // album, same as resolveCoverImage's { _id, album } query does.
+        const explicitPageBelongsToAlbum =
+          explicitPage !== undefined && explicitPage.album.toString() === album._id.toString();
+        const filename = explicitPageBelongsToAlbum
+          ? explicitPage.filename
+          : firstFilenameByAlbumId.get(album._id.toString());
+        const coverImage = filename ? storage.photoUrl(album.owner, album._id, filename) : null;
+        return [album._id.toString(), coverImage];
+      })
+    );
+  });
+}
+
+function withCoverImages(albums) {
+  return resolveCoverImages(albums).then((coverImageByAlbumId) =>
+    albums.map((album) => ({
+      ...album.toJSON(),
+      coverImage: coverImageByAlbumId.get(album._id.toString()) ?? null,
+    }))
+  );
+}
+
 // Attaches ownerUsername and coverImage to each album — shared by listPublic
 // and listSharedWithMe, which both need the same owner-lookup + cover shape.
 function withOwnerUsernamesAndCovers(albums) {
   const ownerIds = [...new Set(albums.map((album) => album.owner.toString()))];
-  return User.find({ _id: { $in: ownerIds } }, 'username').then((users) => {
-    const usernameByOwnerId = new Map(users.map((user) => [user._id.toString(), user.username]));
-    return Promise.all(
-      albums.map((album) =>
-        resolveCoverImage(album).then((coverImage) => ({
-          ...album.toJSON(),
-          ownerUsername: usernameByOwnerId.get(album.owner.toString()) ?? DELETED_USER_LABEL,
-          coverImage,
-        }))
-      )
-    );
-  });
+  return Promise.all([User.find({ _id: { $in: ownerIds } }, 'username'), resolveCoverImages(albums)]).then(
+    ([users, coverImageByAlbumId]) => {
+      const usernameByOwnerId = new Map(users.map((user) => [user._id.toString(), user.username]));
+      return albums.map((album) => ({
+        ...album.toJSON(),
+        ownerUsername: usernameByOwnerId.get(album.owner.toString()) ?? DELETED_USER_LABEL,
+        coverImage: coverImageByAlbumId.get(album._id.toString()) ?? null,
+      }));
+    }
+  );
 }
 
 module.exports = {
@@ -123,9 +172,7 @@ module.exports = {
         .skip((page - 1) * ALBUMS_PAGE_SIZE)
         .limit(ALBUMS_PAGE_SIZE),
     ])
-      .then(([total, albums]) =>
-        Promise.all(albums.map(withCoverImage)).then((albums) => ({ total, albums }))
-      )
+      .then(([total, albums]) => withCoverImages(albums).then((albums) => ({ total, albums })))
       .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load albums' }));
   },
@@ -142,9 +189,7 @@ module.exports = {
         .skip((page - 1) * ALBUMS_PAGE_SIZE)
         .limit(ALBUMS_PAGE_SIZE),
     ])
-      .then(([total, albums]) =>
-        Promise.all(albums.map(withCoverImage)).then((albums) => ({ total, albums }))
-      )
+      .then(([total, albums]) => withCoverImages(albums).then((albums) => ({ total, albums })))
       .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load archived albums' }));
   },

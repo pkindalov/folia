@@ -48,8 +48,13 @@ const fakeAlbum = (overrides = {}) => ({
   ...overrides,
 });
 
-// No pages at all: the earliest-page fallback query resolves to nothing.
-const mockNoPages = () => jest.spyOn(Page, 'findOne').mockReturnValue({ sort: jest.fn().mockResolvedValue(null) });
+// No pages at all: both the single-album and batched cover lookups resolve
+// to nothing.
+const mockNoPages = () => {
+  jest.spyOn(Page, 'findOne').mockReturnValue({ sort: jest.fn().mockResolvedValue(null) });
+  jest.spyOn(Page, 'find').mockResolvedValue([]);
+  jest.spyOn(Page, 'aggregate').mockResolvedValue([]);
+};
 
 beforeEach(() => {
   mockNoPages();
@@ -304,9 +309,7 @@ describe('albums-controller', () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
       jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
-      jest.spyOn(Page, 'findOne').mockReturnValue({
-        sort: jest.fn().mockResolvedValue({ filename: 'first.jpg' }),
-      });
+      jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'first.jpg' }]);
       const res = mockRes();
       controller.list({ user: owner, query: {} }, res);
       await flush();
@@ -323,17 +326,37 @@ describe('albums-controller', () => {
       const album = fakeAlbum({ coverPage: PAGE_ID });
       jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
       jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
-      jest
-        .spyOn(Page, 'findOne')
-        .mockResolvedValueOnce({ filename: 'chosen.jpg' });
+      const findPages = jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'chosen.jpg' }]);
       const res = mockRes();
       controller.list({ user: owner, query: {} }, res);
       await flush();
-      expect(Page.findOne).toHaveBeenCalledWith({ _id: PAGE_ID, album: ALBUM_ID });
+      expect(findPages).toHaveBeenCalledWith({ _id: { $in: [PAGE_ID] } });
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           albums: [
             { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/chosen.jpg` },
+          ],
+        })
+      );
+    });
+
+    test('falls back to the earliest photo when the chosen cover belongs to a different album', async () => {
+      const album = fakeAlbum({ coverPage: PAGE_ID });
+      jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
+      jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
+      jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: 'some-other-album', filename: 'wrong.jpg' }]);
+      jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'first.jpg' }]);
+      const res = mockRes();
+      controller.list({ user: owner, query: {} }, res);
+      await flush();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          albums: [
+            { ...album.toJSON(), coverImage: `/uploads/${OWNER_ID}/${ALBUM_ID}/first.jpg` },
           ],
         })
       );
@@ -346,9 +369,7 @@ describe('albums-controller', () => {
       jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
       jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan' }]);
-      jest.spyOn(Page, 'findOne').mockReturnValue({
-        sort: jest.fn().mockResolvedValue({ filename: 'first.jpg' }),
-      });
+      jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'first.jpg' }]);
 
       const res = mockRes();
       controller.listPublic({ query: {} }, res);
@@ -374,7 +395,6 @@ describe('albums-controller', () => {
       jest.spyOn(Album, 'find').mockReturnValue(mockAlbumQuery([album]));
       jest.spyOn(Album, 'countDocuments').mockResolvedValue(1);
       jest.spyOn(User, 'find').mockResolvedValue([]);
-      jest.spyOn(Page, 'findOne').mockReturnValue({ sort: jest.fn().mockResolvedValue(null) });
 
       const res = mockRes();
       controller.listPublic({ query: {} }, res);

@@ -79,7 +79,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             className="line-input w-full py-2 text-headline-md font-display"
             placeholder="e.g., The Sterling Family"
             aria-invalid={errors.name !== undefined}
-            aria-describedby={errors.name ? 'circle-name-error' : undefined}
+            aria-describedby={errors.name !== undefined ? 'circle-name-error' : undefined}
             {...register('name')}
           />
           {errors.name && (
@@ -102,7 +102,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             className="line-input w-full py-2 text-body-text resize-none"
             placeholder="What's this circle for?"
             aria-invalid={errors.description !== undefined}
-            aria-describedby={errors.description ? 'circle-description-error' : undefined}
+            aria-describedby={errors.description !== undefined ? 'circle-description-error' : undefined}
             {...register('description')}
           />
           <div className="flex justify-between items-start mt-1">

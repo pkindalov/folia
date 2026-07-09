@@ -245,7 +245,7 @@ export default function EditorPage() {
                 className="line-input w-full py-2 text-body-text"
                 placeholder="Name this volume…"
                 aria-invalid={errors.title !== undefined}
-                aria-describedby={errors.title ? 'album-title-error' : undefined}
+                aria-describedby={errors.title !== undefined ? 'album-title-error' : undefined}
                 {...register('title')}
               />
               {errors.title && (
