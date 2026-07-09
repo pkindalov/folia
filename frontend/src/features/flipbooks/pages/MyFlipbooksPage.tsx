@@ -26,7 +26,7 @@ export default function MyFlipbooksPage() {
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useAlbums(page, visibilityForFilter(filter));
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
 
   const onFilterChange = (nextFilter: Filter) => {
     setFilter(nextFilter);

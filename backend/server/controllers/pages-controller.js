@@ -134,7 +134,7 @@ module.exports = {
     if (caption !== undefined && typeof caption !== 'string') {
       return res.status(400).json({ error: 'caption must be a string' });
     }
-    if (typeof caption === 'string' && caption.length > 500) {
+    if (typeof caption === 'string' && caption.trim().length > 500) {
       return res.status(400).json({ error: 'caption must be at most 500 characters' });
     }
 

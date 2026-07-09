@@ -51,7 +51,11 @@ export default function PageThumbnail({
   // flight for this caption — two quick blurs used to be able to fire two
   // overlapping requests, and whichever the server saw last would win,
   // sometimes silently reverting a newer edit.
-  const hasUnsavedCaption = caption !== (photo.caption ?? '');
+  //
+  // Compared trimmed, since the server trims the caption on save (Page.js)
+  // — comparing raw would leave this stuck "unsaved" forever after saving a
+  // caption with leading/trailing whitespace.
+  const hasUnsavedCaption = caption.trim() !== (photo.caption ?? '');
 
   const handleSaveCaption = () => {
     if (hasUnsavedCaption) onCaptionChange(caption);

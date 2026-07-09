@@ -47,7 +47,7 @@ function AlbumGrid({ albums }: { albums: PublicAlbum[] }) {
 function SharedWithYouSection() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useSharedWithMeAlbums(page);
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
 
   // An album leaving the circle (or being unshared) on a later page can
   // leave `page` pointing past the new last page — fall back to it rather
@@ -82,7 +82,7 @@ export default function ExplorePage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = usePublicAlbums(page);
   const albums = data?.albums;
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
 
   // An album leaving publication on a later page can leave `page` pointing
   // past the new last page — fall back to it rather than showing a blank

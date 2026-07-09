@@ -129,9 +129,9 @@ export default function CirclesPage() {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const { data, isLoading, isError, error } = useCircles(page);
   const invitesQuery = useMyInvites(invitesPage);
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
   const invitesTotalPages = invitesQuery.data
-    ? Math.ceil(invitesQuery.data.total / invitesQuery.data.limit)
+    ? Math.max(1, Math.ceil(invitesQuery.data.total / invitesQuery.data.limit))
     : 0;
 
   // Deleting the last circle on a later page can leave `page` pointing past

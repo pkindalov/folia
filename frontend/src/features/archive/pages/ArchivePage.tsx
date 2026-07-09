@@ -74,7 +74,7 @@ function ArchivedVolumeCard({ album }: { album: Album }) {
 export default function ArchivePage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useArchivedAlbums(page);
-  const totalPages = data ? Math.ceil(data.total / data.limit) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
 
   // Restoring the last album on a later page can leave `page` pointing past
   // the new last page — fall back to it rather than showing a blank page.
