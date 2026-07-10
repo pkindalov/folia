@@ -66,6 +66,15 @@ describe('registerSchema', () => {
     }
   );
 
+  test('rejects a whitespace-only username and trims valid input', () => {
+    expect(registerSchema.safeParse({ ...valid, username: '   ' }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, username: ' ab' }).success).toBe(false);
+
+    const result = registerSchema.safeParse({ ...valid, username: '  pan  ' });
+    expect(result.success).toBe(true);
+    expect(result.data?.username).toBe('pan');
+  });
+
   test('mirrors backend password boundaries (8-128)', () => {
     expect(
       registerSchema.safeParse({ ...valid, password: '1234567', confirmPassword: '1234567' })

@@ -416,7 +416,15 @@ module.exports = {
 
               return withCoverImage(saved).then((album) => res.json({ album }));
             })
-            .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
+            .catch((err) => {
+              // The album was deleted by a concurrent request between the
+              // findById above and this save — a 404 reflects that better
+              // than the generic "Invalid data" 400.
+              if (err instanceof mongoose.Error.DocumentNotFoundError) {
+                return res.status(404).json({ error: 'Album not found' });
+              }
+              res.status(400).json({ error: errorHandler.handleMongooseError(err) });
+            });
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to update album' }));

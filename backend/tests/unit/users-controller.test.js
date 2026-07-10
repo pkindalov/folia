@@ -59,6 +59,22 @@ describe('users-controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    test('rejects a username that is too short once trimmed', () => {
+      const res = mockRes();
+      controller.register({ body: { ...VALID_REGISTER, username: ' ab' } }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'username must be 3-30 characters' });
+    });
+
+    test('trims surrounding whitespace off the username before creating the user', async () => {
+      const create = jest
+        .spyOn(User, 'create')
+        .mockResolvedValue({ _id: 'id1', username: 'pan' });
+      controller.register({ body: { ...VALID_REGISTER, username: '  pan  ' } }, mockRes());
+      await flush();
+      expect(create.mock.calls[0][0].username).toBe('pan');
+    });
+
     test('accepts boundary usernames (3 and 30 chars)', async () => {
       for (const username of ['abc', 'x'.repeat(30)]) {
         const res = mockRes();
@@ -282,6 +298,17 @@ describe('users-controller', () => {
       controller.profile({ params: { username: 'maria' } }, res);
       await flush();
       expect(res.json).toHaveBeenCalledWith({ user: { ...user, avatarUrl: null } });
+    });
+
+    test('never exposes the user\'s email address — this route is looked up by username alone', async () => {
+      const user = { _id: 'id2', username: 'maria', email: 'maria@test.com' };
+      jest.spyOn(User, 'findOne').mockResolvedValue(user);
+      const res = mockRes();
+      controller.profile({ params: { username: 'maria' } }, res);
+      await flush();
+      const [{ user: returnedUser }] = res.json.mock.calls[0];
+      expect(returnedUser).not.toHaveProperty('email');
+      expect(returnedUser).toEqual({ _id: 'id2', username: 'maria', avatarUrl: null });
     });
 
     test('returns 404 for a missing user', async () => {

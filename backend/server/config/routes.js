@@ -24,6 +24,17 @@ const searchLimiter = rateLimit({
   message: { error: 'Too many searches, try again shortly' },
 });
 
+// Bounds how much disk/CPU an authenticated user can burn by repeatedly
+// uploading max-size avatars — legitimate use never needs more than a
+// handful of changes in a short window.
+const avatarUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many uploads, try again later' },
+});
+
 module.exports = (app) => {
   // Health / meta
   app.get('/api/health', controllers.home.health);
@@ -38,6 +49,7 @@ module.exports = (app) => {
   app.post(
     '/api/users/me/avatar',
     auth.isAuthenticated,
+    avatarUploadLimiter,
     avatarUpload.single('avatar'),
     controllers.users.uploadAvatar
   );

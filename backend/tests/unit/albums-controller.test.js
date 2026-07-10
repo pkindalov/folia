@@ -5,6 +5,7 @@ jest.mock('../../server/utilities/storage', () => ({
   photoUrl: jest.fn((ownerId, albumId, filename) => `/uploads/${ownerId}/${albumId}/${filename}`),
 }));
 
+const mongoose = require('mongoose');
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const User = require('../../server/data/User');
@@ -838,6 +839,18 @@ describe('albums-controller', () => {
       controller.update({ params: { id: ALBUM_ID }, body: { title: 'New' }, user: owner }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('maps a concurrent-deletion DocumentNotFoundError to 404, not a generic 400', async () => {
+      const album = fakeAlbum({
+        save: jest.fn().mockRejectedValue(new mongoose.Error.DocumentNotFoundError({})),
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const res = mockRes();
+      controller.update({ params: { id: ALBUM_ID }, body: { title: 'New' }, user: owner }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
     });
 
     test('rejects invalid partial input before touching the DB', () => {

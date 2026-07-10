@@ -29,7 +29,11 @@ module.exports = {
     if (!isNonEmptyString(username) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
       return res.status(400).json({ error: 'username, email and password are required' });
     }
-    if (username.length < 3 || username.length > 30) {
+    // Validate against the trimmed length — the schema trims on save, so
+    // checking the raw length here would let e.g. " ab" pass this check
+    // only to fail the schema's minlength validator once saved.
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
       return res.status(400).json({ error: 'username must be 3-30 characters' });
     }
     if (!EMAIL_RE.test(email) || email.length > 254) {
@@ -42,7 +46,7 @@ module.exports = {
     const salt = encryption.generateSalt();
     const hashedPass = encryption.generateHashedPassword(salt, password);
 
-    User.create({ username, email, salt, hashedPass, roles: ['User'] })
+    User.create({ username: trimmedUsername, email, salt, hashedPass, roles: ['User'] })
       .then((user) => {
         res.status(201).json({ token: auth.signToken(user), user: withAvatarUrl(user) });
       })
@@ -74,11 +78,14 @@ module.exports = {
     res.json({ user: withAvatarUrl(req.user) });
   },
 
+  // Public-facing lookup by username — never include email, same reasoning
+  // as search: this shouldn't become an enumeration surface.
   profile: (req, res) => {
     User.findOne({ username: req.params.username })
       .then((user) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({ user: withAvatarUrl(user) });
+        const { email, ...publicUser } = withAvatarUrl(user);
+        res.json({ user: publicUser });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load profile' }));
   },

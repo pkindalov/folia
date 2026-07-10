@@ -214,6 +214,20 @@ describe('profile routes (integration)', () => {
       await waitFor(() => fs.readdirSync(avatarFolder).length === 1);
       expect(fs.readdirSync(avatarFolder)).not.toContain(firstFilename);
     });
+
+    // Keep last: exhausts the shared rate limiter for this route
+    test('429s after the upload rate limit is exhausted', async () => {
+      authAs(fakeUser());
+      let last;
+      for (let i = 0; i < 25; i++) {
+        last = await request(app)
+          .post('/api/users/me/avatar')
+          .set('Authorization', `Bearer ${token}`)
+          .attach('avatar', Buffer.from('not an image'), 'notes.txt');
+      }
+      expect(last.status).toBe(429);
+      expect(last.body).toEqual({ error: 'Too many uploads, try again later' });
+    });
   });
 
   describe('DELETE /api/users/me/avatar', () => {
