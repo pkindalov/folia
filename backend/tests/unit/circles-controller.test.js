@@ -755,7 +755,7 @@ describe('circles-controller', () => {
       );
       await flush();
       expect(findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: CIRCLE_ID },
+        { _id: CIRCLE_ID, 'members.user': MEMBER_ID },
         { $pull: { members: { user: MEMBER_ID } } },
         expect.objectContaining({ new: true })
       );
@@ -809,7 +809,8 @@ describe('circles-controller', () => {
     test('404 (not a 500) when the circle is deleted by a concurrent request before the $pull lands', async () => {
       jest
         .spyOn(Circle, 'findById')
-        .mockResolvedValue(fakeCircle({ members: [{ user: MEMBER_ID, addedAt: new Date() }] }));
+        .mockResolvedValueOnce(fakeCircle({ members: [{ user: MEMBER_ID, addedAt: new Date() }] }))
+        .mockResolvedValueOnce(null);
       jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(null);
       const res = mockRes();
       controller.removeMember(
@@ -818,6 +819,28 @@ describe('circles-controller', () => {
       );
       await flush();
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('a lost race (concurrent request already removed this exact member) is idempotent — 200, no second notification', async () => {
+      const raceWinnerState = fakeCircle({ members: [] });
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValueOnce(
+          fakeCircle({ members: [{ user: MEMBER_ID, status: 'pending', invitedBy: OWNER_ID, addedAt: new Date() }] })
+        )
+        .mockResolvedValueOnce(raceWinnerState);
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(null);
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: member },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ circle: expect.objectContaining({ members: [] }) })
+      );
+      expect(Notification.create).not.toHaveBeenCalled();
     });
 
     test('404 for a malformed userId, without touching the DB', () => {

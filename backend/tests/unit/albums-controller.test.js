@@ -251,6 +251,44 @@ describe('albums-controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
+    test('reflects an already-reverted album instead of trusting a stale in-memory copy, when a concurrent circle deletion unshared it before its own document was removed', async () => {
+      // A circle deletion unshares every album pointing at it (a query-based
+      // updateMany) *before* deleting the circle document itself. If that
+      // updateMany runs in the gap between this album's own save() and its
+      // Circle.exists check, Circle.exists still sees the circle as existing
+      // (its document hasn't been removed yet) even though this exact album
+      // was already reverted to private in the database. Trusting the
+      // in-memory `album` object here would incorrectly report "shared".
+      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Circle, 'exists').mockResolvedValue(true);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'create').mockResolvedValue(album);
+      const alreadyRevertedAlbum = fakeAlbum({ visibility: 'private', sharedWithCircle: null });
+      jest.spyOn(Album, 'findById').mockResolvedValue(alreadyRevertedAlbum);
+      const res = mockRes();
+      controller.create(
+        {
+          body: {
+            title: 'Summer',
+            visibility: 'shared',
+            sharedWithCircle: '507f1f77bcf86cd799439099',
+          },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          album: expect.objectContaining({ visibility: 'private', sharedWithCircle: null }),
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
     test('ignores a submitted sharedWithCircle when visibility is not shared', async () => {
       const create = jest.spyOn(Album, 'create').mockResolvedValue(fakeAlbum());
       const findById = jest.spyOn(Circle, 'findById');
@@ -267,9 +305,17 @@ describe('albums-controller', () => {
 
     test('creating an album directly as shared notifies the accepted circle members, not the pending invitee', async () => {
       jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
-      jest.spyOn(Album, 'create').mockResolvedValue(
-        fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID, title: 'Summer Trip' })
-      );
+      const createdAlbum = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        title: 'Summer Trip',
+      });
+      jest.spyOn(Album, 'create').mockResolvedValue(createdAlbum);
+      // healDanglingCircleReference re-reads the album once it confirms the
+      // circle still exists, to guard against a concurrent circle deletion
+      // having already unshared it in the gap since save() — here it's just
+      // the same, still-shared album.
+      jest.spyOn(Album, 'findById').mockResolvedValue(createdAlbum);
       const res = mockRes();
       controller.create(
         {
@@ -312,9 +358,9 @@ describe('albums-controller', () => {
 
     test('still responds 201 when creating the album_shared notification fails', async () => {
       jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
-      jest
-        .spyOn(Album, 'create')
-        .mockResolvedValue(fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID }));
+      const createdAlbum = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Album, 'create').mockResolvedValue(createdAlbum);
+      jest.spyOn(Album, 'findById').mockResolvedValue(createdAlbum);
       Notification.create.mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.create(

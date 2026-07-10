@@ -417,32 +417,44 @@ module.exports = {
         // matching invite notification should flip to read too either way.
         const isPendingInviteRemoval = targetMember.status === 'pending';
 
-        // Atomic $pull — avoids a stale-array race against a concurrent
-        // add/remove on the same circle, mirroring addMember's approach.
+        // Atomic $pull, matched only while the member is still present —
+        // avoids a stale-array race against a concurrent add/remove on the
+        // same circle (mirroring addMember's approach), and also means a
+        // repeat removal (double-click, retried request) can't both re-run
+        // the $pull as a harmless no-op AND fire a second "invite declined"
+        // notification: without the 'members.user' guard, $pull matching
+        // zero elements still returns the document as "updated", so a losing
+        // concurrent request would notify the inviter twice for one decline.
         return Circle.findOneAndUpdate(
-          { _id: id },
+          { _id: id, 'members.user': userId },
           { $pull: { members: { user: userId } } },
           { new: true }
         ).then((updated) => {
-          // The circle was deleted by a concurrent request between the read
-          // above and this update.
-          if (!updated) return res.status(404).json({ error: 'Circle not found' });
-          if (isPendingInviteRemoval) {
-            markCircleInviteRead({ circleId: id, recipientId: userId });
-            // Only a genuine self-decline is a "rejection" worth notifying
-            // the inviter about — the owner/admin cancelling someone else's
-            // pending invite is a different action and should stay silent.
-            if (isSelfRemoval) {
-              notifyCircleInviteResponse({
-                type: 'circle_invite_declined',
-                circleId: id,
-                circleName: updated.name,
-                invitedBy: targetMember.invitedBy,
-                actingUser: req.user,
-              });
+          if (updated) {
+            if (isPendingInviteRemoval) {
+              markCircleInviteRead({ circleId: id, recipientId: userId });
+              // Only a genuine self-decline is a "rejection" worth notifying
+              // the inviter about — the owner/admin cancelling someone else's
+              // pending invite is a different action and should stay silent.
+              if (isSelfRemoval) {
+                notifyCircleInviteResponse({
+                  type: 'circle_invite_declined',
+                  circleId: id,
+                  circleName: updated.name,
+                  invitedBy: targetMember.invitedBy,
+                  actingUser: req.user,
+                });
+              }
             }
+            return withUsernames(updated).then((circle) => res.json({ circle }));
           }
-          return withUsernames(updated).then((circle) => res.json({ circle }));
+          // Either the circle was deleted, or a concurrent request already
+          // removed this exact member — re-read to tell the two apart and
+          // report success idempotently, without a second notification.
+          return Circle.findById(id).then((current) => {
+            if (!current) return res.status(404).json({ error: 'Circle not found' });
+            return withUsernames(current).then((circle) => res.json({ circle }));
+          });
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to remove member' }));

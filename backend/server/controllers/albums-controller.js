@@ -76,11 +76,21 @@ function healDanglingCircleReference(album) {
   }
 
   return Circle.exists({ _id: album.sharedWithCircle }).then((stillExists) => {
-    if (stillExists) return album;
+    if (!stillExists) {
+      album.sharedWithCircle = null;
+      album.visibility = 'private';
+      return album.save();
+    }
 
-    album.sharedWithCircle = null;
-    album.visibility = 'private';
-    return album.save();
+    // The circle still exists, but a circle deletion unshares its albums
+    // (via a query-based updateMany) *before* deleting the circle document
+    // itself — so this in-memory album can already have been reverted to
+    // private in the database in the gap between our own save() and this
+    // check, while the circle doc briefly still exists. Re-reading from the
+    // database rather than trusting this stale in-memory copy means the
+    // response always reflects what's actually committed, instead of
+    // reporting 'shared' for an album that was just silently unshared.
+    return Album.findById(album._id);
   });
 }
 
