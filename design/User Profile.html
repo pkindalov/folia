@@ -1,0 +1,577 @@
+<!doctype html>
+
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>5. User Profile - Heritage Album</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              surface: "#fcf9f2",
+              "outline-variant": "#cec5bd",
+              "on-error": "#ffffff",
+              "on-error-container": "#93000a",
+              "on-surface": "#1c1c18",
+              error: "#ba1a1a",
+              "surface-container-high": "#ebe8e1",
+              "on-tertiary-container": "#4f3e00",
+              "surface-bright": "#fcf9f2",
+              "on-secondary-fixed-variant": "#85221a",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-low": "#f6f3ec",
+              "on-secondary-fixed": "#410001",
+              "inverse-on-surface": "#f3f0e9",
+              "inverse-primary": "#ccc5c1",
+              "on-primary-container": "#95908b",
+              "on-background": "#1c1c18",
+              "primary-fixed-dim": "#ccc5c1",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#ffdad5",
+              "on-primary": "#ffffff",
+              "primary-container": "#2c2926",
+              "on-primary-fixed-variant": "#4a4643",
+              "tertiary-fixed": "#ffe088",
+              outline: "#7d766f",
+              "inverse-surface": "#31312c",
+              "tertiary-container": "#cca830",
+              tertiary: "#735c00",
+              primary: "#171512",
+              "surface-tint": "#625e5a",
+              "on-tertiary-fixed-variant": "#574500",
+              "on-tertiary-fixed": "#241a00",
+              secondary: "#a63a2e",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#4c463f",
+              background: "#fcf9f2",
+              "secondary-fixed-dim": "#ffb4a9",
+              "surface-container-highest": "#e5e2db",
+              "surface-variant": "#e5e2db",
+              "secondary-container": "#ff7c6c",
+              "on-secondary-container": "#72140e",
+              "surface-container": "#f1eee7",
+              "on-primary-fixed": "#1e1b18",
+              "on-tertiary": "#ffffff",
+              "surface-dim": "#dcdad3",
+              "tertiary-fixed-dim": "#e9c349",
+              "primary-fixed": "#e8e1dc",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              unit: "4px",
+              "gutter-mobile": "12px",
+              "touch-target-min": "44px",
+              "stack-md": "16px",
+              "stack-sm": "8px",
+              "stack-lg": "24px",
+              "section-gap": "40px",
+              "margin-mobile": "16px",
+            },
+            fontFamily: {
+              "headline-lg": ["Newsreader"],
+              "headline-md": ["Newsreader"],
+              "display-lg": ["Newsreader"],
+              "body-md": ["Newsreader"],
+              "body-lg": ["Newsreader"],
+              "label-md": ["Public Sans"],
+              "label-sm": ["Public Sans"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "32px",
+                { lineHeight: "38px", fontWeight: "600" },
+              ],
+              "headline-md": [
+                "24px",
+                { lineHeight: "30px", fontWeight: "600" },
+              ],
+              "display-lg": [
+                "40px",
+                {
+                  lineHeight: "48px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.05em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": ["10px", { lineHeight: "14px", fontWeight: "500" }],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #fcf9f2;
+        background-image:
+          radial-gradient(#e5e2db 0.5px, transparent 0.5px),
+          radial-gradient(#e5e2db 0.5px, #fcf9f2 0.5px);
+        background-size: 20px 20px;
+        background-position:
+          0 0,
+          10px 10px;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 300,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      .paper-sheet {
+        box-shadow:
+          0px 4px 20px rgba(0, 0, 0, 0.05),
+          inset 0px 0px 0px 1px rgba(18, 18, 16, 0.05);
+        position: relative;
+      }
+
+      .paper-sheet::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+        opacity: 0.1;
+        pointer-events: none;
+      }
+
+      .hand-ruled {
+        background-image: linear-gradient(transparent 31px, #e5e2db 31px);
+        background-size: 100% 32px;
+      }
+
+      .ink-button {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .ink-button:active {
+        transform: translateY(1px);
+        box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1eee7;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #171512;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body class="font-body-md text-on-surface">
+    <!-- Top Navigation Bar (Shared Component Logic) -->
+    <header
+      class="fixed top-0 left-0 right-0 z-50 bg-[#fdfcf8] border-b border-stone-200 flex justify-between items-center px-10 py-6 w-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)]"
+    >
+      <div class="flex items-center gap-2">
+        <span
+          class="font-['Newsreader'] font-bold text-2xl tracking-tighter text-[#121210]"
+          >Heritage Album</span
+        >
+        <span class="text-stone-300 mx-4">/</span>
+        <span
+          class="font-['Newsreader'] italic text-lg tracking-tight text-[#121210]"
+          >5. User Profile (Multi-Circle)</span
+        >
+      </div>
+      <nav class="hidden md:flex items-center gap-8">
+        <a
+          class="text-stone-400 font-['Newsreader'] italic text-lg tracking-tight hover:text-stone-600 transition-opacity"
+          href="#"
+          >The Gallery</a
+        >
+        <a
+          class="text-stone-400 font-['Newsreader'] italic text-lg tracking-tight hover:text-stone-600 transition-opacity"
+          href="#"
+          >My Spreads</a
+        >
+        <a
+          class="text-stone-400 font-['Newsreader'] italic text-lg tracking-tight hover:text-stone-600 transition-opacity"
+          href="#"
+          >Archived</a
+        >
+      </nav>
+      <div class="flex items-center gap-6">
+        <button
+          class="material-symbols-outlined text-[#121210] hover:opacity-80 transition-opacity"
+        >
+          menu_book
+        </button>
+        <button
+          class="material-symbols-outlined text-[#121210] hover:opacity-80 transition-opacity"
+        >
+          settings
+        </button>
+        <div
+          class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden"
+        >
+          <img
+            class="w-full h-full object-cover"
+            data-alt="A dignified close-up portrait of an elderly man with silver hair and wise eyes, wearing a dark wool sweater. He is captured in soft, high-contrast black and white photography, reflecting a timeless, archival aesthetic. The lighting is dramatic and warm, emphasizing the textures of his skin and the quiet dignity of a family curator."
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTYMG6Vf72H-zDTFpPC_RkjCiXBKTtWxAko7C43DK5c7h2HTK3p2FKnXMwBpfv7vDHe5kD-chrX7R5bDeXwpDhjW6M5VQDU2a1rK5rcXouMZu53DDpDVb6daR15lUzI1csblD_XVAehpO9czb0ApUkW-ZHPWLjlvjiOCqOsJtLO2-1wSeNXwc9YC6rLDi4vLg4dtFyJ0UPRFuA_EugoYMINTMgcSoCRY0OBHGfBBjw8LrGQA4B5E5DX4CiwtCd-Eo1rfAECEsSXDI"
+          />
+        </div>
+      </div>
+    </header>
+    <!-- Side Navigation Bar (Shared Component Logic) -->
+    <aside
+      class="fixed left-0 top-0 h-full w-72 bg-[#fdfcf8] border-r border-stone-200 flex-col pt-32 pb-12 px-8 shadow-[10px_0px_30px_rgba(0,0,0,0.03)] hidden md:flex"
+    >
+      <div class="mb-10">
+        <h2 class="font-['Newsreader'] font-semibold text-xl text-[#121210]">
+          The Living Archive
+        </h2>
+        <p
+          class="font-['Newsreader'] text-sm tracking-wide uppercase text-stone-400"
+        >
+          Est. 2024
+        </p>
+      </div>
+      <nav class="flex-1 space-y-2">
+        <a
+          class="flex items-center gap-4 text-stone-400 font-['Newsreader'] text-sm tracking-wide uppercase py-3 hover:bg-stone-50 transition-colors"
+          href="#"
+        >
+          <span class="material-symbols-outlined">auto_stories</span>
+          Current Spread
+        </a>
+        <a
+          class="flex items-center gap-4 text-stone-400 font-['Newsreader'] text-sm tracking-wide uppercase py-3 hover:bg-stone-50 transition-colors"
+          href="#"
+        >
+          <span class="material-symbols-outlined">group</span>
+          Contributors
+        </a>
+        <a
+          class="flex items-center gap-4 text-stone-400 font-['Newsreader'] text-sm tracking-wide uppercase py-3 hover:bg-stone-50 transition-colors"
+          href="#"
+        >
+          <span class="material-symbols-outlined">history_edu</span>
+          Conversations
+        </a>
+        <a
+          class="flex items-center gap-4 text-stone-400 font-['Newsreader'] text-sm tracking-wide uppercase py-3 hover:bg-stone-50 transition-colors"
+          href="#"
+        >
+          <span class="material-symbols-outlined">menu_book</span>
+          Historical Notes
+        </a>
+      </nav>
+      <button
+        class="mt-8 bg-primary text-on-primary py-4 px-6 font-label-md text-sm ink-button"
+      >
+        Add New Memory
+      </button>
+    </aside>
+    <!-- Main Content Canvas -->
+    <main class="md:ml-72 pt-32 pb-24 px-8 md:px-16 max-w-7xl mx-auto">
+      <header class="mb-12">
+        <h1 class="font-display-lg text-display-lg text-primary mb-2">
+          Curator's Dossier
+        </h1>
+        <p class="font-body-lg text-body-lg text-outline italic">
+          Refining the digital heritage of the Hawthorne Lineage.
+        </p>
+      </header>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <!-- Column 1: Identity & Privacy -->
+        <div class="lg:col-span-4 space-y-10">
+          <!-- Profile Identity Card -->
+          <section class="paper-sheet bg-surface p-8 border border-stone-200">
+            <div class="flex flex-col items-center text-center">
+              <div
+                class="w-32 h-40 border-[0.5px] border-stone-400 p-1 mb-6 relative"
+              >
+                <div class="absolute inset-0 bg-stone-100/30"></div>
+                <img
+                  class="w-full h-full object-cover grayscale contrast-125"
+                  data-alt="A portrait of an older man in a vintage, grainy sepia-toned photograph style. He is wearing a classic vest and tie, sitting in a library-like environment filled with books. The image has visible film grain and slight vignetting, giving it the appearance of a physical artifact from the mid-20th century preserved in a dossier."
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDb2bPygRb5k4wOIwoWb2ZYA8mcbkXZfNYg0V5CtzQNpq193JXifxRlfAfBtoieQwqj6epOhHNwGFkdEnYOpnttHz7pEfkM0xADGHDOnPVtR_8yAlMizFxluE7rgo1u0d1wOWEp7x0mQ2cVEQsT5RwlaXnv7yYaeRovnTTIlU-gX7cw_mV-eQlinenUitGtYta-C3saSBP42C3UDpeTxOZS5e66G15uLsasupeB0EtQ6oJ1AcqWEHYSH_tLQ2yCL6O6FscDvYJShDM"
+                />
+              </div>
+              <h2 class="font-headline-md text-headline-md text-primary">
+                Arthur Hawthorne
+              </h2>
+              <p
+                class="font-label-md text-label-md text-secondary uppercase tracking-[0.2em] mt-1"
+              >
+                Lead Curator
+              </p>
+              <div class="mt-8 w-full border-t border-stone-100 pt-6 space-y-4">
+                <div class="flex justify-between text-left">
+                  <span class="font-label-sm text-outline uppercase"
+                    >Member Since</span
+                  >
+                  <span class="font-body-md text-stone-600 italic"
+                    >May 19, 2024</span
+                  >
+                </div>
+                <div class="flex justify-between text-left">
+                  <span class="font-label-sm text-outline uppercase"
+                    >Archived Items</span
+                  >
+                  <span class="font-body-md text-stone-600 italic"
+                    >412 Artifacts</span
+                  >
+                </div>
+                <div class="pt-4 space-y-4">
+                  <button
+                    class="w-full bg-primary text-on-primary py-3 px-6 font-label-md text-sm ink-button flex items-center justify-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-sm">edit</span
+                    >Edit Profile</button
+                  ><a
+                    class="flex items-center justify-center gap-2 text-stone-400 font-['Newsreader'] text-sm tracking-wide uppercase py-2 hover:text-primary transition-colors"
+                    href="#"
+                    ><span class="material-symbols-outlined text-sm"
+                      >settings</span
+                    >Account Settings</a
+                  >
+                </div>
+              </div>
+            </div>
+          </section>
+          <!-- Shared Access Section (Private, Family, Public) -->
+        </div>
+        <!-- Column 2: Family Circle Management -->
+        <div class="lg:col-span-8">
+          <section
+            class="paper-sheet bg-surface border border-stone-200 min-h-full"
+          >
+            <div
+              class="p-10 border-b border-stone-200 flex justify-between items-end"
+            >
+              <div>
+                <h2 class="font-display-lg text-headline-lg text-primary">
+                  Manage My Circles
+                </h2>
+                <p class="font-body-md italic text-outline">
+                  Organize your lineage into distinct archival groups.
+                </p>
+              </div>
+              <button
+                class="bg-primary text-on-primary font-label-md py-3 px-8 ink-button flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-sm">add_circle</span
+                >Create New Circle
+              </button>
+            </div>
+            <div class="p-10">
+              <div
+                class="flex items-center gap-4 mb-10 pb-4 border-b border-stone-100"
+              >
+                <span class="material-symbols-outlined text-stone-300"
+                  >search</span
+                ><input
+                  class="bg-transparent border-none focus:ring-0 font-['Newsreader'] italic text-lg w-full placeholder:text-stone-300"
+                  placeholder="Search circles or kin..."
+                  type="text"
+                />
+              </div>
+              <div class="space-y-8">
+                <div class="border border-stone-200 p-6 bg-stone-50/30">
+                  <div class="flex justify-between items-start mb-6">
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-12 h-12 bg-primary flex items-center justify-center text-white"
+                      >
+                        <span class="material-symbols-outlined"
+                          >family_restroom</span
+                        >
+                      </div>
+                      <div>
+                        <h3 class="font-headline-md text-xl text-primary">
+                          Hawthorne Family Circle
+                        </h3>
+                        <p class="text-xs italic text-outline">
+                          12 Members • Primary Lineage
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button
+                        class="px-4 py-2 border border-stone-300 font-label-sm uppercase text-[10px] hover:bg-white transition-colors"
+                      >
+                        Invite to Circle</button
+                      ><button class="material-symbols-outlined text-stone-300">
+                        more_vert
+                      </button>
+                    </div>
+                  </div>
+                  <div class="flex -space-x-2 overflow-hidden">
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-200"
+                    ></div>
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-300"
+                    ></div>
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-400"
+                    ></div>
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-100 flex items-center justify-center text-[10px] font-bold"
+                    >
+                      +9
+                    </div>
+                  </div>
+                </div>
+                <div class="border border-stone-200 p-6 bg-stone-50/30">
+                  <div class="flex justify-between items-start mb-6">
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-12 h-12 bg-stone-200 flex items-center justify-center text-primary"
+                      >
+                        <span class="material-symbols-outlined">school</span>
+                      </div>
+                      <div>
+                        <h3 class="font-headline-md text-xl text-primary">
+                          University Archives
+                        </h3>
+                        <p class="text-xs italic text-outline">
+                          4 Members • Academic Research
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button
+                        class="px-4 py-2 border border-stone-300 font-label-sm uppercase text-[10px] hover:bg-white transition-colors"
+                      >
+                        Invite to Circle</button
+                      ><button class="material-symbols-outlined text-stone-300">
+                        more_vert
+                      </button>
+                    </div>
+                  </div>
+                  <div class="flex -space-x-2 overflow-hidden">
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-200"
+                    ></div>
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-300"
+                    ></div>
+                    <div
+                      class="w-8 h-8 rounded-full border-2 border-white bg-stone-100 flex items-center justify-center text-[10px] font-bold"
+                    >
+                      +1
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-auto p-10 bg-stone-50 border-t border-stone-200">
+              <div class="grid grid-cols-3 gap-8">
+                <div>
+                  <h5 class="font-label-sm text-outline uppercase mb-2">
+                    Circle Governance
+                  </h5>
+                  <p class="text-xs italic text-stone-500 leading-relaxed">
+                    Each circle maintains its own visibility protocols and
+                    contribution rights.
+                  </p>
+                </div>
+                <div>
+                  <h5 class="font-label-sm text-outline uppercase mb-2">
+                    Archive Density
+                  </h5>
+                  <p class="text-xs italic text-stone-500 leading-relaxed">
+                    Multi-circle access allows for cross-referencing artifacts
+                    across different social contexts.
+                  </p>
+                </div>
+                <div class="text-right flex flex-col justify-end">
+                  <p class="font-['Newsreader'] italic text-sm text-primary">
+                    Last Ledger Audit: Oct 15, 2024
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="md:ml-72 p-10 border-t border-stone-200 mt-20 bg-[#fdfcf8]">
+      <div class="flex justify-between items-center opacity-50">
+        <span class="font-['Newsreader'] text-sm tracking-widest uppercase"
+          >Heritage Album — The Dossier Edition</span
+        >
+        <div class="flex gap-8">
+          <a
+            class="font-label-sm text-[10px] uppercase tracking-widest"
+            href="#"
+            >Privacy</a
+          >
+          <a
+            class="font-label-sm text-[10px] uppercase tracking-widest"
+            href="#"
+            >Protocol</a
+          >
+          <a
+            class="font-label-sm text-[10px] uppercase tracking-widest"
+            href="#"
+            >Help</a
+          >
+        </div>
+      </div>
+    </footer>
+    <!-- Interactive Layer: Stamp Effect on Profile Section -->
+    <script>
+      document.querySelectorAll(".ink-button").forEach((button) => {
+        button.addEventListener("mousedown", () => {
+          button.style.transform = "scale(0.98) translateY(1px)";
+        });
+        button.addEventListener("mouseup", () => {
+          button.style.transform = "scale(1) translateY(0)";
+        });
+      });
+
+      // Simple visibility toggle logic for simulation
+      document.querySelectorAll("[data-role-selector]").forEach((selector) => {
+        selector.addEventListener("click", function () {
+          document
+            .querySelectorAll("[data-role-selector]")
+            .forEach((s) =>
+              s.classList.remove("bg-stone-50", "border-primary"),
+            );
+          this.classList.add("bg-stone-50", "border-primary");
+        });
+      });
+    </script>
+  </body>
+</html>

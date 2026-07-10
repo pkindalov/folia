@@ -1,0 +1,495 @@
+<!doctype html>
+
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      name="viewport"
+    />
+    <title>Heritage Album - User Profile</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;0,700;1,400;1,600&amp;family=Public+Sans:wght@400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              surface: "#fcf9f2",
+              "outline-variant": "#cec5bd",
+              "on-error": "#ffffff",
+              "on-error-container": "#93000a",
+              "on-surface": "#1c1c18",
+              error: "#ba1a1a",
+              "surface-container-high": "#ebe8e1",
+              "on-tertiary-container": "#4f3e00",
+              "surface-bright": "#fcf9f2",
+              "on-secondary-fixed-variant": "#85221a",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-low": "#f6f3ec",
+              "on-secondary-fixed": "#410001",
+              "inverse-on-surface": "#f3f0e9",
+              "inverse-primary": "#ccc5c1",
+              "on-primary-container": "#95908b",
+              "on-background": "#1c1c18",
+              "primary-fixed-dim": "#ccc5c1",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#ffdad5",
+              "on-primary": "#ffffff",
+              "primary-container": "#2c2926",
+              "on-primary-fixed-variant": "#4a4643",
+              "tertiary-fixed": "#ffe088",
+              outline: "#7d766f",
+              "inverse-surface": "#31312c",
+              "tertiary-container": "#cca830",
+              tertiary: "#735c00",
+              primary: "#171512",
+              "surface-tint": "#625e5a",
+              "on-tertiary-fixed-variant": "#574500",
+              "on-tertiary-fixed": "#241a00",
+              secondary: "#a63a2e",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#4c463f",
+              background: "#fcf9f2",
+              "secondary-fixed-dim": "#ffb4a9",
+              "surface-container-highest": "#e5e2db",
+              "surface-variant": "#e5e2db",
+              "secondary-container": "#ff7c6c",
+              "on-secondary-container": "#72140e",
+              "surface-container": "#f1eee7",
+              "on-primary-fixed": "#1e1b18",
+              "on-tertiary": "#ffffff",
+              "surface-dim": "#dcdad3",
+              "tertiary-fixed-dim": "#e9c349",
+              "primary-fixed": "#e8e1dc",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              unit: "4px",
+              "gutter-mobile": "12px",
+              "touch-target-min": "44px",
+              "stack-md": "16px",
+              "stack-sm": "8px",
+              "stack-lg": "24px",
+              "section-gap": "40px",
+              "margin-mobile": "16px",
+            },
+            fontFamily: {
+              "headline-lg": ["Newsreader"],
+              "headline-md": ["Newsreader"],
+              "display-lg": ["Newsreader"],
+              "body-md": ["Newsreader"],
+              "body-lg": ["Newsreader"],
+              "label-md": ["Public Sans"],
+              "label-sm": ["Public Sans"],
+              "headline-lg-mobile": ["Newsreader"],
+            },
+            fontSize: {
+              "headline-lg": [
+                "32px",
+                { lineHeight: "38px", fontWeight: "600" },
+              ],
+              "headline-md": [
+                "24px",
+                { lineHeight: "30px", fontWeight: "600" },
+              ],
+              "display-lg": [
+                "40px",
+                {
+                  lineHeight: "48px",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+              "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+              "label-md": [
+                "12px",
+                {
+                  lineHeight: "16px",
+                  letterSpacing: "0.05em",
+                  fontWeight: "600",
+                },
+              ],
+              "label-sm": ["10px", { lineHeight: "14px", fontWeight: "500" }],
+              "headline-lg-mobile": [
+                "28px",
+                { lineHeight: "34px", fontWeight: "600" },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #fcf9f2;
+        background-image: url("https://www.transparenttextures.com/patterns/felt.png"); /* Subtle paper texture */
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .paper-card {
+        background: #ffffff;
+        border: 1px solid #cec5bd;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+
+      .paper-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png");
+        opacity: 0.03;
+        pointer-events: none;
+      }
+
+      .ink-line {
+        height: 0.5px;
+        background-color: #cec5bd;
+        width: 100%;
+      }
+
+      .active-stamp {
+        position: relative;
+      }
+
+      .active-stamp::before {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        background: #a63a2e;
+        border-radius: 50%;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 300,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      .pressed-state:active {
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        transform: translateY(1px);
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cec5bd;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body class="font-body-md text-on-surface mb-18">
+    <!-- Top App Bar -->
+    <header
+      class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b-[0.5px] border-outline-variant shadow-sm flex justify-between items-center px-margin-mobile h-14"
+    >
+      <div class="flex items-center gap-2">
+        <span
+          class="material-symbols-outlined text-primary cursor-pointer active:scale-95 duration-150"
+          >menu</span
+        >
+        <h1
+          class="font-headline-lg-mobile text-headline-lg-mobile text-primary italic"
+        >
+          Heritage Album
+        </h1>
+      </div>
+      <span
+        class="material-symbols-outlined text-primary cursor-pointer active:scale-95 duration-150 ml-auto mr-4"
+        >settings</span
+      >
+      <div
+        class="w-8 h-8 rounded-full border border-outline-variant bg-surface-container overflow-hidden"
+      >
+        <img
+          class="w-full h-full object-cover"
+          data-alt="A dignified close-up portrait of an elderly man with silver hair and a warm, intelligent expression, styled like a vintage black and white film photograph with subtle grain and soft lighting, representing a legacy curator."
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAe9g_mpc2GoyrTKSsfnFWmlqM0DkcaFjPDG9qN07OGFSl5U63IrRjPrKdjzidJDVlLF0INXdhf1wrD0eyvpQ2G6aeHRrbGzEkBcrhvpqWQdlonCte3cVkOz6e0c0TDHhALkSZY9W2FVykXztkmtx9pxoisBpUIt3SKpKtn3eMXOz-2ihJyzMC_Ej3fH6xATGC83rbd8-ElUqJphsUcXvcmhXHUddIXRMikNhLZz-UEWtX3Y0GuOCH-dfoK7HLt4IDN80zTnW_ftpE"
+        />
+      </div>
+    </header>
+    <main class="pt-20 px-margin-mobile">
+      <!-- Section Label -->
+      <div class="mb-stack-lg border-b-[0.5px] border-outline-variant pb-2">
+        <span
+          class="font-label-md text-label-md text-secondary tracking-[0.2em] uppercase"
+          >5. User Profile (Mobile - Multi-Circle)</span
+        >
+      </div>
+      <!-- Hero / Identification Page -->
+      <section class="mb-section-gap">
+        <div class="flex flex-col items-center text-center">
+          <div class="relative w-24 h-24 mb-stack-md">
+            <div
+              class="absolute inset-0 border border-outline-variant rotate-3 bg-surface shadow-sm"
+            ></div>
+            <div
+              class="absolute inset-0 border border-outline-variant -rotate-2 bg-surface shadow-md"
+            ></div>
+            <div
+              class="relative w-full h-full border border-primary overflow-hidden shadow-lg z-10"
+            >
+              <img
+                class="w-full h-full object-cover"
+                data-alt="A vintage-style sepia portrait of a man in his late 60s wearing a high-collared shirt and spectacles, captured with a soft focus that evokes early 20th-century studio photography. The aesthetic is archival, warm, and deeply personal."
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCReyWK8KFXXdIFhDtKlS2SuCm2wmfDOFnsFMFT3MZb4WBQNXE-Bm7JQz3g8S2NLs0hj5P8kgr9DDMwflt82gD3xsYa5v2xDWWzX60jLUVjube_Ehiv89BgjFAGer4qOETC1tOb_Q5Q_c9Pt0roR5CxJ0ap0-kykz-sx1qNc7X0zBfZvgoJzEmeOEVPo-u1wGNuUC-fWQsm2Mkbd4yfSgPj7qVGYCt6_BhMzv3e9EsEuUyhqrL7H4M6-awMPcX19QMtZ0xyfbctQ0o"
+              />
+            </div>
+          </div>
+          <h2 class="font-headline-lg text-headline-lg text-primary">
+            Arthur J. Sterling
+          </h2>
+          <p
+            class="font-label-md text-label-md text-on-surface-variant italic mb-stack-sm tracking-tight"
+          >
+            Family Curator Since 2021
+          </p>
+          <div class="flex gap-stack-sm">
+            <span
+              class="px-2 py-1 bg-surface-container-low border border-outline-variant text-label-sm font-label-sm text-on-surface-variant"
+              >Archivist</span
+            >
+            <span
+              class="px-2 py-1 bg-surface-container-low border border-outline-variant text-label-sm font-label-sm text-on-surface-variant"
+              >42 Memories</span
+            >
+          </div>
+        </div>
+      </section>
+      <!-- Family Circle: Tactical Grid -->
+      <section class="mb-section-gap">
+        <div class="flex justify-between items-baseline mb-stack-md">
+          <h3 class="font-headline-md text-headline-md text-primary">
+            My Circles
+          </h3>
+          <button
+            class="font-label-md text-label-md text-secondary border-b border-secondary active:opacity-50 transition-opacity"
+          >
+            Manage All
+          </button>
+        </div>
+        <!-- Circle Tabs/Toggle -->
+        <div
+          class="flex gap-2 overflow-x-auto pb-4 custom-scrollbar mb-stack-md"
+        >
+          <button
+            class="px-4 py-2 bg-primary text-surface rounded-full font-label-md whitespace-nowrap"
+          >
+            Family
+          </button>
+          <button
+            class="px-4 py-2 bg-surface-container border border-outline-variant text-on-surface-variant rounded-full font-label-md whitespace-nowrap"
+          >
+            Friends
+          </button>
+          <button
+            class="px-4 py-2 bg-surface-container border border-outline-variant text-on-surface-variant rounded-full font-label-md whitespace-nowrap"
+          >
+            Colleagues
+          </button>
+          <button
+            class="px-4 py-2 bg-surface-container border border-outline-variant text-on-surface-variant rounded-full font-label-md whitespace-nowrap flex items-center gap-1"
+          >
+            <span class="material-symbols-outlined text-[18px]">add</span> New
+          </button>
+        </div>
+        <div class="grid grid-cols-1 gap-stack-sm">
+          <!-- Member Card 1 -->
+          <div
+            class="paper-card p-margin-mobile flex items-center justify-between"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 border border-outline-variant">
+                <img
+                  alt="Eleanor Vance"
+                  class="w-full h-full object-cover"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0iMOerMC0wq-jPMIDxzRtNYfiQbW4BDU_lSzupgA0uQ8GBND8lNwF-iTAdjgtkozkdItsMykvtYJ8yvskTHj-za9YN_benJmW0JGmRPACBovDsV-5QI5PJUdWpIQ8gVTKEAuDuaxQq-iEXAUHXO4gb3r1iJSQe_bwyBoNYu5aL9X3a7_bDkSfkLgybVE9iHNg4nG7R9CUQnVj0z9wupFbLYe3LOSWnROg8LfvgqcsYUZJfXyXaE1_jgBCgCOO7wgpMBKG6-vS0ho"
+                />
+              </div>
+              <div>
+                <p
+                  class="font-headline-md text-[18px] text-primary leading-tight"
+                >
+                  Eleanor Vance
+                </p>
+                <p
+                  class="font-label-sm text-label-sm text-on-surface-variant italic"
+                >
+                  Granddaughter • Contributor
+                </p>
+              </div>
+            </div>
+            <span
+              class="material-symbols-outlined text-outline cursor-pointer pressed-state"
+              >more_vert</span
+            >
+          </div>
+          <!-- Member Card 2 -->
+          <div
+            class="paper-card p-margin-mobile flex items-center justify-between"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 border border-outline-variant">
+                <img
+                  alt="Julian Sterling"
+                  class="w-full h-full object-cover"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtq6BhAEWFmuKnvcV9PK7Kj6p2IZxUYE38xPSIzt6SZl1ZuGKT9pu_jl-Z1Cn1mAXCn5QrnDEIQMZkVTIF8r3u-oYw8rOWMOQIebnlSU-j35jbDl8YjX0cCTpw4TH7iCHyg1--Z7nNdlO0HUO_65MJpLbirVWwR8NCXle06vMsfKZkIPDp-fY1NgFi6-x3Y62WkPYV_O4JP2GagAQqkDf6lLmqX9vA_u1MP24NVxpkuF2ln_HArB87wiFncteG09aue7fu4MtbrPE"
+                />
+              </div>
+              <div>
+                <p
+                  class="font-headline-md text-[18px] text-primary leading-tight"
+                >
+                  Julian Sterling
+                </p>
+                <p
+                  class="font-label-sm text-label-sm text-on-surface-variant italic"
+                >
+                  Son • Admin
+                </p>
+              </div>
+            </div>
+            <span
+              class="material-symbols-outlined text-outline cursor-pointer pressed-state"
+              >more_vert</span
+            >
+          </div>
+          <!-- Invite Action -->
+          <div
+            class="border border-dashed border-outline-variant p-margin-mobile flex flex-col items-center justify-center opacity-60 active:opacity-100 transition-opacity cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-primary mb-1"
+              >person_add</span
+            >
+            <p class="font-label-md text-label-md">Invite to Family Circle</p>
+          </div>
+          <div
+            class="paper-card p-margin-mobile flex items-center justify-between mt-stack-lg"
+          >
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-secondary"
+                >settings</span
+              >
+              <div>
+                <p
+                  class="font-headline-md text-[18px] text-primary leading-tight"
+                >
+                  Account Settings
+                </p>
+                <p
+                  class="font-label-sm text-label-sm text-on-surface-variant italic"
+                >
+                  Privacy, Legacy &amp; Export
+                </p>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-outline-variant"
+              >chevron_right</span
+            >
+          </div>
+        </div>
+      </section>
+      <!-- Archival Settings & Privacy (Image Integration) -->
+      <!-- Account Actions -->
+    </main>
+    <!-- Bottom Navigation Bar -->
+    <nav
+      class="fixed bottom-0 w-full z-50 h-18 bg-surface/90 backdrop-blur-md border-t-[0.5px] border-outline-variant shadow-[0_-2px_4px_rgba(0,0,0,0.05)] flex justify-around items-center px-4 pb-safe"
+    >
+      <div
+        class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors cursor-pointer pressed-state"
+      >
+        <span class="material-symbols-outlined">home</span>
+        <span class="font-label-sm text-label-sm">Home</span>
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors cursor-pointer pressed-state"
+      >
+        <span class="material-symbols-outlined">explore</span>
+        <span class="font-label-sm text-label-sm">Explore</span>
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-colors cursor-pointer pressed-state"
+      >
+        <span class="material-symbols-outlined">add_circle</span>
+        <span class="font-label-sm text-label-sm">Create</span>
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-secondary font-bold active-stamp cursor-pointer"
+      >
+        <span
+          class="material-symbols-outlined"
+          style="font-variation-settings: &quot;FILL&quot; 1"
+          >person</span
+        >
+        <span class="font-label-sm text-label-sm">Profile</span>
+      </div>
+    </nav>
+    <script>
+      // Micro-interaction for member cards
+      document.querySelectorAll(".paper-card").forEach((card) => {
+        card.addEventListener("click", function () {
+          // Subtle visual feedback
+          this.classList.add("bg-surface-container-low");
+          setTimeout(
+            () => this.classList.remove("bg-surface-container-low"),
+            100,
+          );
+        });
+      });
+
+      // Interactive radio buttons for privacy
+      const radios = document.querySelectorAll('input[name="privacy"]');
+      radios.forEach((radio) => {
+        radio.addEventListener("change", function () {
+          // Clear all border highlights
+          document.querySelectorAll('input[name="privacy"]').forEach((r) => {
+            r.closest("label").classList.remove(
+              "border-secondary",
+              "bg-secondary/5",
+            );
+            r.closest("label").classList.add("border-outline-variant");
+          });
+          // Add highlight to selected
+          if (this.checked) {
+            this.closest("label").classList.remove("border-outline-variant");
+            this.closest("label").classList.add(
+              "border-secondary",
+              "bg-secondary/5",
+            );
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
