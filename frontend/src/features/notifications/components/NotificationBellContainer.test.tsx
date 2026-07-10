@@ -9,10 +9,22 @@ import { renderWithProviders } from '../../../tests/test-utils';
 type FakeNotification = {
   _id: string;
   recipient: string;
-  type: 'circle_invite' | 'circle_invite_accepted' | 'circle_invite_declined' | 'circle_deleted';
+  type:
+    | 'circle_invite'
+    | 'circle_invite_accepted'
+    | 'circle_invite_declined'
+    | 'circle_deleted'
+    | 'album_shared'
+    | 'album_updated'
+    | 'album_deleted'
+    | 'album_photos_added'
+    | 'album_photo_removed'
+    | 'album_photo_caption_updated';
   circle: string;
   circleName: string;
   actorUsername: string;
+  albumTitle?: string;
+  album?: string;
   read: boolean;
   createdAt: string;
 };
@@ -72,7 +84,12 @@ const renderBell = (variant: 'sidebar' | 'mobile' = 'sidebar') =>
   renderWithProviders(<NotificationBellContainer variant={variant} />, {
     route: '/',
     path: '/',
-    extraRoutes: <Route path="/circles" element={<div>Circles page reached</div>} />,
+    extraRoutes: (
+      <>
+        <Route path="/circles" element={<div>Circles page reached</div>} />
+        <Route path="/book/:id" element={<div>Album viewer reached</div>} />
+      </>
+    ),
   });
 
 const openPanel = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -164,6 +181,144 @@ describe('NotificationBellContainer', () => {
         (_, element) => element?.textContent === 'maria deleted the circle The Sterling Family'
       )
     ).toBeInTheDocument();
+  });
+
+  test('renders an album-shared notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'album_shared', albumTitle: 'Summer Trip' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent === 'maria shared a new album Summer Trip with The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an album-updated notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'album_updated', albumTitle: 'Summer Trip' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent ===
+          'maria updated the album Summer Trip shared with The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an album-deleted notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'album_deleted', albumTitle: 'Summer Trip' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent ===
+          'maria deleted the album Summer Trip shared with The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an album-photos-added notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'album_photos_added', albumTitle: 'Summer Trip' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent === 'maria added new photos to Summer Trip in The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an album-photo-removed notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'album_photo_removed', albumTitle: 'Summer Trip' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent === 'maria removed a photo from Summer Trip in The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an album-photo-caption-updated notification with its own message', async () => {
+    notifications = [
+      { ...baseNotification, type: 'album_photo_caption_updated', albumTitle: 'Summer Trip' },
+    ];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent ===
+          "maria updated a photo's caption in Summer Trip shared with The Sterling Family"
+      )
+    ).toBeInTheDocument();
+  });
+
+  const EXPECTED_MESSAGE_BY_TYPE = {
+    album_shared: 'maria shared a new album Summer Trip with The Sterling Family',
+    album_updated: 'maria updated the album Summer Trip shared with The Sterling Family',
+    album_photos_added: 'maria added new photos to Summer Trip in The Sterling Family',
+    album_photo_removed: 'maria removed a photo from Summer Trip in The Sterling Family',
+    album_photo_caption_updated:
+      "maria updated a photo's caption in Summer Trip shared with The Sterling Family",
+    album_deleted: 'maria deleted the album Summer Trip shared with The Sterling Family',
+  } as const;
+
+  test.each([
+    'album_shared',
+    'album_updated',
+    'album_photos_added',
+    'album_photo_removed',
+    'album_photo_caption_updated',
+  ] as const)(
+    'clicking a %s notification navigates to the album, not the circles list',
+    async (type) => {
+      notifications = [{ ...baseNotification, type, albumTitle: 'Summer Trip', album: 'album-42' }];
+      const user = userEvent.setup();
+      renderBell();
+      await openPanel(user);
+
+      const message = await screen.findByText(
+        (_, element) => element?.textContent === EXPECTED_MESSAGE_BY_TYPE[type]
+      );
+      await user.click(message.closest('a')!);
+
+      expect(await screen.findByText('Album viewer reached')).toBeInTheDocument();
+    }
+  );
+
+  test('clicking an album-deleted notification falls back to the circles list — there is no album left to view', async () => {
+    notifications = [
+      { ...baseNotification, type: 'album_deleted', albumTitle: 'Summer Trip', album: 'album-42' },
+    ];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    const message = await screen.findByText(
+      (_, element) => element?.textContent === EXPECTED_MESSAGE_BY_TYPE.album_deleted
+    );
+    await user.click(message.closest('a')!);
+
+    expect(await screen.findByText('Circles page reached')).toBeInTheDocument();
   });
 
   test('shows an empty state when there are no notifications', async () => {

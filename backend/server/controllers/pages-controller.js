@@ -3,6 +3,7 @@ const fs = require('fs');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const storage = require('../utilities/storage');
+const { notifyAlbumEvent } = require('../utilities/album-notifications');
 const { isOwnerOrAdmin, checkAlbumReadAccess } = require('../utilities/controller-helpers');
 
 const env = process.env.NODE_ENV || 'development';
@@ -106,6 +107,9 @@ module.exports = {
         )
           .then((pages) =>
             syncPageCount(album).then((pageCount) => {
+              // One notification per upload request, not per photo — a
+              // batch of 10 photos is one "new photos added" event.
+              notifyAlbumEvent({ type: 'album_photos_added', album, actorUser: req.user });
               res.status(201).json({
                 pages: pages.map((page) => ({
                   ...page.toJSON(),
@@ -141,8 +145,17 @@ module.exports = {
     Page.findOne({ _id: pageId, album: album._id })
       .then((page) => {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
-        page.caption = caption ?? '';
+        const nextCaption = caption ?? '';
+        // Page.caption is trim: true, so compare trimmed — otherwise a
+        // whitespace-only edit (stored value unchanged after Mongoose's
+        // trim setter) would still read as "changed" and fire a spurious
+        // notification.
+        const captionChanged = nextCaption.trim() !== page.caption;
+        page.caption = nextCaption;
         return page.save().then((saved) => {
+          if (captionChanged) {
+            notifyAlbumEvent({ type: 'album_photo_caption_updated', album, actorUser: req.user });
+          }
           res.json({
             page: {
               ...saved.toJSON(),
@@ -206,7 +219,10 @@ module.exports = {
             }
           })
           .then(() => syncPageCount(album))
-          .then((pageCount) => res.json({ deleted: true, pageCount }));
+          .then((pageCount) => {
+            notifyAlbumEvent({ type: 'album_photo_removed', album, actorUser: req.user });
+            res.json({ deleted: true, pageCount });
+          });
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete photo' }));
   },

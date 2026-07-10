@@ -47,6 +47,25 @@ function checkAlbumReadAccess(album, user) {
 // can't force a huge, wasteful .skip() on the underlying query.
 const MAX_PAGE = 100000;
 
+// Who should be notified about something happening on a circle (its
+// deletion) or on a resource shared with it (an album being shared, edited,
+// deleted, or getting new photos): the circle's owner plus its accepted
+// members — mirroring exactly who canAccessSharedAlbum/isOwnerOrMember
+// already grant access to — minus whoever performed the action, since they
+// don't need telling about their own action. Shared by circles-controller.js
+// and album-notifications.js so the recipient rule can't drift between them.
+function circleRecipientIds(circle, actorId) {
+  const excludeId = actorId.toString();
+  return [
+    ...new Set([
+      circle.owner.toString(),
+      ...circle.members
+        .filter((member) => member.status === 'accepted')
+        .map((member) => member.user.toString()),
+    ]),
+  ].filter((recipientId) => recipientId !== excludeId);
+}
+
 module.exports = {
   isNonEmptyString: (v) => typeof v === 'string' && v.trim().length > 0,
 
@@ -65,4 +84,5 @@ module.exports = {
   canAccessSharedAlbum,
   isOwnerOrAdmin,
   checkAlbumReadAccess,
+  circleRecipientIds,
 };

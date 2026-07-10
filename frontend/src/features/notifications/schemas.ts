@@ -5,6 +5,12 @@ export const NOTIFICATION_TYPES = [
   'circle_invite_accepted',
   'circle_invite_declined',
   'circle_deleted',
+  'album_shared',
+  'album_updated',
+  'album_deleted',
+  'album_photos_added',
+  'album_photo_removed',
+  'album_photo_caption_updated',
 ] as const;
 
 export const notificationSchema = z
@@ -15,6 +21,9 @@ export const notificationSchema = z
     circle: z.string(),
     circleName: z.string(),
     actorUsername: z.string(),
+    // Only present on the album_* types.
+    album: z.string().optional(),
+    albumTitle: z.string().optional(),
     read: z.boolean(),
     createdAt: z.string(),
     updatedAt: z.string().optional(),

@@ -12,6 +12,9 @@ export type NotificationItemData = {
   type: AppNotification['type'];
   actorUsername: string;
   circleName: string;
+  // Only present on the album_* types.
+  albumTitle: string | null;
+  album: string | null;
   read: boolean;
   relativeTime: string; // pre-formatted, just render it
 };

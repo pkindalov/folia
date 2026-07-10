@@ -12,6 +12,8 @@ jest.mock('fs', () => ({
 
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
+const Circle = require('../../server/data/Circle');
+const Notification = require('../../server/data/Notification');
 const fs = require('fs');
 const controller = require('../../server/controllers/pages-controller');
 
@@ -19,12 +21,26 @@ const flush = () => new Promise(setImmediate);
 
 const OWNER_ID = '507f1f77bcf86cd799439011';
 const OTHER_ID = '507f1f77bcf86cd799439022';
+const MEMBER_ID = '507f1f77bcf86cd799439033';
+const PENDING_MEMBER_ID = '507f1f77bcf86cd799439055';
 const ALBUM_ID = '507f191e810c19729de860ea';
 const PAGE_ID = '507f191e810c19729de860eb';
+const SHARED_CIRCLE_ID = '507f1f77bcf86cd799439099';
 
 const owner = { _id: OWNER_ID, username: 'pan', roles: ['User'] };
 const stranger = { _id: OTHER_ID, username: 'maria', roles: ['User'] };
 const admin = { _id: OTHER_ID, username: 'root', roles: ['Admin'] };
+
+const fakeCircle = (overrides = {}) => ({
+  _id: SHARED_CIRCLE_ID,
+  name: 'The Sterling Family',
+  owner: { toString: () => OWNER_ID },
+  members: [
+    { user: MEMBER_ID, status: 'accepted' },
+    { user: PENDING_MEMBER_ID, status: 'pending' },
+  ],
+  ...overrides,
+});
 
 const mockRes = () => {
   const res = {};
@@ -70,6 +86,11 @@ const fakePage = (overrides = {}) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // A photo upload to a shared album now fires a fire-and-forget
+  // notification; stubbed globally so tests that don't care about it can't
+  // accidentally hit the real Mongoose model.
+  jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
+  jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
 });
 
 describe('pages-controller', () => {
@@ -220,6 +241,75 @@ describe('pages-controller', () => {
       expect(fs.rm).toHaveBeenCalledTimes(1);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    test('notifies each accepted circle member when photos are added to a shared album', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files, user: owner }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_photos_added',
+          album: ALBUM_ID,
+          albumTitle: 'Summer',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+    });
+
+    test('fires one notification per upload request, not one per photo', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(3);
+      jest
+        .spyOn(Page, 'insertMany')
+        .mockResolvedValue([fakePage(), fakePage({ _id: 'p2' }), fakePage({ _id: 'p3' })]);
+      const res = mockRes();
+      const files = [
+        { filename: 'a.jpg', mimetype: 'image/jpeg', size: 10 },
+        { filename: 'b.jpg', mimetype: 'image/jpeg', size: 10 },
+        { filename: 'c.jpg', mimetype: 'image/jpeg', size: 10 },
+      ];
+      controller.upload({ album, files, user: owner }, res);
+      await flush();
+      const photosAddedCalls = Notification.create.mock.calls.filter(
+        ([doc]) => doc.type === 'album_photos_added' && doc.recipient === MEMBER_ID
+      );
+      expect(photosAddedCalls).toHaveLength(1);
+    });
+
+    test('does not notify when uploading to a private album', async () => {
+      const album = fakeAlbum();
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds 201 when creating the album_photos_added notification fails', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files, user: owner }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
   });
 
   describe('updateCaption', () => {
@@ -305,6 +395,105 @@ describe('pages-controller', () => {
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    test('notifies each accepted circle member when a photo caption changes on a shared album', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      const page = fakePage({ caption: 'old caption' });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption(
+        { album, params: { pageId: PAGE_ID }, body: { caption: 'new caption' }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_photo_caption_updated',
+          album: ALBUM_ID,
+          albumTitle: 'Summer',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+    });
+
+    test('does not notify when the submitted caption is unchanged', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      const page = fakePage({ caption: 'same caption' });
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption(
+        { album, params: { pageId: PAGE_ID }, body: { caption: 'same caption' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('does not notify for a whitespace-only edit — Page.caption is trimmed on save, so the stored value never actually changes', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      const page = fakePage({ caption: 'same caption' });
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption(
+        { album, params: { pageId: PAGE_ID }, body: { caption: '  same caption  ' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('does not notify when the caption is omitted and was already empty — clearing an already-empty caption is a no-op', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      const page = fakePage({ caption: '' });
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption({ album, params: { pageId: PAGE_ID }, body: {}, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('does not notify when captioning a photo in a private album', async () => {
+      const album = fakeAlbum();
+      const findById = jest.spyOn(Circle, 'findById');
+      const page = fakePage({ caption: 'old' });
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const res = mockRes();
+      controller.updateCaption(
+        { album, params: { pageId: PAGE_ID }, body: { caption: 'new' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds 200 when creating the caption-updated notification fails', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      const page = fakePage({ caption: 'old caption' });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.updateCaption(
+        { album, params: { pageId: PAGE_ID }, body: { caption: 'new caption' }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ page: expect.objectContaining({ caption: 'new caption' }) })
+      );
+    });
   });
 
   describe('remove', () => {
@@ -370,6 +559,52 @@ describe('pages-controller', () => {
       controller.remove({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    test('notifies each accepted circle member when a photo is removed from a shared album', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(fakePage());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_photo_removed',
+          album: ALBUM_ID,
+          albumTitle: 'Summer',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+    });
+
+    test('does not notify when removing a photo from a private album', async () => {
+      const album = fakeAlbum();
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'findOne').mockResolvedValue(fakePage());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID }, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds 200 when creating the album_photo_removed notification fails', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(fakePage());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true, pageCount: 0 });
     });
   });
 

@@ -12,14 +12,77 @@ type NotificationItemProps = {
   isDismissing: boolean;
 };
 
-// Record over NotificationItemData['type'] rather than a switch: adding a
-// notification type without a case here is a compile error, not a silent
-// runtime gap.
-const ACTION_TEXT_BY_TYPE: Record<NotificationItemData['type'], string> = {
-  circle_invite: 'invited you to',
-  circle_invite_accepted: 'accepted your invite to',
-  circle_invite_declined: 'declined your invite to',
-  circle_deleted: 'deleted the circle',
+// A message reads as "{actor} {leading} {subject} {trailing}", with actor
+// and subject bolded when unread. subject is the thing the action was done
+// to (a circle for circle_* types, an album for album_* types); trailing is
+// optional plain-text context after it (e.g. which circle an album was
+// shared with). Record over NotificationItemData['type'] rather than a
+// switch: adding a notification type without a case here is a compile error,
+// not a silent runtime gap.
+type MessageParts = { leading: string; subject: string; trailing?: string };
+
+const MESSAGE_PARTS_BY_TYPE: Record<
+  NotificationItemData['type'],
+  (notification: NotificationItemData) => MessageParts
+> = {
+  circle_invite: ({ circleName }) => ({ leading: 'invited you to', subject: circleName }),
+  circle_invite_accepted: ({ circleName }) => ({
+    leading: 'accepted your invite to',
+    subject: circleName,
+  }),
+  circle_invite_declined: ({ circleName }) => ({
+    leading: 'declined your invite to',
+    subject: circleName,
+  }),
+  circle_deleted: ({ circleName }) => ({ leading: 'deleted the circle', subject: circleName }),
+  album_shared: ({ albumTitle, circleName }) => ({
+    leading: 'shared a new album',
+    subject: albumTitle ?? 'an album',
+    trailing: `with ${circleName}`,
+  }),
+  album_updated: ({ albumTitle, circleName }) => ({
+    leading: 'updated the album',
+    subject: albumTitle ?? 'an album',
+    trailing: `shared with ${circleName}`,
+  }),
+  album_deleted: ({ albumTitle, circleName }) => ({
+    leading: 'deleted the album',
+    subject: albumTitle ?? 'an album',
+    trailing: `shared with ${circleName}`,
+  }),
+  album_photos_added: ({ albumTitle, circleName }) => ({
+    leading: 'added new photos to',
+    subject: albumTitle ?? 'an album',
+    trailing: `in ${circleName}`,
+  }),
+  album_photo_removed: ({ albumTitle, circleName }) => ({
+    leading: 'removed a photo from',
+    subject: albumTitle ?? 'an album',
+    trailing: `in ${circleName}`,
+  }),
+  album_photo_caption_updated: ({ albumTitle, circleName }) => ({
+    leading: "updated a photo's caption in",
+    subject: albumTitle ?? 'an album',
+    trailing: `shared with ${circleName}`,
+  }),
+};
+
+// Where clicking the row navigates. Most album_* types link straight to the
+// album itself; album_deleted is the one exception — there's no album left
+// to view, so it falls back to /circles like the circle_* types. Record
+// over NotificationItemData['type'] rather than a switch, for the same
+// exhaustiveness reason as MESSAGE_PARTS_BY_TYPE above.
+const LINK_TO_BY_TYPE: Record<NotificationItemData['type'], (notification: NotificationItemData) => string> = {
+  circle_invite: () => '/circles',
+  circle_invite_accepted: () => '/circles',
+  circle_invite_declined: () => '/circles',
+  circle_deleted: () => '/circles',
+  album_shared: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_deleted: () => '/circles',
+  album_photos_added: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_photo_removed: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_photo_caption_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
 };
 
 // Two sibling interactive elements, not a nested button-in-link: the row
@@ -32,8 +95,9 @@ export default function NotificationItem({
   onDismiss,
   isDismissing,
 }: NotificationItemProps) {
-  const { _id, type, actorUsername, circleName, read, relativeTime } = notification;
-  const actionText = ACTION_TEXT_BY_TYPE[type];
+  const { _id, actorUsername, read, relativeTime } = notification;
+  const { leading, subject, trailing } = MESSAGE_PARTS_BY_TYPE[notification.type](notification);
+  const linkTo = LINK_TO_BY_TYPE[notification.type](notification);
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -47,7 +111,7 @@ export default function NotificationItem({
       }`}
     >
       <Link
-        to="/circles"
+        to={linkTo}
         onClick={() => onItemClick(notification)}
         className="flex items-start px-5 py-4 hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-secondary -outline-offset-2"
       >
@@ -62,12 +126,14 @@ export default function NotificationItem({
           >
             {read ? (
               <>
-                {actorUsername} {actionText} {circleName}
+                {actorUsername} {leading} {subject}
+                {trailing ? ` ${trailing}` : ''}
               </>
             ) : (
               <>
-                <strong className="font-semibold">{actorUsername}</strong> {actionText}{' '}
-                <strong className="font-semibold">{circleName}</strong>
+                <strong className="font-semibold">{actorUsername}</strong> {leading}{' '}
+                <strong className="font-semibold">{subject}</strong>
+                {trailing ? ` ${trailing}` : ''}
               </>
             )}
           </span>

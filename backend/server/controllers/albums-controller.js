@@ -5,6 +5,7 @@ const User = require('../data/User');
 const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
+const { notifyAlbumEvent } = require('../utilities/album-notifications');
 const {
   isNonEmptyString,
   parsePage,
@@ -315,6 +316,9 @@ module.exports = {
         .then((album) => {
           // Every user gets their own folder under uploads/, one subfolder per album
           storage.ensureAlbumDir(req.user._id, album._id);
+          // No-ops unless the album actually ended up 'shared' with a circle
+          // (healDanglingCircleReference may have just reverted it to private).
+          notifyAlbumEvent({ type: 'album_shared', album, actorUser: req.user });
           // A brand-new album can't have any pages yet, so its cover is always null.
           res.status(201).json({ album: { ...album.toJSON(), coverImage: null } });
         })
@@ -363,6 +367,16 @@ module.exports = {
         return circleOwnershipCheck.then((circleError) => {
           if (circleError) return res.status(400).json({ error: circleError });
 
+          // Captured before mutating below, to tell apart "just became shared
+          // with this circle" from "already shared with this same circle,
+          // only its content changed" once the save has gone through.
+          const wasSharedWithCircleId =
+            album.visibility === 'shared' && album.sharedWithCircle
+              ? album.sharedWithCircle.toString()
+              : null;
+          const titleChanged = title !== undefined && title.trim() !== album.title;
+          const descriptionChanged = description !== undefined && description !== album.description;
+
           if (title !== undefined) album.title = title.trim();
           if (description !== undefined) album.description = description;
           if (visibility !== undefined) album.visibility = visibility;
@@ -372,7 +386,26 @@ module.exports = {
           return album
             .save()
             .then(healDanglingCircleReference)
-            .then((saved) => withCoverImage(saved).then((album) => res.json({ album })))
+            .then((saved) => {
+              const isNowSharedWithCircleId =
+                saved.visibility === 'shared' && saved.sharedWithCircle
+                  ? saved.sharedWithCircle.toString()
+                  : null;
+
+              if (isNowSharedWithCircleId && isNowSharedWithCircleId !== wasSharedWithCircleId) {
+                // Newly shared (or re-shared with a different circle) — this
+                // is the "here's new content for you" moment, same type as a
+                // brand-new album, regardless of whether that happened via
+                // create() or here via an edit.
+                notifyAlbumEvent({ type: 'album_shared', album: saved, actorUser: req.user });
+              } else if (isNowSharedWithCircleId && (titleChanged || descriptionChanged)) {
+                // Still shared with the same circle as before — a routine
+                // edit to content the circle can already see.
+                notifyAlbumEvent({ type: 'album_updated', album: saved, actorUser: req.user });
+              }
+
+              return withCoverImage(saved).then((album) => res.json({ album }));
+            })
             .catch((err) => res.status(400).json({ error: errorHandler.handleMongooseError(err) }));
         });
       })
@@ -392,14 +425,25 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
-        return album.deleteOne().then(() =>
+        // Atomic find-and-delete, not album.deleteOne(): two concurrent
+        // delete requests for the same album could both pass the checks
+        // above before either removes it, and Model#deleteOne() doesn't
+        // error when nothing matches — so without this, both would fall
+        // through and double-fire the album_deleted notification below.
+        // findOneAndDelete only ever actually removes the document once;
+        // whichever request loses the race gets null back and skips the
+        // cleanup/notification, since the winning request already did it.
+        return Album.findOneAndDelete({ _id: id }).then((deletedAlbum) => {
+          if (!deletedAlbum) return res.json({ deleted: true });
+
           // Its pages (and their files) go with it — otherwise the Page
           // records would orphan once the album they reference is gone
-          Page.deleteMany({ album: album._id }).then(() => {
-            storage.removeAlbumDir(album.owner, album._id);
+          return Page.deleteMany({ album: deletedAlbum._id }).then(() => {
+            storage.removeAlbumDir(deletedAlbum.owner, deletedAlbum._id);
+            notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
             res.json({ deleted: true });
-          })
-        );
+          });
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete album' }));
   },

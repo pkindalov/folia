@@ -9,6 +9,7 @@ const {
   parsePage,
   DELETED_USER_LABEL,
   isOwnerOrAdmin,
+  circleRecipientIds,
 } = require('../utilities/controller-helpers');
 
 const { MAX_MEMBERS } = Circle;
@@ -113,14 +114,7 @@ function notifyCircleInviteResponse({ type, circleId, circleName, invitedBy, act
 function notifyCircleDeleted({ circle, circleName, actorUsername, actorId }) {
   Promise.resolve()
     .then(() => {
-      const recipientIds = [
-        ...new Set([
-          circle.owner.toString(),
-          ...circle.members
-            .filter((member) => member.status === 'accepted')
-            .map((member) => member.user.toString()),
-        ]),
-      ].filter((recipientId) => recipientId !== actorId);
+      const recipientIds = circleRecipientIds(circle, actorId);
 
       return Promise.all(
         recipientIds.map((recipientId) =>

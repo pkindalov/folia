@@ -6,6 +6,12 @@ const NOTIFICATION_TYPES = [
   'circle_invite_accepted',
   'circle_invite_declined',
   'circle_deleted',
+  'album_shared',
+  'album_updated',
+  'album_deleted',
+  'album_photos_added',
+  'album_photo_removed',
+  'album_photo_caption_updated',
 ];
 
 // Soft cap per recipient — this is a growing, unbounded top-level
@@ -49,6 +55,17 @@ const notificationSchema = new mongoose.Schema(
     actorUsername: {
       type: String,
       required: '{PATH} is required',
+    },
+    // Only set for the album_* types — a snapshot of which album and what
+    // its title was, for the same reason circleName is a snapshot: the
+    // notification should still read correctly even after the album is
+    // later renamed or deleted.
+    album: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Album',
+    },
+    albumTitle: {
+      type: String,
     },
     read: {
       type: Boolean,

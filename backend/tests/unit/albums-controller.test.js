@@ -9,6 +9,7 @@ const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const User = require('../../server/data/User');
 const Circle = require('../../server/data/Circle');
+const Notification = require('../../server/data/Notification');
 const storage = require('../../server/utilities/storage');
 const controller = require('../../server/controllers/albums-controller');
 
@@ -16,12 +17,31 @@ const flush = () => new Promise(setImmediate);
 
 const OWNER_ID = '507f1f77bcf86cd799439011';
 const OTHER_ID = '507f1f77bcf86cd799439022';
+const MEMBER_ID = '507f1f77bcf86cd799439033';
+const PENDING_MEMBER_ID = '507f1f77bcf86cd799439055';
 const ALBUM_ID = '507f191e810c19729de860ea';
 const PAGE_ID = '507f191e810c19729de860eb';
+const SHARED_CIRCLE_ID = '507f1f77bcf86cd799439099';
 
 const owner = { _id: OWNER_ID, username: 'pan', roles: ['User'] };
 const stranger = { _id: OTHER_ID, username: 'maria', roles: ['User'] };
 const admin = { _id: OTHER_ID, username: 'root', roles: ['Admin'] };
+
+// A circle owned by `owner`, with one accepted member (who should be
+// notified about album events) and one still-pending invitee (who
+// shouldn't — they never had real access). Used wherever an album is shared
+// with a circle and the notification's recipients matter, not just
+// verifySharedCircleOwnership's pass/fail check.
+const fakeCircle = (overrides = {}) => ({
+  _id: SHARED_CIRCLE_ID,
+  name: 'The Sterling Family',
+  owner: { toString: () => OWNER_ID },
+  members: [
+    { user: MEMBER_ID, status: 'accepted' },
+    { user: PENDING_MEMBER_ID, status: 'pending' },
+  ],
+  ...overrides,
+});
 
 const mockRes = () => {
   const res = {};
@@ -40,9 +60,8 @@ const fakeAlbum = (overrides = {}) => ({
   save: jest.fn().mockImplementation(function () {
     return Promise.resolve(this);
   }),
-  deleteOne: jest.fn().mockResolvedValue({}),
   toJSON: function () {
-    const { toJSON: _drop, save: _drop2, deleteOne: _drop3, ...rest } = this;
+    const { toJSON: _drop, save: _drop2, ...rest } = this;
     return rest;
   },
   ...overrides,
@@ -62,6 +81,12 @@ beforeEach(() => {
   // is a no-op unless a test deliberately overrides this to exercise the
   // self-heal path.
   jest.spyOn(Circle, 'exists').mockResolvedValue(true);
+  // Every mutation on a shared album now fires a fire-and-forget
+  // notification; stubbed globally (rather than per-test) so a test that
+  // doesn't care about notifications can't accidentally hit the real
+  // Mongoose model, mirroring circles-controller.test.js's convention.
+  jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
+  jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
 });
 
 describe('albums-controller', () => {
@@ -237,6 +262,66 @@ describe('albums-controller', () => {
       await flush();
       expect(findById).not.toHaveBeenCalled();
       expect(create.mock.calls[0][0].sharedWithCircle).toBeNull();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test('creating an album directly as shared notifies the accepted circle members, not the pending invitee', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Album, 'create').mockResolvedValue(
+        fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID, title: 'Summer Trip' })
+      );
+      const res = mockRes();
+      controller.create(
+        {
+          body: { title: 'Summer Trip', visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_shared',
+          circle: SHARED_CIRCLE_ID,
+          circleName: 'The Sterling Family',
+          actorUsername: 'pan',
+          album: ALBUM_ID,
+          albumTitle: 'Summer Trip',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+      // The circle owner and the album's creator are the same person here —
+      // no point notifying yourself of your own action.
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID })
+      );
+    });
+
+    test('does not notify anyone when creating a private album', async () => {
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Album, 'create').mockResolvedValue(fakeAlbum());
+      const res = mockRes();
+      controller.create({ body: { title: 'Summer' }, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds 201 when creating the album_shared notification fails', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest
+        .spyOn(Album, 'create')
+        .mockResolvedValue(fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID }));
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.create(
+        { body: { title: 'Summer', visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID }, user: owner },
+        res
+      );
+      await flush();
       expect(res.status).toHaveBeenCalledWith(201);
     });
   });
@@ -754,15 +839,159 @@ describe('albums-controller', () => {
     test('accepts setting sharedWithCircle to a circle the requester owns', async () => {
       const album = fakeAlbum({ visibility: 'shared' });
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
-      jest.spyOn(Circle, 'findById').mockResolvedValue({ owner: { toString: () => OWNER_ID } });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.update(
-        { params: { id: ALBUM_ID }, body: { sharedWithCircle: '507f1f77bcf86cd799439099' }, user: owner },
+        { params: { id: ALBUM_ID }, body: { sharedWithCircle: SHARED_CIRCLE_ID }, user: owner },
         res
       );
       await flush();
-      expect(album.sharedWithCircle).toBe('507f1f77bcf86cd799439099');
+      expect(album.sharedWithCircle).toBe(SHARED_CIRCLE_ID);
       expect(album.save).toHaveBeenCalled();
+    });
+
+    test('newly sharing a previously-private album notifies the circle (album_shared)', async () => {
+      const album = fakeAlbum({ visibility: 'private', sharedWithCircle: null });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        {
+          params: { id: ALBUM_ID },
+          body: { visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID },
+          user: owner,
+        },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_shared',
+          album: ALBUM_ID,
+          albumTitle: 'Summer',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+    });
+
+    test('re-sharing an already-shared album with a different circle notifies the new circle as album_shared', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: 'some-other-circle-id' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { sharedWithCircle: SHARED_CIRCLE_ID }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: MEMBER_ID, type: 'album_shared', circle: SHARED_CIRCLE_ID })
+      );
+    });
+
+    test('editing the title of an already-shared album notifies the circle as album_updated, not album_shared', async () => {
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        title: 'Old title',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { title: 'New title' }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: MEMBER_ID, type: 'album_updated', albumTitle: 'New title' })
+      );
+    });
+
+    test('editing the description of an already-shared album notifies the circle as album_updated', async () => {
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        description: 'Old description',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { description: 'New description' }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: MEMBER_ID, type: 'album_updated' })
+      );
+    });
+
+    test('saving the same title/description again does not notify — nothing actually changed', async () => {
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        title: 'Summer',
+        description: 'Same',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { title: 'Summer', description: 'Same' }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('toggling archived on a shared album does not notify — not content the circle sees differently', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID, archived: false });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { archived: true }, user: owner },
+        res
+      );
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('unsharing an album (moving away from shared) does not notify — no "unshared" notification type exists', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { visibility: 'private' }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds 200 when creating the album_updated notification fails', async () => {
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        title: 'Old title',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { title: 'New title' }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.status).not.toHaveBeenCalledWith(400);
     });
 
     test('self-heals a circle deleted between the ownership check and the save', async () => {
@@ -809,23 +1038,34 @@ describe('albums-controller', () => {
       // The circle is owned by the album's real owner, not by the Admin
       // making this request — verifySharedCircleOwnership would reject it if
       // it were (wrongly) re-run against req.user for an untouched value.
+      // Circle.findById *is* still called once, but only by the
+      // album_updated notification lookup below, not by ownership
+      // re-verification — the update succeeding (not a 400) is what proves
+      // re-verification was skipped.
       const album = fakeAlbum({
         visibility: 'shared',
-        sharedWithCircle: '507f1f77bcf86cd799439099',
+        sharedWithCircle: SHARED_CIRCLE_ID,
       });
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
-      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.update(
         { params: { id: ALBUM_ID }, body: { description: 'new description' }, user: admin },
         res
       );
       await flush();
-      expect(findById).not.toHaveBeenCalled();
       expect(album.description).toBe('new description');
-      expect(album.sharedWithCircle).toBe('507f1f77bcf86cd799439099');
+      expect(album.sharedWithCircle).toBe(SHARED_CIRCLE_ID);
       expect(res.status).not.toHaveBeenCalledWith(400);
       expect(album.save).toHaveBeenCalled();
+      // The Admin acted, not the album's real owner — so the owner (who
+      // didn't perform this edit) is a recipient, unlike the Admin themselves.
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID, type: 'album_updated', actorUsername: 'root' })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OTHER_ID })
+      );
     });
 
     test('clears sharedWithCircle when visibility moves away from shared', async () => {
@@ -915,24 +1155,25 @@ describe('albums-controller', () => {
 
   describe('remove', () => {
     test('403 when a non-owner tries to delete', async () => {
-      const album = fakeAlbum();
-      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const findOneAndDelete = jest.spyOn(Album, 'findOneAndDelete');
       const res = mockRes();
       controller.remove({ params: { id: ALBUM_ID }, user: stranger }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(403);
-      expect(album.deleteOne).not.toHaveBeenCalled();
+      expect(findOneAndDelete).not.toHaveBeenCalled();
       expect(storage.removeAlbumDir).not.toHaveBeenCalled();
     });
 
     test('deletes the album, its pages, and its upload folder', async () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findOneAndDelete = jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
       const deleteMany = jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
       const res = mockRes();
       controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
-      expect(album.deleteOne).toHaveBeenCalled();
+      expect(findOneAndDelete).toHaveBeenCalledWith({ _id: ALBUM_ID });
       expect(deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
       expect(storage.removeAlbumDir).toHaveBeenCalledWith(album.owner, ALBUM_ID);
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
@@ -941,11 +1182,12 @@ describe('albums-controller', () => {
     test('an Admin can delete any album', async () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findOneAndDelete = jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
       jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
       const res = mockRes();
       controller.remove({ params: { id: ALBUM_ID }, user: admin }, res);
       await flush();
-      expect(album.deleteOne).toHaveBeenCalled();
+      expect(findOneAndDelete).toHaveBeenCalled();
     });
 
     test('404 for malformed id, no deletion attempted', () => {
@@ -954,6 +1196,79 @@ describe('albums-controller', () => {
       controller.remove({ params: { id: '../../etc' }, user: owner }, res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(findById).not.toHaveBeenCalled();
+    });
+
+    // The atomic findOneAndDelete only ever actually removes the document
+    // once — a second concurrent delete request for the same album finds
+    // nothing left to remove and gets null back. It should still report
+    // success but must not re-run page cleanup or notifications the winning
+    // request already did.
+    test('a losing race against a concurrent delete of the same album still reports success, but skips cleanup/notifications', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(
+        fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID })
+      );
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(null);
+      const deleteMany = jest.spyOn(Page, 'deleteMany');
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+      expect(deleteMany).not.toHaveBeenCalled();
+      expect(storage.removeAlbumDir).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('notifies each accepted circle member when a shared album is deleted', async () => {
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+        title: 'Summer Trip',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'album_deleted',
+          albumTitle: 'Summer Trip',
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: PENDING_MEMBER_ID })
+      );
+    });
+
+    test('does not notify anyone when deleting a private album', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
+      const findById = jest.spyOn(Circle, 'findById');
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(findById).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds with deleted:true when creating the deletion notification fails', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
   });
 });

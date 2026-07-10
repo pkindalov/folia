@@ -27,19 +27,54 @@ describe('Notification model', () => {
       expect(notification.read).toBe(false);
     });
 
-    test.each(['circle_invite_accepted', 'circle_invite_declined', 'circle_deleted'])(
-      'accepts a valid %s notification',
-      (type) => {
-        const notification = new Notification({
-          recipient: RECIPIENT_ID,
-          type,
-          circle: CIRCLE_ID,
-          circleName: 'The Sterling Family',
-          actorUsername: 'sam',
-        });
-        expect(notification.validateSync()).toBeUndefined();
-      }
-    );
+    test.each([
+      'circle_invite_accepted',
+      'circle_invite_declined',
+      'circle_deleted',
+      'album_shared',
+      'album_updated',
+      'album_deleted',
+      'album_photos_added',
+      'album_photo_removed',
+      'album_photo_caption_updated',
+    ])('accepts a valid %s notification', (type) => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type,
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+    });
+
+    test('accepts and stores an album/albumTitle snapshot on an album_* notification', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'album_shared',
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+        album: '507f191e810c19729de860eb',
+        albumTitle: 'Summer Trip',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.album.toString()).toBe('507f191e810c19729de860eb');
+      expect(notification.albumTitle).toBe('Summer Trip');
+    });
+
+    test('album and albumTitle are optional — a circle_deleted notification has neither', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'circle_deleted',
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.album).toBeUndefined();
+      expect(notification.albumTitle).toBeUndefined();
+    });
 
     test('rejects a type outside the enum', () => {
       const err = new Notification({
