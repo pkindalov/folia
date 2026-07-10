@@ -43,7 +43,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen md:flex">
       {/* Mobile top bar */}
       <header className="md:hidden fixed top-0 inset-x-0 z-50 flex justify-between items-center px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/40 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
-        <span className="font-display font-bold text-2xl tracking-tighter">Folia</span>
+        <Link to="/" className="font-display font-bold text-2xl tracking-tighter">Folia</Link>
         <div className="flex items-center gap-3">
           <Link to="/profile" className="flex items-center gap-2">
             <span className="font-body text-sm text-on-surface-variant">{user.username}</span>
@@ -62,10 +62,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col py-12 px-8 bg-surface-container-lowest fixed left-0 top-0 h-full w-72 border-r border-outline-variant/50 shadow-[10px_0px_30px_rgba(0,0,0,0.03)] z-40">
-        <div className="mb-12">
+        <Link to="/" className="mb-12 block">
           <h1 className="font-display font-semibold text-3xl text-primary">Folia</h1>
           <p className="font-body text-sm text-on-surface-variant italic mt-1">Preserving Legacy</p>
-        </div>
+        </Link>
         <nav className="flex-1 flex flex-col gap-2">
           {NAV_ITEMS.map((item) => (
             <NavLink
