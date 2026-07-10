@@ -8,6 +8,7 @@ export const userSchema = z
     email: z.string(),
     roles: z.array(z.string()),
     createdAt: z.string().optional(),
+    avatarUrl: z.string().nullable().optional(),
   })
   .passthrough();
 

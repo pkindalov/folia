@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useMe, useLogout } from '../features/auth';
 import { NotificationBellContainer } from '../features/notifications';
+import Avatar from './Avatar';
 import Icon from './Icon';
 
 const NAV_ITEMS = [
@@ -44,13 +45,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <header className="md:hidden fixed top-0 inset-x-0 z-50 flex justify-between items-center px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/40 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
         <span className="font-display font-bold text-2xl tracking-tighter">Folia</span>
         <div className="flex items-center gap-3">
-          <span className="font-body text-sm text-on-surface-variant">{user.username}</span>
-          <span
-            className="w-8 h-8 rounded-full bg-secondary text-on-secondary font-ui text-sm flex items-center justify-center"
-            aria-hidden="true"
-          >
-            {user.username.charAt(0).toUpperCase()}
-          </span>
+          <Link to="/profile" className="flex items-center gap-2">
+            <span className="font-body text-sm text-on-surface-variant">{user.username}</span>
+            <Avatar username={user.username} avatarUrl={user.avatarUrl} size="sm" />
+          </Link>
           <NotificationBellContainer variant="mobile" />
           <button
             onClick={logout}
@@ -88,10 +86,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto pt-8 border-t border-outline-variant/50 flex flex-col gap-6">
           <NotificationBellContainer variant="sidebar" />
-          <p className="font-body text-sm text-on-surface-variant px-4">
-            Signed in as <strong>{user.username}</strong> ({user.email})
-            {user.roles.includes('Admin') && ' — Admin'}
-          </p>
+          <Link
+            to="/profile"
+            aria-label="View profile"
+            className="flex items-center gap-3 px-4 hover:opacity-80 transition-opacity"
+          >
+            <Avatar username={user.username} avatarUrl={user.avatarUrl} size="sm" />
+            <p className="font-body text-sm text-on-surface-variant">
+              Signed in as <strong>{user.username}</strong> ({user.email})
+              {user.roles.includes('Admin') && ' — Admin'}
+            </p>
+          </Link>
           <button
             onClick={logout}
             className="flex items-center gap-4 px-4 py-3 font-body text-sm tracking-wide uppercase text-on-surface-variant hover:bg-surface-container-low rounded-paper transition-colors text-left"
