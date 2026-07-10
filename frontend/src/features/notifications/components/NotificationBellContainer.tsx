@@ -60,6 +60,7 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
   const notifications: NotificationItemData[] = (notificationsQuery.data?.notifications ?? []).map(
     (notification) => ({
       _id: notification._id,
+      type: notification.type,
       actorUsername: notification.actorUsername,
       circleName: notification.circleName,
       read: notification.read,

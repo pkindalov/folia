@@ -248,6 +248,19 @@ describe('circles-controller', () => {
       expect(res.status).not.toHaveBeenCalledWith(403);
     });
 
+    test('never exposes invitedBy in the response — it is server-side bookkeeping only', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date(), invitedBy: OWNER_ID }],
+        })
+      );
+      const res = mockRes();
+      controller.getOne({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      const { circle } = res.json.mock.calls[0][0];
+      expect(circle.members[0]).not.toHaveProperty('invitedBy');
+    });
+
     test('falls back to a placeholder label when a referenced User was deleted', async () => {
       jest
         .spyOn(Circle, 'findById')
@@ -516,6 +529,28 @@ describe('circles-controller', () => {
       );
     });
 
+    test('records the acting user as invitedBy on the new member', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(User, 'findById').mockResolvedValue({ _id: NEW_MEMBER_ID, username: 'jules' });
+      const updated = fakeCircle({
+        members: [{ user: NEW_MEMBER_ID, status: 'pending', addedAt: new Date() }],
+      });
+      const findOneAndUpdate = jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(updated);
+      const res = mockRes();
+      controller.addMember(
+        { params: { id: CIRCLE_ID }, body: { userId: NEW_MEMBER_ID }, user: admin },
+        res
+      );
+      await flush();
+      expect(findOneAndUpdate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          $push: { members: expect.objectContaining({ invitedBy: admin._id }) },
+        }),
+        expect.anything()
+      );
+    });
+
     test('creates an invite notification for the new member', async () => {
       jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
       jest.spyOn(User, 'findById').mockResolvedValue({ _id: NEW_MEMBER_ID, username: 'jules' });
@@ -755,6 +790,96 @@ describe('circles-controller', () => {
         { $set: { read: true, readAt: expect.any(Date) } }
       );
     });
+
+    test('notifies the inviter when the invitee declines their own pending invite', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date(), invitedBy: OWNER_ID }],
+        })
+      );
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(fakeCircle({ members: [] }));
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: member },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: OWNER_ID,
+          type: 'circle_invite_declined',
+          circle: CIRCLE_ID,
+          circleName: 'The Sterling Family',
+          actorUsername: 'sam',
+        })
+      );
+    });
+
+    // The key requirement: a well-intentioned refactor that flattens this
+    // condition into the "mark read" branch would silently regress it.
+    test('does not notify anyone when the owner cancels someone else\'s pending invite (not a self-decline)', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date(), invitedBy: OWNER_ID }],
+        })
+      );
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(fakeCircle({ members: [] }));
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('does not notify anyone when an accepted member leaves (not a decline)', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date(), invitedBy: OWNER_ID }],
+        })
+      );
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(fakeCircle({ members: [] }));
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: member },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('does not notify or crash when declining a legacy invite with no recorded invitedBy', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({ members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date() }] })
+      );
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(fakeCircle({ members: [] }));
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: member },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+    });
+
+    test('still responds 200 when creating the decline notification fails', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date(), invitedBy: OWNER_ID }],
+        })
+      );
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(fakeCircle({ members: [] }));
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.removeMember(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, user: member },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+    });
   });
 
   describe('listInvites', () => {
@@ -841,6 +966,7 @@ describe('circles-controller', () => {
 
     test('404 when there is no matching pending invitation', async () => {
       const findOneAndUpdate = jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(null);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(null);
       const res = mockRes();
       controller.respondToInvite(
         { params: { id: CIRCLE_ID, userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
@@ -848,11 +974,37 @@ describe('circles-controller', () => {
       );
       await flush();
       expect(findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: CIRCLE_ID, 'members.user': MEMBER_ID },
+        { _id: CIRCLE_ID, members: { $elemMatch: { user: MEMBER_ID, status: 'pending' } } },
         { $set: { 'members.$.status': 'accepted' } },
         expect.objectContaining({ new: true })
       );
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('re-accepting an already-accepted invitation is idempotent — 200, no second notification', async () => {
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(null);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        fakeCircle({
+          members: [
+            { user: MEMBER_ID, status: 'accepted', addedAt: new Date(), invitedBy: OWNER_ID },
+          ],
+        })
+      );
+      const res = mockRes();
+      controller.respondToInvite(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          circle: expect.objectContaining({
+            members: [expect.objectContaining({ status: 'accepted' })],
+          }),
+        })
+      );
+      expect(Notification.create).not.toHaveBeenCalled();
     });
 
     test('accepts the invitation and returns the updated circle', async () => {
@@ -912,6 +1064,62 @@ describe('circles-controller', () => {
           }),
         })
       );
+    });
+
+    test('notifies the inviter when their invite is accepted', async () => {
+      const updated = fakeCircle({
+        members: [
+          { user: MEMBER_ID, status: 'accepted', addedAt: new Date(), invitedBy: OWNER_ID },
+        ],
+      });
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(updated);
+      const res = mockRes();
+      controller.respondToInvite(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
+        res
+      );
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: OWNER_ID,
+          type: 'circle_invite_accepted',
+          circle: CIRCLE_ID,
+          circleName: 'The Sterling Family',
+          actorUsername: 'sam',
+        })
+      );
+    });
+
+    test('does not notify or crash when accepting a legacy invite with no recorded invitedBy', async () => {
+      const updated = fakeCircle({
+        members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
+      });
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(updated);
+      const res = mockRes();
+      controller.respondToInvite(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+    });
+
+    test('still responds 200 when creating the acceptance notification fails', async () => {
+      const updated = fakeCircle({
+        members: [
+          { user: MEMBER_ID, status: 'accepted', addedAt: new Date(), invitedBy: OWNER_ID },
+        ],
+      });
+      jest.spyOn(Circle, 'findOneAndUpdate').mockResolvedValue(updated);
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.respondToInvite(
+        { params: { id: CIRCLE_ID, userId: MEMBER_ID }, body: { status: 'accepted' }, user: member },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
     });
   });
 });

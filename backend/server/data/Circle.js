@@ -44,6 +44,13 @@ const circleSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
           },
+          // Who sent this specific invite — the owner or an admin. Optional
+          // (absent on members added before this field existed) so those
+          // pre-existing subdocuments remain valid without a migration.
+          invitedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+          },
         },
       ],
       validate: {

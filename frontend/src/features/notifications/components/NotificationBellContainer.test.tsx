@@ -9,7 +9,7 @@ import { renderWithProviders } from '../../../tests/test-utils';
 type FakeNotification = {
   _id: string;
   recipient: string;
-  type: 'circle_invite';
+  type: 'circle_invite' | 'circle_invite_accepted' | 'circle_invite_declined';
   circle: string;
   circleName: string;
   actorUsername: string;
@@ -123,6 +123,32 @@ describe('NotificationBellContainer', () => {
     expect(
       await screen.findByText(
         (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders an accepted-invite notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'circle_invite_accepted' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) => element?.textContent === 'maria accepted your invite to The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders a declined-invite notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'circle_invite_declined' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) => element?.textContent === 'maria declined your invite to The Sterling Family'
       )
     ).toBeInTheDocument();
   });

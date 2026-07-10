@@ -54,7 +54,9 @@ function withUsernames(circle) {
     return {
       ...json,
       ownerUsername: usernameById.get(circle.owner.toString()) ?? DELETED_USER_LABEL,
-      members: json.members.map((member) => ({
+      // invitedBy is server-side bookkeeping (used to route accept/decline
+      // notifications back to the inviter) — not meant for any client to see.
+      members: json.members.map(({ invitedBy, ...member }) => ({
         ...member,
         username: usernameById.get(member.user.toString()) ?? DELETED_USER_LABEL,
       })),
@@ -75,6 +77,30 @@ function notifyCircleInvite({ circleId, circleName, actorUsername, recipientId }
   })
     .then(() => Notification.pruneExcessForRecipient(recipientId))
     .catch((err) => console.error('Failed to create/prune circle-invite notification', err));
+}
+
+// Notifies whoever sent a specific invite that the invitee accepted or
+// declined it. Silently a no-op (not an error) when invitedBy is missing
+// (an invite sent before this field existed) or equals the person acting —
+// there is no inviter to notify, or notifying yourself would be meaningless.
+// Wrapped in a Promise so even the synchronous guard checks share the same
+// fire-and-forget contract as notifyCircleInvite above: nothing in here can
+// ever propagate into the caller's response chain.
+function notifyCircleInviteResponse({ type, circleId, circleName, invitedBy, actingUser }) {
+  Promise.resolve()
+    .then(() => {
+      if (!invitedBy) return null;
+      if (invitedBy.toString() === actingUser._id.toString()) return null;
+
+      return Notification.create({
+        recipient: invitedBy,
+        type,
+        circle: circleId,
+        circleName,
+        actorUsername: actingUser.username,
+      }).then(() => Notification.pruneExcessForRecipient(invitedBy));
+    })
+    .catch((err) => console.error('Failed to create/prune circle-invite-response notification', err));
 }
 
 function markCircleInviteRead({ circleId, recipientId }) {
@@ -276,7 +302,14 @@ module.exports = {
               $expr: { $lt: [{ $size: '$members' }, MAX_MEMBERS] },
             },
             {
-              $push: { members: { user: userId, status: 'pending', addedAt: new Date() } },
+              $push: {
+                members: {
+                  user: userId,
+                  status: 'pending',
+                  addedAt: new Date(),
+                  invitedBy: req.user._id,
+                },
+              },
             },
             { new: true }
           ).then((updated) => {
@@ -348,6 +381,18 @@ module.exports = {
           if (!updated) return res.status(404).json({ error: 'Circle not found' });
           if (isPendingInviteRemoval) {
             markCircleInviteRead({ circleId: id, recipientId: userId });
+            // Only a genuine self-decline is a "rejection" worth notifying
+            // the inviter about — the owner/admin cancelling someone else's
+            // pending invite is a different action and should stay silent.
+            if (isSelfRemoval) {
+              notifyCircleInviteResponse({
+                type: 'circle_invite_declined',
+                circleId: id,
+                circleName: updated.name,
+                invitedBy: targetMember.invitedBy,
+                actingUser: req.user,
+              });
+            }
           }
           return withUsernames(updated).then((circle) => res.json({ circle }));
         });
@@ -407,15 +452,45 @@ module.exports = {
       return res.status(403).json({ error: 'You can only respond to your own invitation' });
     }
 
+    // Matched only when the member is currently pending — otherwise a
+    // repeat accept (double-click, retried request) would both re-run the
+    // update as a harmless no-op AND fire a second "invite accepted"
+    // notification to the inviter. Requiring the pending->accepted
+    // transition here means the notification below only ever fires once,
+    // on the actual transition.
     Circle.findOneAndUpdate(
-      { _id: id, 'members.user': userId },
+      { _id: id, members: { $elemMatch: { user: userId, status: 'pending' } } },
       { $set: { 'members.$.status': 'accepted' } },
       { new: true }
     )
       .then((updated) => {
-        if (!updated) return res.status(404).json({ error: 'Invitation not found' });
-        markCircleInviteRead({ circleId: id, recipientId: userId });
-        return withUsernames(updated).then((circle) => res.json({ circle }));
+        if (updated) {
+          markCircleInviteRead({ circleId: id, recipientId: userId });
+          const acceptedMember = updated.members.find(
+            (member) => member.user.toString() === userId
+          );
+          notifyCircleInviteResponse({
+            type: 'circle_invite_accepted',
+            circleId: id,
+            circleName: updated.name,
+            invitedBy: acceptedMember?.invitedBy,
+            actingUser: req.user,
+          });
+          return withUsernames(updated).then((circle) => res.json({ circle }));
+        }
+        // No pending invite matched — either it was already accepted
+        // (idempotent: report success, no second notification) or there
+        // never was one for this user.
+        return Circle.findById(id).then((current) => {
+          if (!current) return res.status(404).json({ error: 'Invitation not found' });
+          const existingMember = current.members.find(
+            (member) => member.user.toString() === userId
+          );
+          if (!existingMember || existingMember.status !== 'accepted') {
+            return res.status(404).json({ error: 'Invitation not found' });
+          }
+          return withUsernames(current).then((circle) => res.json({ circle }));
+        });
       })
       .catch(() => res.status(500).json({ error: 'Failed to accept invitation' }));
   },

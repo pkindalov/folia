@@ -5,9 +5,11 @@ import useFocusTrap from '../../../hooks/useFocusTrap';
 import useOutsideClick from '../../../hooks/useOutsideClick';
 import useEscapeKey from '../../../hooks/useEscapeKey';
 import NotificationItem from './NotificationItem';
+import type { AppNotification } from '../schemas';
 
 export type NotificationItemData = {
   _id: string;
+  type: AppNotification['type'];
   actorUsername: string;
   circleName: string;
   read: boolean;

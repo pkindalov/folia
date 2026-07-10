@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-export const NOTIFICATION_TYPES = ['circle_invite'] as const;
+export const NOTIFICATION_TYPES = [
+  'circle_invite',
+  'circle_invite_accepted',
+  'circle_invite_declined',
+] as const;
 
 export const notificationSchema = z
   .object({

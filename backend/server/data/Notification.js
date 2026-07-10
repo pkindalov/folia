@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 
-// Only one trigger exists today (a circle invite), but the type is still
-// named explicitly rather than assumed — every query below filters by it.
-const NOTIFICATION_TYPES = ['circle_invite'];
+// Every query below filters by type explicitly rather than assuming shape.
+const NOTIFICATION_TYPES = ['circle_invite', 'circle_invite_accepted', 'circle_invite_declined'];
 
 // Soft cap per recipient — this is a growing, unbounded top-level
 // collection (unlike Circle.members, there's no schema-level array to

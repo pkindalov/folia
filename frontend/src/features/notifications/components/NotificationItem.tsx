@@ -12,6 +12,15 @@ type NotificationItemProps = {
   isDismissing: boolean;
 };
 
+// Record over NotificationItemData['type'] rather than a switch: adding a
+// notification type without a case here is a compile error, not a silent
+// runtime gap.
+const ACTION_TEXT_BY_TYPE: Record<NotificationItemData['type'], string> = {
+  circle_invite: 'invited you to',
+  circle_invite_accepted: 'accepted your invite to',
+  circle_invite_declined: 'declined your invite to',
+};
+
 // Two sibling interactive elements, not a nested button-in-link: the row
 // Link is the primary click target, and the dismiss button sits beside it
 // (never inside it) to keep Tab order sane and the markup valid.
@@ -22,7 +31,8 @@ export default function NotificationItem({
   onDismiss,
   isDismissing,
 }: NotificationItemProps) {
-  const { _id, actorUsername, circleName, read, relativeTime } = notification;
+  const { _id, type, actorUsername, circleName, read, relativeTime } = notification;
+  const actionText = ACTION_TEXT_BY_TYPE[type];
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -51,11 +61,11 @@ export default function NotificationItem({
           >
             {read ? (
               <>
-                {actorUsername} invited you to {circleName}
+                {actorUsername} {actionText} {circleName}
               </>
             ) : (
               <>
-                <strong className="font-semibold">{actorUsername}</strong> invited you to{' '}
+                <strong className="font-semibold">{actorUsername}</strong> {actionText}{' '}
                 <strong className="font-semibold">{circleName}</strong>
               </>
             )}

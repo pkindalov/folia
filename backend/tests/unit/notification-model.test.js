@@ -27,6 +27,20 @@ describe('Notification model', () => {
       expect(notification.read).toBe(false);
     });
 
+    test.each(['circle_invite_accepted', 'circle_invite_declined'])(
+      'accepts a valid %s notification',
+      (type) => {
+        const notification = new Notification({
+          recipient: RECIPIENT_ID,
+          type,
+          circle: CIRCLE_ID,
+          circleName: 'The Sterling Family',
+          actorUsername: 'sam',
+        });
+        expect(notification.validateSync()).toBeUndefined();
+      }
+    );
+
     test('rejects a type outside the enum', () => {
       const err = new Notification({
         recipient: RECIPIENT_ID,
