@@ -103,6 +103,40 @@ function notifyCircleInviteResponse({ type, circleId, circleName, invitedBy, act
     .catch((err) => console.error('Failed to create/prune circle-invite-response notification', err));
 }
 
+// Notifies every accepted member (and the owner, if someone else — e.g. an
+// Admin — is the one deleting) that the circle is gone. Excludes whoever
+// performed the deletion; they don't need telling. Fire-and-forget, same
+// contract as notifyCircleInviteResponse above: wrapped in a Promise so
+// even the synchronous recipient-set computation can never propagate into
+// the caller's response chain, and recipientIds are independent, so one
+// failed create doesn't stop the others from going out.
+function notifyCircleDeleted({ circle, circleName, actorUsername, actorId }) {
+  Promise.resolve()
+    .then(() => {
+      const recipientIds = [
+        ...new Set([
+          circle.owner.toString(),
+          ...circle.members
+            .filter((member) => member.status === 'accepted')
+            .map((member) => member.user.toString()),
+        ]),
+      ].filter((recipientId) => recipientId !== actorId);
+
+      return Promise.all(
+        recipientIds.map((recipientId) =>
+          Notification.create({
+            recipient: recipientId,
+            type: 'circle_deleted',
+            circle: circle._id,
+            circleName,
+            actorUsername,
+          }).then(() => Notification.pruneExcessForRecipient(recipientId))
+        )
+      );
+    })
+    .catch((err) => console.error('Failed to create/prune circle-deleted notifications', err));
+}
+
 function markCircleInviteRead({ circleId, recipientId }) {
   Notification.updateMany(
     { recipient: recipientId, circle: circleId, type: 'circle_invite', read: false },
@@ -244,6 +278,12 @@ module.exports = {
           )
           .then(() => {
             markAllCircleInvitesRead(id);
+            notifyCircleDeleted({
+              circle,
+              circleName: circle.name,
+              actorUsername: req.user.username,
+              actorId: req.user._id.toString(),
+            });
             return res.json({ deleted: true });
           });
       })

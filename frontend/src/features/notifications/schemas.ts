@@ -4,6 +4,7 @@ export const NOTIFICATION_TYPES = [
   'circle_invite',
   'circle_invite_accepted',
   'circle_invite_declined',
+  'circle_deleted',
 ] as const;
 
 export const notificationSchema = z

@@ -19,6 +19,7 @@ const ACTION_TEXT_BY_TYPE: Record<NotificationItemData['type'], string> = {
   circle_invite: 'invited you to',
   circle_invite_accepted: 'accepted your invite to',
   circle_invite_declined: 'declined your invite to',
+  circle_deleted: 'deleted the circle',
 };
 
 // Two sibling interactive elements, not a nested button-in-link: the row

@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 // Every query below filters by type explicitly rather than assuming shape.
-const NOTIFICATION_TYPES = ['circle_invite', 'circle_invite_accepted', 'circle_invite_declined'];
+const NOTIFICATION_TYPES = [
+  'circle_invite',
+  'circle_invite_accepted',
+  'circle_invite_declined',
+  'circle_deleted',
+];
 
 // Soft cap per recipient — this is a growing, unbounded top-level
 // collection (unlike Circle.members, there's no schema-level array to

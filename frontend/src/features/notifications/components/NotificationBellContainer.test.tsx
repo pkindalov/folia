@@ -9,7 +9,7 @@ import { renderWithProviders } from '../../../tests/test-utils';
 type FakeNotification = {
   _id: string;
   recipient: string;
-  type: 'circle_invite' | 'circle_invite_accepted' | 'circle_invite_declined';
+  type: 'circle_invite' | 'circle_invite_accepted' | 'circle_invite_declined' | 'circle_deleted';
   circle: string;
   circleName: string;
   actorUsername: string;
@@ -149,6 +149,19 @@ describe('NotificationBellContainer', () => {
     expect(
       await screen.findByText(
         (_, element) => element?.textContent === 'maria declined your invite to The Sterling Family'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('renders a circle-deleted notification with its own message', async () => {
+    notifications = [{ ...baseNotification, type: 'circle_deleted' }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    expect(
+      await screen.findByText(
+        (_, element) => element?.textContent === 'maria deleted the circle The Sterling Family'
       )
     ).toBeInTheDocument();
   });

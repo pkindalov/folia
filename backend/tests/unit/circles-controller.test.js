@@ -430,6 +430,83 @@ describe('circles-controller', () => {
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
+
+    test('notifies each accepted member that the circle was deleted, but not the owner who deleted it', async () => {
+      const circle = fakeCircle({
+        members: [
+          { user: MEMBER_ID, status: 'accepted', addedAt: new Date() },
+          { user: NEW_MEMBER_ID, status: 'accepted', addedAt: new Date() },
+        ],
+      });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: MEMBER_ID,
+          type: 'circle_deleted',
+          circle: CIRCLE_ID,
+          circleName: 'The Sterling Family',
+          actorUsername: 'pan',
+        })
+      );
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: NEW_MEMBER_ID, type: 'circle_deleted' })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID })
+      );
+    });
+
+    test('does not notify a still-pending (not yet accepted) invitee — they never had real access to lose', async () => {
+      const circle = fakeCircle({
+        members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date() }],
+      });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('notifies the owner too when an Admin (not the owner) deletes the circle', async () => {
+      const circle = fakeCircle({
+        members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
+      });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: admin }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID, type: 'circle_deleted', actorUsername: 'root' })
+      );
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: MEMBER_ID, type: 'circle_deleted' })
+      );
+    });
+
+    test('creates no notifications when there are no other accepted members or owner to notify', async () => {
+      const circle = fakeCircle({ members: [] });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('still responds with deleted:true when creating the deletion notifications fails', async () => {
+      const circle = fakeCircle({
+        members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
+      });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      Notification.create.mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
   });
 
   describe('addMember', () => {

@@ -27,7 +27,7 @@ describe('Notification model', () => {
       expect(notification.read).toBe(false);
     });
 
-    test.each(['circle_invite_accepted', 'circle_invite_declined'])(
+    test.each(['circle_invite_accepted', 'circle_invite_declined', 'circle_deleted'])(
       'accepts a valid %s notification',
       (type) => {
         const notification = new Notification({
