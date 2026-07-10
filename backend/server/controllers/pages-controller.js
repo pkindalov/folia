@@ -18,6 +18,16 @@ function syncPageCount(album) {
   });
 }
 
+// The album can be deleted by a concurrent request between requireOwnedAlbum's
+// findById and a later album.save() — mongoose then rejects the save with
+// DocumentNotFoundError. A 404 reflects that better than a generic 500.
+function respondToAlbumWriteError(res, err, message) {
+  if (err instanceof mongoose.Error.DocumentNotFoundError) {
+    return res.status(404).json({ error: 'Album not found' });
+  }
+  res.status(500).json({ error: message });
+}
+
 function removeFiles(ownerId, albumId, filenames) {
   for (const filename of filenames) {
     const filePath = storage.photoPath(ownerId, albumId, filename);
@@ -124,7 +134,7 @@ module.exports = {
             throw err;
           });
       })
-      .catch(() => res.status(500).json({ error: 'Failed to save photos' }));
+      .catch((err) => respondToAlbumWriteError(res, err, 'Failed to save photos'));
   },
 
   updateCaption: (req, res) => {
@@ -187,7 +197,7 @@ module.exports = {
           });
         });
       })
-      .catch(() => res.status(500).json({ error: 'Failed to set cover photo' }));
+      .catch((err) => respondToAlbumWriteError(res, err, 'Failed to set cover photo'));
   },
 
   remove: (req, res) => {
@@ -224,6 +234,6 @@ module.exports = {
             res.json({ deleted: true, pageCount });
           });
       })
-      .catch(() => res.status(500).json({ error: 'Failed to delete photo' }));
+      .catch((err) => respondToAlbumWriteError(res, err, 'Failed to delete photo'));
   },
 };

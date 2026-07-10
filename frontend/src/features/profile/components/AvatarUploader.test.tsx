@@ -2,6 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AvatarUploader from './AvatarUploader';
+import { useMe } from '../../auth';
 import { tokenStorage } from '../../../lib/api-client';
 import { renderWithProviders } from '../../../tests/test-utils';
 
@@ -89,6 +90,51 @@ describe('AvatarUploader', () => {
       const [url, options] = vi.mocked(fetch).mock.calls[0];
       expect(String(url)).toMatch(/\/api\/users\/me\/avatar$/);
       expect(options!.method).toBe('DELETE');
+    });
+  });
+
+  test('a 409 conflict on upload refetches the real user instead of leaving the cache stale', async () => {
+    mockApi({
+      '/api/users/me/avatar': { body: { error: 'Profile changed elsewhere' }, status: 409 },
+      '/api/users/me': { body: { user: { avatarUrl: '/uploads/avatars/x/from-other-tab.jpg' } } },
+    });
+    const user = userEvent.setup();
+    function Wrapper() {
+      useMe();
+      return <AvatarUploader username="pan" avatarUrl="/uploads/avatars/x/stale.jpg" />;
+    }
+    renderWithProviders(<Wrapper />);
+
+    const file = new File(['fake-bytes'], 'a.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByLabelText('Change photo'), file);
+
+    expect(await screen.findByText('Profile changed elsewhere')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/api/users/me'))
+      ).toBe(true);
+    });
+  });
+
+  test('a 409 conflict on remove refetches the real user instead of leaving the cache stale', async () => {
+    mockApi({
+      '/api/users/me/avatar': { body: { error: 'Profile changed elsewhere' }, status: 409 },
+      '/api/users/me': { body: { user: { avatarUrl: null } } },
+    });
+    const user = userEvent.setup();
+    function Wrapper() {
+      useMe();
+      return <AvatarUploader username="pan" avatarUrl="/uploads/avatars/x/stale.jpg" />;
+    }
+    renderWithProviders(<Wrapper />);
+
+    await user.click(screen.getByRole('button', { name: 'Remove photo' }));
+
+    expect(await screen.findByText('Profile changed elsewhere')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/api/users/me'))
+      ).toBe(true);
     });
   });
 });

@@ -90,7 +90,14 @@ function healDanglingCircleReference(album) {
     // database rather than trusting this stale in-memory copy means the
     // response always reflects what's actually committed, instead of
     // reporting 'shared' for an album that was just silently unshared.
-    return Album.findById(album._id);
+    return Album.findById(album._id).then((found) => {
+      // The album itself can also have been deleted by a concurrent request
+      // in this same window — surface that the same way a mid-save deletion
+      // already is (DocumentNotFoundError -> 404), instead of letting a
+      // caller crash on a null album and report a misleading 400.
+      if (!found) throw new mongoose.Error.DocumentNotFoundError({ _id: album._id });
+      return found;
+    });
   });
 }
 

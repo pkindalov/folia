@@ -10,6 +10,7 @@ jest.mock('fs', () => ({
   rm: jest.fn((filePath, opts, cb) => cb(null)),
 }));
 
+const mongoose = require('mongoose');
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const Circle = require('../../server/data/Circle');
@@ -240,6 +241,20 @@ describe('pages-controller', () => {
       await flush();
       expect(fs.rm).toHaveBeenCalledTimes(1);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    test('maps a concurrent album-deletion DocumentNotFoundError to 404, not a generic 500', async () => {
+      const album = fakeAlbum({
+        save: jest.fn().mockRejectedValue(new mongoose.Error.DocumentNotFoundError({})),
+      });
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
     });
 
     test('notifies each accepted circle member when photos are added to a shared album', async () => {
@@ -561,6 +576,19 @@ describe('pages-controller', () => {
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
+    test('maps a concurrent album-deletion DocumentNotFoundError to 404, not a generic 500', async () => {
+      const album = fakeAlbum({
+        save: jest.fn().mockRejectedValue(new mongoose.Error.DocumentNotFoundError({})),
+      });
+      jest.spyOn(Page, 'findOne').mockResolvedValue(fakePage());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      const res = mockRes();
+      controller.remove({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
+    });
+
     test('notifies each accepted circle member when a photo is removed from a shared album', async () => {
       const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
       jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
@@ -648,6 +676,18 @@ describe('pages-controller', () => {
       controller.setCover({ album: fakeAlbum(), params: { pageId: PAGE_ID } }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    test('maps a concurrent album-deletion DocumentNotFoundError to 404, not a generic 500', async () => {
+      const album = fakeAlbum({
+        save: jest.fn().mockRejectedValue(new mongoose.Error.DocumentNotFoundError({})),
+      });
+      jest.spyOn(Page, 'findOne').mockResolvedValue(fakePage());
+      const res = mockRes();
+      controller.setCover({ album, params: { pageId: PAGE_ID } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
     });
   });
 });

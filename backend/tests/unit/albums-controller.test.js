@@ -853,6 +853,31 @@ describe('albums-controller', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
     });
 
+    test('maps a 404, not a generic 400, when the album is deleted in the narrow window between its own save() and healDanglingCircleReference re-reading it', async () => {
+      // Same race healDanglingCircleReference already guards against for a
+      // reverted-to-private album, but here the album itself vanished, not
+      // just its circle link. Circle.exists still sees the circle (its own
+      // deletion hasn't reached that document yet), so this hits the
+      // re-read branch — where the re-read must now come back null.
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: SHARED_CIRCLE_ID,
+      });
+      jest.spyOn(Circle, 'exists').mockResolvedValue(true);
+      jest
+        .spyOn(Album, 'findById')
+        .mockResolvedValueOnce(album) // the initial load in update()
+        .mockResolvedValueOnce(null); // healDanglingCircleReference's re-read
+      const res = mockRes();
+      controller.update(
+        { params: { id: ALBUM_ID }, body: { title: 'New' }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
+    });
+
     test('rejects invalid partial input before touching the DB', () => {
       const findById = jest.spyOn(Album, 'findById');
       const res = mockRes();
