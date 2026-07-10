@@ -270,20 +270,34 @@ module.exports = {
           { sharedWithCircle: null, visibility: 'private' }
         )
           .then(() =>
+            // Atomic find-and-delete, not circle.deleteOne(): two concurrent
+            // requests can both pass the read/permission check above before
+            // either deletes, and Model#deleteOne() doesn't error when
+            // nothing matches — so without this, both would fall through to
+            // the block below and double-fire markAllCircleInvitesRead and
+            // notifyCircleDeleted. findOneAndDelete only ever actually
+            // removes the document once; whichever request loses the race
+            // gets null back and skips those side effects, since the
+            // winning request already handled them.
+            //
             // Unsharing already succeeded by this point, so a failure here must
             // be reported differently: the circle survives, but its albums are
             // no longer shared with it, and a generic "failed to delete" message
             // would hide that from the caller.
-            circle.deleteOne().catch(() => Promise.reject(new Error('DELETE_AFTER_UNSHARE_FAILED')))
+            Circle.findOneAndDelete({ _id: id }).catch(() =>
+              Promise.reject(new Error('DELETE_AFTER_UNSHARE_FAILED'))
+            )
           )
-          .then(() => {
-            markAllCircleInvitesRead(id);
-            notifyCircleDeleted({
-              circle,
-              circleName: circle.name,
-              actorUsername: req.user.username,
-              actorId: req.user._id.toString(),
-            });
+          .then((deletedCircle) => {
+            if (deletedCircle) {
+              markAllCircleInvitesRead(id);
+              notifyCircleDeleted({
+                circle: deletedCircle,
+                circleName: deletedCircle.name,
+                actorUsername: req.user.username,
+                actorId: req.user._id.toString(),
+              });
+            }
             return res.json({ deleted: true });
           });
       })

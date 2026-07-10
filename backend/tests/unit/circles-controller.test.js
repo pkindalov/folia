@@ -40,7 +40,6 @@ const fakeCircle = (overrides = {}) => ({
   save: jest.fn().mockImplementation(function () {
     return Promise.resolve(this);
   }),
-  deleteOne: jest.fn().mockResolvedValue({}),
   isOwnerOrMember: function (userId) {
     const id = userId.toString();
     return (
@@ -49,8 +48,7 @@ const fakeCircle = (overrides = {}) => ({
     );
   },
   toJSON: function () {
-    const { toJSON: _drop, save: _drop2, deleteOne: _drop3, isOwnerOrMember: _drop4, ...rest } =
-      this;
+    const { toJSON: _drop, save: _drop2, isOwnerOrMember: _drop3, ...rest } = this;
     return rest;
   },
   ...overrides,
@@ -341,29 +339,31 @@ describe('circles-controller', () => {
 
   describe('remove', () => {
     test('403 when a non-owner tries to delete', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const findOneAndDelete = jest.spyOn(Circle, 'findOneAndDelete');
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: stranger }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(403);
-      expect(circle.deleteOne).not.toHaveBeenCalled();
+      expect(findOneAndDelete).not.toHaveBeenCalled();
       expect(Album.updateMany).not.toHaveBeenCalled();
     });
 
     test('owner can delete the circle', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const findOneAndDelete = jest
+        .spyOn(Circle, 'findOneAndDelete')
+        .mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
-      expect(circle.deleteOne).toHaveBeenCalled();
+      expect(findOneAndDelete).toHaveBeenCalledWith({ _id: CIRCLE_ID });
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
 
     test('resets any album shared with the deleted circle back to private', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
@@ -374,43 +374,67 @@ describe('circles-controller', () => {
     });
 
     test('an Admin can delete any circle', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const findOneAndDelete = jest
+        .spyOn(Circle, 'findOneAndDelete')
+        .mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: admin }, res);
       await flush();
-      expect(circle.deleteOne).toHaveBeenCalled();
+      expect(findOneAndDelete).toHaveBeenCalled();
     });
 
     test('never deletes the circle when unsharing its albums fails, so no album is left pointing at a deleted circle', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const findOneAndDelete = jest.spyOn(Circle, 'findOneAndDelete');
       jest.spyOn(Album, 'updateMany').mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
-      expect(circle.deleteOne).not.toHaveBeenCalled();
+      expect(findOneAndDelete).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
     test('reports the specific partial-failure state when albums are unshared but the delete itself fails', async () => {
-      const circle = fakeCircle();
-      circle.deleteOne.mockRejectedValue(new Error('db down'));
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      const findOneAndDelete = jest
+        .spyOn(Circle, 'findOneAndDelete')
+        .mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
       expect(Album.updateMany).toHaveBeenCalled();
-      expect(circle.deleteOne).toHaveBeenCalled();
+      expect(findOneAndDelete).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         error: "This circle's albums were unshared, but deleting the circle failed. Please try again.",
       });
     });
 
-    test('marks any still-pending invite notifications for the circle as read once it is deleted', async () => {
-      const circle = fakeCircle();
+    // The atomic findOneAndDelete only ever actually removes the document
+    // once — a second concurrent delete request for the same circle (e.g. the
+    // owner and an Admin both deleting it at nearly the same moment) finds
+    // nothing left to remove and gets null back. It should still report
+    // success (the circle is gone either way) but must not re-run the
+    // cleanup/notification side effects the winning request already did.
+    test('a losing race against a concurrent delete of the same circle still reports success, but skips cleanup/notifications', async () => {
+      const circle = fakeCircle({
+        members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
+      });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(null);
+      const res = mockRes();
+      controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+      expect(Notification.updateMany).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('marks any still-pending invite notifications for the circle as read once it is deleted', async () => {
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(fakeCircle());
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
@@ -421,8 +445,8 @@ describe('circles-controller', () => {
     });
 
     test('still responds with deleted:true when marking invite notifications read fails', async () => {
-      const circle = fakeCircle();
-      jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(fakeCircle());
       Notification.updateMany.mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
@@ -439,6 +463,7 @@ describe('circles-controller', () => {
         ],
       });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(circle);
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
@@ -464,6 +489,7 @@ describe('circles-controller', () => {
         members: [{ user: MEMBER_ID, status: 'pending', addedAt: new Date() }],
       });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(circle);
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
@@ -475,6 +501,7 @@ describe('circles-controller', () => {
         members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
       });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(circle);
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: admin }, res);
       await flush();
@@ -489,6 +516,7 @@ describe('circles-controller', () => {
     test('creates no notifications when there are no other accepted members or owner to notify', async () => {
       const circle = fakeCircle({ members: [] });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(circle);
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
       await flush();
@@ -500,6 +528,7 @@ describe('circles-controller', () => {
         members: [{ user: MEMBER_ID, status: 'accepted', addedAt: new Date() }],
       });
       jest.spyOn(Circle, 'findById').mockResolvedValue(circle);
+      jest.spyOn(Circle, 'findOneAndDelete').mockResolvedValue(circle);
       Notification.create.mockRejectedValue(new Error('db down'));
       const res = mockRes();
       controller.remove({ params: { id: CIRCLE_ID }, user: owner }, res);
