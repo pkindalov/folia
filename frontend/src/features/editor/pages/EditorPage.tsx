@@ -138,8 +138,9 @@ export default function EditorPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<AlbumFormInput>({
     resolver: zodResolver(albumFormSchema),
     defaultValues: { title: '', description: '', visibility: 'private', sharedWithCircle: null },
@@ -152,6 +153,21 @@ export default function EditorPage() {
       reset({ title, description, visibility, sharedWithCircle: sharedWithCircle ?? null });
     }
   }, [albumQuery.data, reset]);
+
+  // assignedCircleQuery only starts once albumQuery.data is known, so it
+  // always resolves at least one round trip after the reset() above. The
+  // <select> below is an uncontrolled register()'d field: if reset() ran
+  // before the assigned circle's <option> existed in the DOM, the browser
+  // falls back to the blank "any signed-in user" option and never
+  // retroactively re-selects the right one once that <option> appears —
+  // silently widening a circle-restricted album to "shared with anyone" on
+  // the next save. Re-apply the value once it's ready, unless the user has
+  // already touched this field themselves.
+  useEffect(() => {
+    if (assignedCircle && !dirtyFields.sharedWithCircle) {
+      setValue('sharedWithCircle', assignedCircle._id);
+    }
+  }, [assignedCircle, dirtyFields.sharedWithCircle, setValue]);
 
   const visibility = watch('visibility');
   const busy = mutation.isPending || deleteAlbum.isPending || archiveAlbum.isPending;
@@ -449,7 +465,15 @@ export default function EditorPage() {
               <button
                 type="submit"
                 form="album-form"
-                disabled={busy || (isEdit && albumQuery.isLoading)}
+                // Also blocked while the assigned circle is still being
+                // fetched (isLoading is only ever true here while that
+                // fetch is actually in flight — it's false when there's no
+                // sharedWithCircle to look up at all): saving before it
+                // resolves would submit the uncontrolled <select>'s DOM
+                // value, which is still the blank "any signed-in user"
+                // option until that fetch's result gives it a matching
+                // <option> to select — silently widening the album's access.
+                disabled={busy || (isEdit && albumQuery.isLoading) || assignedCircleQuery.isLoading}
                 className="bg-secondary text-on-secondary px-8 py-3 rounded-paper font-ui text-ui-button shadow-md hover:opacity-90 active:translate-y-px transition-all flex items-center gap-2 disabled:opacity-60"
               >
                 <Icon name="save" />

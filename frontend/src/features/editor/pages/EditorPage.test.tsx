@@ -186,6 +186,113 @@ describe('EditorPage — edit', () => {
     expect(JSON.parse(put!.options!.body as string).sharedWithCircle).toBe('c99');
   });
 
+  test('re-applies the assigned circle to the picker once it loads after the general list, so a later save does not silently unshare the album', async () => {
+    // assignedCircleQuery only starts once the album (and its
+    // sharedWithCircle) is known, so in a real browser it always resolves at
+    // least one round trip after the general circles list. Modeling that
+    // gap here — general list resolves immediately, assigned circle resolves
+    // later — is what actually exercises the bug: the uncontrolled <select>
+    // renders (with no matching <option> yet) before the assigned circle
+    // arrives, and previously never got told to re-select it once its
+    // <option> showed up.
+    const restrictedAlbum = {
+      album: { ...ALBUM.album, visibility: 'shared', sharedWithCircle: 'c99' },
+    };
+    const otherCircle = {
+      _id: 'c1',
+      name: 'Other Circle',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+    const assignedCircle = {
+      _id: 'c99',
+      name: 'Assigned Circle',
+      owner: 'id1',
+      ownerUsername: 'pan',
+      members: [],
+    };
+
+    let resolveAssignedCircle: (() => void) | undefined;
+    const assignedCircleReady = new Promise<void>((resolve) => {
+      resolveAssignedCircle = resolve;
+    });
+
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const path = String(url);
+      calls.push({ url: path, options });
+      if (path.includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (path.endsWith('/api/albums/a1')) {
+        // Handles both the initial GET and the later PUT save — the test
+        // only needs the PUT's request body, not a mutated response.
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(restrictedAlbum),
+        } as Response);
+      }
+      if (path.includes('/api/circles/c99')) {
+        return assignedCircleReady.then(
+          () =>
+            ({
+              ok: true,
+              status: 200,
+              json: () => Promise.resolve({ circle: assignedCircle }),
+            }) as Response
+        );
+      }
+      if (path.includes('/api/circles')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ circles: [otherCircle], total: 1, page: 1, limit: 12 }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
+    });
+
+    const user = userEvent.setup();
+    renderEdit();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/volume title/i)).toHaveValue('Summer in the Valley')
+    );
+
+    // General list has already rendered; the assigned circle is still in
+    // flight — the exact moment the DOM/RHF desync used to happen.
+    expect(await screen.findByRole('option', { name: 'Other Circle' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Assigned Circle' })).not.toBeInTheDocument();
+
+    // Saving in this window would submit the <select>'s current DOM value —
+    // still the blank "any signed-in user" option, since the assigned
+    // circle's <option> doesn't exist yet — so Save must stay disabled
+    // until that fetch resolves, not just until the album itself loads.
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+
+    resolveAssignedCircle!();
+    expect(await screen.findByRole('option', { name: 'Assigned Circle' })).toBeInTheDocument();
+
+    // Not just present in the DOM — actually selected, so a save from here
+    // submits the correct value instead of silently reverting to "Open to
+    // any signed-in user" (null).
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('c99'));
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
+
+    // Now edit an unrelated field (title) and confirm sharedWithCircle
+    // survives the save unchanged.
+    const title = screen.getByLabelText(/volume title/i);
+    await user.clear(title);
+    await user.type(title, 'Renamed Volume');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => {
+      const put = calls.find((c) => c.url.endsWith('/api/albums/a1') && c.options?.method === 'PUT');
+      expect(put).toBeDefined();
+      expect(JSON.parse(put!.options!.body as string).sharedWithCircle).toBe('c99');
+    });
+  });
+
   test("an Admin editing another user's album still sees the assigned circle as an option, even though they don't own it", async () => {
     const restrictedAlbum = {
       album: { ...ALBUM.album, owner: 'owner-id', visibility: 'shared', sharedWithCircle: 'c99' },
