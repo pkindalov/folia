@@ -2,6 +2,9 @@ import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
 import type { NotificationItemData } from './NotificationBell';
+import { REACTION_NOTIFICATION_TYPES } from '../schemas';
+
+type ReactionNotificationType = (typeof REACTION_NOTIFICATION_TYPES)[number];
 
 type NotificationItemProps = {
   notification: NotificationItemData;
@@ -21,20 +24,35 @@ type NotificationItemProps = {
 // not a silent runtime gap.
 type MessageParts = { leading: string; subject: string; trailing?: string };
 
+const REACTION_LABELS: Record<ReactionNotificationType, string> = {
+  like: 'Like',
+  love: 'Love',
+  haha: 'Haha',
+  wow: 'Wow',
+  sad: 'Sad',
+  angry: 'Angry',
+};
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData['type'],
   (notification: NotificationItemData) => MessageParts
 > = {
-  circle_invite: ({ circleName }) => ({ leading: 'invited you to', subject: circleName }),
+  circle_invite: ({ circleName }) => ({
+    leading: 'invited you to',
+    subject: circleName ?? 'a circle',
+  }),
   circle_invite_accepted: ({ circleName }) => ({
     leading: 'accepted your invite to',
-    subject: circleName,
+    subject: circleName ?? 'a circle',
   }),
   circle_invite_declined: ({ circleName }) => ({
     leading: 'declined your invite to',
-    subject: circleName,
+    subject: circleName ?? 'a circle',
   }),
-  circle_deleted: ({ circleName }) => ({ leading: 'deleted the circle', subject: circleName }),
+  circle_deleted: ({ circleName }) => ({
+    leading: 'deleted the circle',
+    subject: circleName ?? 'a circle',
+  }),
   album_shared: ({ albumTitle, circleName }) => ({
     leading: 'shared a new album',
     subject: albumTitle ?? 'an album',
@@ -65,6 +83,11 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     subject: albumTitle ?? 'an album',
     trailing: `shared with ${circleName}`,
   }),
+  page_reaction: ({ albumTitle, circleName, reactionType }) => ({
+    leading: `reacted "${REACTION_LABELS[reactionType ?? 'like']}" to a photo in`,
+    subject: albumTitle ?? 'an album',
+    trailing: circleName ? `shared with ${circleName}` : undefined,
+  }),
 };
 
 // Where clicking the row navigates. Most album_* types link straight to the
@@ -83,6 +106,7 @@ const LINK_TO_BY_TYPE: Record<NotificationItemData['type'], (notification: Notif
   album_photos_added: ({ album }) => (album ? `/book/${album}` : '/circles'),
   album_photo_removed: ({ album }) => (album ? `/book/${album}` : '/circles'),
   album_photo_caption_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  page_reaction: ({ album }) => (album ? `/book/${album}` : '/circles'),
 };
 
 // Two sibling interactive elements, not a nested button-in-link: the row

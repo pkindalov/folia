@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { REACTION_TYPES } = require('./Reaction');
 
 // Every query below filters by type explicitly rather than assuming shape.
 const NOTIFICATION_TYPES = [
@@ -12,7 +13,24 @@ const NOTIFICATION_TYPES = [
   'album_photos_added',
   'album_photo_removed',
   'album_photo_caption_updated',
+  'page_reaction',
 ];
+
+// Every other type is scoped to a circle (it's an event on something shared
+// with one), so circle/circleName stay required for those. page_reaction
+// goes straight to the album owner instead of fanning out to a circle, and
+// can fire on a public album with no circle involved at all — required only
+// for the types that actually have one.
+const requiresCircle = function () {
+  return this.type !== 'page_reaction';
+};
+
+// The inverse: page/reactionType only ever apply to page_reaction, and are
+// required there — mirrors requiresCircle's conditional-required treatment
+// rather than leaving these two fields unconstrained.
+const requiresPageReaction = function () {
+  return this.type === 'page_reaction';
+};
 
 // Soft cap per recipient — this is a growing, unbounded top-level
 // collection (unlike Circle.members, there's no schema-level array to
@@ -41,7 +59,7 @@ const notificationSchema = new mongoose.Schema(
     circle: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Circle',
-      required: true,
+      required: requiresCircle,
     },
     // Snapshots of the circle name and inviting owner's username at the
     // time the invite was sent — a notification is a record of what
@@ -50,22 +68,33 @@ const notificationSchema = new mongoose.Schema(
     // fallback handling like a live join would.
     circleName: {
       type: String,
-      required: '{PATH} is required',
+      required: requiresCircle,
     },
     actorUsername: {
       type: String,
       required: '{PATH} is required',
     },
-    // Only set for the album_* types — a snapshot of which album and what
-    // its title was, for the same reason circleName is a snapshot: the
-    // notification should still read correctly even after the album is
-    // later renamed or deleted.
+    // Only set for the album_* and page_reaction types — a snapshot of
+    // which album and what its title was, for the same reason circleName is
+    // a snapshot: the notification should still read correctly even after
+    // the album is later renamed or deleted.
     album: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Album',
     },
     albumTitle: {
       type: String,
+    },
+    // Only set for page_reaction — which page was reacted to and with what.
+    page: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Page',
+      required: requiresPageReaction,
+    },
+    reactionType: {
+      type: String,
+      enum: REACTION_TYPES,
+      required: requiresPageReaction,
     },
     read: {
       type: Boolean,

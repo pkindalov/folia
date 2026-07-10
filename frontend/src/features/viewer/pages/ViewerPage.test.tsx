@@ -20,6 +20,12 @@ const ALBUM = {
   },
 };
 
+const NO_REACTIONS = {
+  counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+  total: 0,
+  viewerReaction: null,
+};
+
 const PAGE_1 = {
   _id: 'p1',
   album: 'a1',
@@ -27,6 +33,7 @@ const PAGE_1 = {
   mimeType: 'image/jpeg',
   size: 1024,
   url: '/uploads/id1/a1/photo1.jpg',
+  reactions: NO_REACTIONS,
 };
 
 const PAGE_2 = {
@@ -36,6 +43,7 @@ const PAGE_2 = {
   mimeType: 'image/jpeg',
   size: 2048,
   url: '/uploads/id1/a1/photo2.jpg',
+  reactions: NO_REACTIONS,
 };
 
 const PAGE_3 = {
@@ -45,6 +53,7 @@ const PAGE_3 = {
   mimeType: 'image/jpeg',
   size: 3072,
   url: '/uploads/id1/a1/photo3.jpg',
+  reactions: NO_REACTIONS,
 };
 
 function mockApi(routes: Record<string, { body: unknown; status?: number }>) {
@@ -285,5 +294,68 @@ describe('ViewerPage', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument()
     );
+  });
+
+  test('picking a reaction sends it to the server and reflects the new state once saved', async () => {
+    let pagesFetchCount = 0;
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const method = options?.method ?? 'GET';
+      const urlStr = String(url);
+      const respond = (body: unknown, status = 200) =>
+        Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+      if (urlStr.includes('/api/users/me')) return respond(ME);
+      if (urlStr.includes('/api/albums/a1/pages') && method === 'GET') {
+        pagesFetchCount += 1;
+        // The first load has no reactions; once the reaction is saved and
+        // the page list is refetched, the server reflects the new pick.
+        const reactions =
+          pagesFetchCount === 1
+            ? NO_REACTIONS
+            : { counts: { ...NO_REACTIONS.counts, love: 1 }, total: 1, viewerReaction: 'love' };
+        return respond({ pages: [{ ...PAGE_1, reactions }] });
+      }
+      if (urlStr.includes('/reaction') && method === 'PUT') {
+        return respond({
+          reactions: { counts: { ...NO_REACTIONS.counts, love: 1 }, total: 1, viewerReaction: 'love' },
+        });
+      }
+      if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+      return respond({ error: 'Not found' }, 404);
+    });
+
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+    await user.click(screen.getByRole('button', { name: /react to this photo/i }));
+    await user.click(screen.getByRole('button', { name: 'Love' }));
+
+    await waitFor(() => {
+      const reactionCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([u, o]) => String(u).includes('/reaction') && o?.method === 'PUT');
+      expect(reactionCall).toBeDefined();
+      expect(JSON.parse(reactionCall![1]!.body as string)).toEqual({ type: 'love' });
+    });
+
+    expect(await screen.findByRole('button', { name: /you reacted: love/i })).toHaveTextContent('Love');
+  });
+
+  test('shows an error toast when saving a reaction fails', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+      'PUT /api/albums/a1/pages/p1/reaction': { body: { error: 'Could not save reaction' }, status: 500 },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+    await user.click(screen.getByRole('button', { name: /react to this photo/i }));
+    await user.click(screen.getByRole('button', { name: 'Like' }));
+
+    expect(await screen.findByText('Could not save reaction')).toBeInTheDocument();
   });
 });

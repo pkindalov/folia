@@ -35,4 +35,27 @@ function notifyAlbumEvent({ type, album, actorUser }) {
     .catch((err) => console.error(`Failed to create/prune ${type} notifications`, err));
 }
 
-module.exports = { notifyAlbumEvent };
+// Fire-and-forget: notifies an album's owner that someone reacted to one of
+// its pages. Unlike notifyAlbumEvent, this always goes straight to a single
+// recipient (the owner) rather than fanning out to a circle — reacting is
+// available on any album the reactor can view (private, shared, or public),
+// not just circle-shared ones. No-ops silently for a self-reaction (the
+// owner reacting to their own page doesn't need telling about it).
+function notifyPageReaction({ page, album, reactionType, reactorUser }) {
+  const ownerId = album.owner.toString();
+  if (ownerId === reactorUser._id.toString()) return;
+
+  Notification.create({
+    recipient: ownerId,
+    type: 'page_reaction',
+    actorUsername: reactorUser.username,
+    album: album._id,
+    albumTitle: album.title,
+    page: page._id,
+    reactionType,
+  })
+    .then(() => Notification.pruneExcessForRecipient(ownerId))
+    .catch((err) => console.error('Failed to create/prune page_reaction notification', err));
+}
+
+module.exports = { notifyAlbumEvent, notifyPageReaction };

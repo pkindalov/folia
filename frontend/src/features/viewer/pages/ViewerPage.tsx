@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
-import { useAlbum, usePages } from '../../flipbooks';
+import ReactionControl from '../../../components/ReactionControl';
+import { toast } from '../../../lib/toast';
+import { useAlbum, usePages, useSetPageReaction, type ReactionType } from '../../flipbooks';
 
 export default function ViewerPage() {
   const { id } = useParams();
@@ -11,6 +13,14 @@ export default function ViewerPage() {
   const { data: pagesData } = usePages(id);
   const pages = pagesData ?? [];
   const hasPhotos = pages.length > 0;
+
+  const setReaction = useSetPageReaction(id ?? '');
+  const handleReact = (pageId: string, type: ReactionType) => {
+    setReaction.mutate(
+      { pageId, type },
+      { onError: (mutationError) => toast.error(mutationError.message) }
+    );
+  };
 
   // Tracked by photo id, not array index — a raw index would go stale (and
   // could silently point at an unrelated photo) if the page list changes
@@ -120,6 +130,12 @@ export default function ViewerPage() {
                         "{currentPhoto.caption}"
                       </p>
                     )}
+                    <ReactionControl
+                      reactions={currentPhoto.reactions}
+                      onReact={(type) => handleReact(currentPhoto._id, type)}
+                      isPending={setReaction.isPending}
+                      variant="light"
+                    />
                     {pages.length > 1 && (
                       <div className="flex items-center gap-6">
                         <button
@@ -169,6 +185,8 @@ export default function ViewerPage() {
           index={currentIndex}
           onClose={() => setIsLightboxOpen(false)}
           onNavigate={(nextIndex) => setPhotoId(pages[nextIndex]?._id ?? null)}
+          onReact={handleReact}
+          isReactionPending={setReaction.isPending}
         />
       )}
     </AppShell>

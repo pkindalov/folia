@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as albumsApi from './api';
-import type { Album, AlbumFormInput } from './schemas';
+import type { Album, AlbumFormInput, ReactionType } from './schemas';
 
 export function useAlbums(page: number, visibility?: Album['visibility']) {
   return useQuery({
@@ -138,6 +138,17 @@ export function useSetCoverPhoto(albumId: string) {
     onSuccess: (album) => {
       queryClient.setQueryData(['albums', albumId], album);
       queryClient.invalidateQueries({ queryKey: ['albums'] });
+    },
+  });
+}
+
+export function useSetPageReaction(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, type }: { pageId: string; type: ReactionType }) =>
+      albumsApi.setPageReaction(albumId, pageId, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
     },
   });
 }

@@ -8,11 +8,14 @@ import {
   deletePageResponseSchema,
   updatePageCaptionResponseSchema,
   setCoverResponseSchema,
+  setPageReactionResponseSchema,
   type Album,
   type AlbumFormInput,
   type Page,
   type PaginatedAlbums,
   type PaginatedPublicAlbums,
+  type ReactionSummary,
+  type ReactionType,
 } from './schemas';
 
 export async function listAlbums(
@@ -105,4 +108,16 @@ export async function updatePageCaption(
 export async function setCoverPhoto(albumId: string, pageId: string): Promise<Album> {
   const data = await api(`/api/albums/${albumId}/pages/${pageId}/cover`, { method: 'PUT' });
   return setCoverResponseSchema.parse(data).album;
+}
+
+export async function setPageReaction(
+  albumId: string,
+  pageId: string,
+  type: ReactionType
+): Promise<ReactionSummary> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/reaction`, {
+    method: 'PUT',
+    body: JSON.stringify({ type }),
+  });
+  return setPageReactionResponseSchema.parse(data).reactions;
 }

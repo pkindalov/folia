@@ -13,6 +13,7 @@ jest.mock('fs', () => ({
 const mongoose = require('mongoose');
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
+const Reaction = require('../../server/data/Reaction');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
 const fs = require('fs');
@@ -31,6 +32,8 @@ const SHARED_CIRCLE_ID = '507f1f77bcf86cd799439099';
 const owner = { _id: OWNER_ID, username: 'pan', roles: ['User'] };
 const stranger = { _id: OTHER_ID, username: 'maria', roles: ['User'] };
 const admin = { _id: OTHER_ID, username: 'root', roles: ['Admin'] };
+
+const ZERO_REACTION_COUNTS = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 };
 
 const fakeCircle = (overrides = {}) => ({
   _id: SHARED_CIRCLE_ID,
@@ -92,6 +95,12 @@ beforeEach(() => {
   // accidentally hit the real Mongoose model.
   jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
   jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
+  // list() now always resolves a reaction summary per page; stubbed to "no
+  // reactions" by default so tests that don't care about reactions can't
+  // accidentally hit the real Mongoose model.
+  jest.spyOn(Reaction, 'aggregate').mockResolvedValue([]);
+  jest.spyOn(Reaction, 'find').mockResolvedValue([]);
+  jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
 });
 
 describe('pages-controller', () => {
@@ -140,6 +149,62 @@ describe('pages-controller', () => {
     });
   });
 
+  describe('requireReadableAlbum', () => {
+    test('404 for a malformed id (no DB hit)', () => {
+      const findById = jest.spyOn(Album, 'findById');
+      const res = mockRes();
+      controller.requireReadableAlbum(
+        { params: { id: 'not-an-objectid' }, user: owner },
+        res,
+        jest.fn()
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findById).not.toHaveBeenCalled();
+    });
+
+    test('404 when the album does not exist', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(null);
+      const res = mockRes();
+      controller.requireReadableAlbum({ params: { id: ALBUM_ID }, user: owner }, res, jest.fn());
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('403 when a stranger requests a private album', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = mockRes();
+      controller.requireReadableAlbum(
+        { params: { id: ALBUM_ID }, user: stranger },
+        res,
+        jest.fn()
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('sets req.album and calls next for a stranger on a public album', async () => {
+      const album = fakeAlbum({ visibility: 'public' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const next = jest.fn();
+      const req = { params: { id: ALBUM_ID }, user: stranger };
+      controller.requireReadableAlbum(req, mockRes(), next);
+      await flush();
+      expect(req.album).toBe(album);
+      expect(next).toHaveBeenCalled();
+    });
+
+    test('sets req.album and calls next for the owner', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const next = jest.fn();
+      const req = { params: { id: ALBUM_ID }, user: owner };
+      controller.requireReadableAlbum(req, mockRes(), next);
+      await flush();
+      expect(req.album).toBe(album);
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
   describe('list', () => {
     test('404 for a malformed id', () => {
       const findById = jest.spyOn(Album, 'findById');
@@ -157,7 +222,7 @@ describe('pages-controller', () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    test('owner sees their private album pages with a url per page', async () => {
+    test('owner sees their private album pages with a url and reaction summary per page', async () => {
       jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
       const sort = jest.fn().mockResolvedValue([fakePage()]);
       jest.spyOn(Page, 'find').mockReturnValue({ sort });
@@ -165,7 +230,39 @@ describe('pages-controller', () => {
       controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
       expect(res.json).toHaveBeenCalledWith({
-        pages: [expect.objectContaining({ url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg` })],
+        pages: [
+          expect.objectContaining({
+            url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+          }),
+        ],
+      });
+    });
+
+    test('includes reaction counts and the viewer\'s own reaction', async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const sort = jest.fn().mockResolvedValue([fakePage()]);
+      jest.spyOn(Page, 'find').mockReturnValue({ sort });
+      jest.spyOn(Reaction, 'aggregate').mockResolvedValue([
+        { _id: { page: PAGE_ID, type: 'love' }, count: 3 },
+        { _id: { page: PAGE_ID, type: 'like' }, count: 1 },
+      ]);
+      jest
+        .spyOn(Reaction, 'find')
+        .mockResolvedValue([{ page: { toString: () => PAGE_ID }, type: 'love' }]);
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.json).toHaveBeenCalledWith({
+        pages: [
+          expect.objectContaining({
+            reactions: {
+              counts: { ...ZERO_REACTION_COUNTS, love: 3, like: 1 },
+              total: 4,
+              viewerReaction: 'love',
+            },
+          }),
+        ],
       });
     });
 
@@ -220,13 +317,18 @@ describe('pages-controller', () => {
       jest.spyOn(Page, 'insertMany').mockResolvedValue([fakePage()]);
       const res = mockRes();
       const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
-      controller.upload({ album, files }, res);
+      controller.upload({ album, files, user: owner }, res);
       await flush();
       expect(album.save).toHaveBeenCalled();
       expect(album.pageCount).toBe(1);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
-        pages: [expect.objectContaining({ url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg` })],
+        pages: [
+          expect.objectContaining({
+            url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+          }),
+        ],
         pageCount: 1,
       });
     });
@@ -377,7 +479,12 @@ describe('pages-controller', () => {
       jest.spyOn(Page, 'findOne').mockResolvedValue(page);
       const res = mockRes();
       controller.updateCaption(
-        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { caption: 'A day at the lake' } },
+        {
+          album: fakeAlbum(),
+          params: { pageId: PAGE_ID },
+          body: { caption: 'A day at the lake' },
+          user: owner,
+        },
         res
       );
       await flush();
@@ -387,6 +494,7 @@ describe('pages-controller', () => {
         page: expect.objectContaining({
           caption: 'A day at the lake',
           url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
+          reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
         }),
       });
     });
@@ -528,7 +636,7 @@ describe('pages-controller', () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
-    test('deletes the file, the record, recomputes pageCount, and responds', async () => {
+    test('deletes the file, the record, its reactions, recomputes pageCount, and responds', async () => {
       const album = fakeAlbum();
       const page = fakePage();
       jest.spyOn(Page, 'findOne').mockResolvedValue(page);
@@ -542,6 +650,7 @@ describe('pages-controller', () => {
         expect.any(Function)
       );
       expect(page.deleteOne).toHaveBeenCalled();
+      expect(Reaction.deleteMany).toHaveBeenCalledWith({ page: PAGE_ID });
       expect(album.pageCount).toBe(0);
       expect(res.json).toHaveBeenCalledWith({ deleted: true, pageCount: 0 });
     });
@@ -633,6 +742,193 @@ describe('pages-controller', () => {
       await flush();
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ deleted: true, pageCount: 0 });
+    });
+  });
+
+  describe('setReaction', () => {
+    test('404 for a malformed page id', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.setReaction(
+        { album: fakeAlbum(), params: { pageId: 'nope' }, body: { type: 'like' }, user: owner },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('400 for a type outside the enum', () => {
+      const findOne = jest.spyOn(Page, 'findOne');
+      const res = mockRes();
+      controller.setReaction(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { type: 'shrug' }, user: owner },
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(findOne).not.toHaveBeenCalled();
+    });
+
+    test('404 when the page does not belong to this album', async () => {
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = mockRes();
+      controller.setReaction(
+        { album: fakeAlbum(), params: { pageId: PAGE_ID }, body: { type: 'like' }, user: owner },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test('creates a new reaction, notifies the album owner, and returns the summary', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(null);
+      const create = jest.spyOn(Reaction, 'create').mockResolvedValue({});
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'love' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(create).toHaveBeenCalledWith({
+        page: PAGE_ID,
+        album: ALBUM_ID,
+        user: OTHER_ID,
+        type: 'love',
+      });
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: OWNER_ID,
+          type: 'page_reaction',
+          reactionType: 'love',
+          page: PAGE_ID,
+        })
+      );
+      expect(res.json).toHaveBeenCalledWith({
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+      });
+    });
+
+    test('does not notify when the reactor is the album owner', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(null);
+      jest.spyOn(Reaction, 'create').mockResolvedValue({});
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'like' }, user: owner },
+        res
+      );
+      await flush();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('switches an existing reaction to a different type without re-notifying', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      const existing = {
+        type: 'like',
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+        deleteOne: jest.fn(),
+      };
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(existing);
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'wow' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(existing.type).toBe('wow');
+      expect(existing.save).toHaveBeenCalled();
+      expect(existing.deleteOne).not.toHaveBeenCalled();
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+
+    test('picking the same reaction again removes it (toggle-off)', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      const existing = { type: 'like', save: jest.fn(), deleteOne: jest.fn().mockResolvedValue({}) };
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(existing);
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'like' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(existing.deleteOne).toHaveBeenCalled();
+      expect(existing.save).not.toHaveBeenCalled();
+    });
+
+    test('a concurrent duplicate-key error on create is a no-op when the winner already stored the same type', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const duplicateKeyError = Object.assign(new Error('E11000 duplicate key'), { code: 11000 });
+      jest.spyOn(Reaction, 'create').mockRejectedValue(duplicateKeyError);
+      const winnerSave = jest.fn();
+      jest
+        .spyOn(Reaction, 'findOne')
+        .mockResolvedValueOnce(null) // this request's own initial check
+        .mockResolvedValueOnce({ type: 'like', save: winnerSave }); // post-race reconciliation read
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'like' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(winnerSave).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+      });
+    });
+
+    test('a concurrent duplicate-key error on create reconciles to this request\'s type when the winner stored a different one', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      const duplicateKeyError = Object.assign(new Error('E11000 duplicate key'), { code: 11000 });
+      jest.spyOn(Reaction, 'create').mockRejectedValue(duplicateKeyError);
+      const winner = {
+        type: 'like',
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+      jest
+        .spyOn(Reaction, 'findOne')
+        .mockResolvedValueOnce(null) // this request's own initial check
+        .mockResolvedValueOnce(winner); // post-race reconciliation read
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'love' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(winner.type).toBe('love');
+      expect(winner.save).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalledWith(500);
+    });
+
+    test('500 for a non-duplicate-key error', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(null);
+      jest.spyOn(Reaction, 'create').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'like' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 

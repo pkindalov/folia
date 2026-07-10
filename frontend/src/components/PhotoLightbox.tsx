@@ -1,11 +1,17 @@
 import { useEffect, useRef } from 'react';
 import Icon from './Icon';
+import ReactionControl from './ReactionControl';
 import useFocusTrap from '../hooks/useFocusTrap';
+import type { ReactionSummary, ReactionType } from '../features/flipbooks';
 
 type LightboxPhoto = {
+  _id: string;
   url: string;
   filename?: string;
   caption?: string;
+  // Reactions are viewer-only (see ViewerPage) — absent when the lightbox is
+  // opened from the editor's page-management view.
+  reactions?: ReactionSummary;
 };
 
 type PhotoLightboxProps = {
@@ -13,9 +19,18 @@ type PhotoLightboxProps = {
   index: number;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  onReact?: (pageId: string, type: ReactionType) => void;
+  isReactionPending?: boolean;
 };
 
-export default function PhotoLightbox({ photos, index, onClose, onNavigate }: PhotoLightboxProps) {
+export default function PhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onNavigate,
+  onReact,
+  isReactionPending = false,
+}: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrevious = index > 0;
   const hasNext = index < photos.length - 1;
@@ -83,6 +98,14 @@ export default function PhotoLightbox({ photos, index, onClose, onNavigate }: Ph
             <span className="font-body italic text-white/60 text-sm">
               Photo {index + 1} of {photos.length}
             </span>
+          )}
+          {onReact && photo.reactions && (
+            <ReactionControl
+              reactions={photo.reactions}
+              onReact={(type) => onReact(photo._id, type)}
+              isPending={isReactionPending}
+              variant="dark"
+            />
           )}
         </div>
 

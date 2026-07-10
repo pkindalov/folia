@@ -11,10 +11,13 @@ export type NotificationItemData = {
   _id: string;
   type: AppNotification['type'];
   actorUsername: string;
-  circleName: string;
-  // Only present on the album_* types.
+  // Only present on circle-scoped types — page_reaction has neither.
+  circleName: string | null;
+  // Only present on the album_* and page_reaction types.
   albumTitle: string | null;
   album: string | null;
+  // Only present on page_reaction.
+  reactionType: AppNotification['reactionType'] | null;
   read: boolean;
   relativeTime: string; // pre-formatted, just render it
 };

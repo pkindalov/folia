@@ -101,6 +101,12 @@ module.exports = (app) => {
     controllers.pages.requireOwnedAlbum,
     controllers.pages.remove
   );
+  app.put(
+    '/api/albums/:id/pages/:pageId/reaction',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.pages.setReaction
+  );
 
   // Circles
   app.get('/api/circles', auth.isAuthenticated, controllers.circles.list);

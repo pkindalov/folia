@@ -1,6 +1,6 @@
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
-const { notifyAlbumEvent } = require('../../server/utilities/album-notifications');
+const { notifyAlbumEvent, notifyPageReaction } = require('../../server/utilities/album-notifications');
 
 const flush = () => new Promise(setImmediate);
 
@@ -10,6 +10,7 @@ const MEMBER_ID = '507f1f77bcf86cd799439033';
 const PENDING_MEMBER_ID = '507f1f77bcf86cd799439044';
 const CIRCLE_ID = '507f191e810c19729de860ea';
 const ALBUM_ID = '507f191e810c19729de860eb';
+const PAGE_ID = '507f191e810c19729de860ec';
 
 const actorUser = { _id: ACTOR_ID, username: 'pan' };
 
@@ -18,8 +19,11 @@ const fakeAlbum = (overrides = {}) => ({
   title: 'Summer Trip',
   visibility: 'shared',
   sharedWithCircle: CIRCLE_ID,
+  owner: { toString: () => OWNER_ID },
   ...overrides,
 });
+
+const fakePage = (overrides = {}) => ({ _id: PAGE_ID, ...overrides });
 
 const fakeCircle = (overrides = {}) => ({
   _id: CIRCLE_ID,
@@ -143,6 +147,72 @@ describe('notifyAlbumEvent', () => {
     await flush();
 
     expect(Notification.create).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe('notifyPageReaction', () => {
+  test('notifies the album owner with the page, reaction type and reactor username', async () => {
+    notifyPageReaction({
+      page: fakePage(),
+      album: fakeAlbum(),
+      reactionType: 'love',
+      reactorUser: actorUser,
+    });
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: OWNER_ID,
+        type: 'page_reaction',
+        actorUsername: 'pan',
+        album: ALBUM_ID,
+        albumTitle: 'Summer Trip',
+        page: PAGE_ID,
+        reactionType: 'love',
+      })
+    );
+  });
+
+  test('does not notify when the reactor is the album owner (no self-notification)', async () => {
+    notifyPageReaction({
+      page: fakePage(),
+      album: fakeAlbum(),
+      reactionType: 'love',
+      reactorUser: { _id: OWNER_ID, username: 'owner' },
+    });
+    await flush();
+
+    expect(Notification.create).not.toHaveBeenCalled();
+  });
+
+  test('prunes the recipient\'s notifications after creating one', async () => {
+    notifyPageReaction({
+      page: fakePage(),
+      album: fakeAlbum(),
+      reactionType: 'like',
+      reactorUser: actorUser,
+    });
+    await flush();
+
+    expect(Notification.pruneExcessForRecipient).toHaveBeenCalledWith(OWNER_ID);
+  });
+
+  test('never throws when Notification.create fails — logs and swallows', async () => {
+    Notification.create.mockRejectedValue(new Error('db down'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      notifyPageReaction({
+        page: fakePage(),
+        album: fakeAlbum(),
+        reactionType: 'wow',
+        reactorUser: actorUser,
+      })
+    ).not.toThrow();
+    await flush();
+
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });

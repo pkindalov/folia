@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
+const Reaction = require('../data/Reaction');
 const storage = require('../utilities/storage');
-const { notifyAlbumEvent } = require('../utilities/album-notifications');
+const { notifyAlbumEvent, notifyPageReaction } = require('../utilities/album-notifications');
 const { isOwnerOrAdmin, checkAlbumReadAccess } = require('../utilities/controller-helpers');
 
 const env = process.env.NODE_ENV || 'development';
@@ -37,6 +38,51 @@ function removeFiles(ownerId, albumId, filenames) {
   }
 }
 
+function zeroFilledCounts() {
+  return Object.fromEntries(Reaction.REACTION_TYPES.map((type) => [type, 0]));
+}
+
+// Batched reaction summary for a page of Page documents — two queries total
+// (grouped counts + the viewer's own reactions) instead of one pair per
+// page, same N+1-avoidance shape as resolveCoverImages in
+// albums-controller.js. Returns a Map from page id (string) to
+// { counts, total, viewerReaction }.
+function resolveReactionSummaries(pages, viewerId) {
+  const pageIds = pages.map((page) => page._id);
+  if (pageIds.length === 0) return Promise.resolve(new Map());
+
+  return Promise.all([
+    Reaction.aggregate([
+      { $match: { page: { $in: pageIds } } },
+      { $group: { _id: { page: '$page', type: '$type' }, count: { $sum: 1 } } },
+    ]),
+    Reaction.find({ page: { $in: pageIds }, user: viewerId }, 'page type'),
+  ]).then(([grouped, viewerReactions]) => {
+    const viewerReactionByPageId = new Map(
+      viewerReactions.map((reaction) => [reaction.page.toString(), reaction.type])
+    );
+
+    const summaryByPageId = new Map(
+      pageIds.map((pageId) => [
+        pageId.toString(),
+        { counts: zeroFilledCounts(), total: 0, viewerReaction: null },
+      ])
+    );
+
+    for (const { _id, count } of grouped) {
+      const summary = summaryByPageId.get(_id.page.toString());
+      summary.counts[_id.type] = count;
+      summary.total += count;
+    }
+
+    for (const [pageId, summary] of summaryByPageId) {
+      summary.viewerReaction = viewerReactionByPageId.get(pageId) ?? null;
+    }
+
+    return summaryByPageId;
+  });
+}
+
 module.exports = {
   // Loads the album, checks the caller can modify it, and stashes it on
   // req.album — runs before multer so unauthorized requests never touch disk.
@@ -58,6 +104,26 @@ module.exports = {
       .catch(() => res.status(500).json({ error: 'Failed to load album' }));
   },
 
+  // Same shape as requireOwnedAlbum, but for actions any viewer with read
+  // access may take (reacting) rather than only the owner/an Admin.
+  requireReadableAlbum: (req, res, next) => {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ error: 'Album not found' });
+    }
+
+    Album.findById(id)
+      .then((album) => {
+        if (!album) return res.status(404).json({ error: 'Album not found' });
+        return checkAlbumReadAccess(album, req.user).then((denied) => {
+          if (denied) return res.status(denied.status).json({ error: denied.error });
+          req.album = album;
+          next();
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to load album' }));
+  },
+
   list: (req, res) => {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
@@ -67,14 +133,17 @@ module.exports = {
     const respondWithPages = (album) =>
       Page.find({ album: id })
         .sort('createdAt')
-        .then((pages) => {
-          res.json({
-            pages: pages.map((page) => ({
-              ...page.toJSON(),
-              url: storage.photoUrl(album.owner, album._id, page.filename),
-            })),
-          });
-        });
+        .then((pages) =>
+          resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
+            res.json({
+              pages: pages.map((page) => ({
+                ...page.toJSON(),
+                url: storage.photoUrl(album.owner, album._id, page.filename),
+                reactions: summaryByPageId.get(page._id.toString()),
+              })),
+            });
+          })
+        );
 
     Album.findById(id)
       .then((album) => {
@@ -116,18 +185,26 @@ module.exports = {
           }))
         )
           .then((pages) =>
-            syncPageCount(album).then((pageCount) => {
-              // One notification per upload request, not per photo — a
-              // batch of 10 photos is one "new photos added" event.
-              notifyAlbumEvent({ type: 'album_photos_added', album, actorUser: req.user });
-              res.status(201).json({
-                pages: pages.map((page) => ({
-                  ...page.toJSON(),
-                  url: storage.photoUrl(album.owner, album._id, page.filename),
-                })),
-                pageCount,
-              });
-            })
+            syncPageCount(album).then((pageCount) =>
+              // Freshly inserted pages can't have any reactions yet, but
+              // resolving the summary the same way list()/setReaction() do
+              // (rather than hand-rolling a zero-filled shape here) keeps
+              // this response's page objects identical in shape everywhere
+              // the frontend's pageSchema is used.
+              resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
+                // One notification per upload request, not per photo — a
+                // batch of 10 photos is one "new photos added" event.
+                notifyAlbumEvent({ type: 'album_photos_added', album, actorUser: req.user });
+                res.status(201).json({
+                  pages: pages.map((page) => ({
+                    ...page.toJSON(),
+                    url: storage.photoUrl(album.owner, album._id, page.filename),
+                    reactions: summaryByPageId.get(page._id.toString()),
+                  })),
+                  pageCount,
+                });
+              })
+            )
           )
           .catch((err) => {
             removeFiles(album.owner, album._id, files.map((f) => f.filename));
@@ -166,11 +243,18 @@ module.exports = {
           if (captionChanged) {
             notifyAlbumEvent({ type: 'album_photo_caption_updated', album, actorUser: req.user });
           }
-          res.json({
-            page: {
-              ...saved.toJSON(),
-              url: storage.photoUrl(album.owner, album._id, saved.filename),
-            },
+          // A caption edit doesn't touch reactions, but this page can
+          // already carry other users' reactions — resolve the real
+          // summary rather than a zero-filled placeholder so the response
+          // shape stays accurate ahead of the query invalidation.
+          return resolveReactionSummaries([saved], req.user._id).then((summaryByPageId) => {
+            res.json({
+              page: {
+                ...saved.toJSON(),
+                url: storage.photoUrl(album.owner, album._id, saved.filename),
+                reactions: summaryByPageId.get(saved._id.toString()),
+              },
+            });
           });
         });
       })
@@ -200,6 +284,63 @@ module.exports = {
       .catch((err) => respondToAlbumWriteError(res, err, 'Failed to set cover photo'));
   },
 
+  setReaction: (req, res) => {
+    const album = req.album;
+    const { pageId } = req.params;
+    if (!mongoose.isValidObjectId(pageId)) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    const { type } = req.body || {};
+    if (!Reaction.REACTION_TYPES.includes(type)) {
+      return res
+        .status(400)
+        .json({ error: `type must be one of: ${Reaction.REACTION_TYPES.join(', ')}` });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        return Reaction.findOne({ page: page._id, user: req.user._id })
+          .then((existing) => {
+            // Picking the same reaction again removes it (toggle-off).
+            if (existing && existing.type === type) return existing.deleteOne();
+            if (existing) {
+              existing.type = type;
+              return existing.save();
+            }
+
+            return Reaction.create({ page: page._id, album: album._id, user: req.user._id, type })
+              .then(() => {
+                notifyPageReaction({ page, album, reactionType: type, reactorUser: req.user });
+              })
+              .catch((err) => {
+                if (err.code !== 11000) throw err;
+                // Two concurrent first-reactions from the same user can both
+                // pass the findOne above before either writes — the unique
+                // {page, user} index rejects the loser here. Reconcile
+                // rather than silently dropping this request's intended
+                // type: if the winner's stored reaction doesn't match what
+                // this request asked for, update it to match (same as the
+                // "switch an existing reaction" branch above) — no
+                // additional notification, since the owner was already
+                // notified once by the winner's write.
+                return Reaction.findOne({ page: page._id, user: req.user._id }).then((winner) => {
+                  if (!winner || winner.type === type) return;
+                  winner.type = type;
+                  return winner.save();
+                });
+              });
+          })
+          .then(() => resolveReactionSummaries([page], req.user._id))
+          .then((summaryByPageId) => {
+            res.json({ reactions: summaryByPageId.get(page._id.toString()) });
+          });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to save reaction' }));
+  },
+
   remove: (req, res) => {
     const album = req.album;
     const { pageId } = req.params;
@@ -215,6 +356,7 @@ module.exports = {
         // a failed deleteOne would leave a DB record pointing at nothing.
         return page
           .deleteOne()
+          .then(() => Reaction.deleteMany({ page: page._id }))
           .then(() => {
             const filePath = storage.photoPath(album.owner, album._id, page.filename);
             fs.rm(filePath, { force: true }, (err) => {

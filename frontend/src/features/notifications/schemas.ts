@@ -11,19 +11,27 @@ export const NOTIFICATION_TYPES = [
   'album_photos_added',
   'album_photo_removed',
   'album_photo_caption_updated',
+  'page_reaction',
 ] as const;
+
+export const REACTION_NOTIFICATION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;
 
 export const notificationSchema = z
   .object({
     _id: z.string(),
     recipient: z.string(),
     type: z.enum(NOTIFICATION_TYPES),
-    circle: z.string(),
-    circleName: z.string(),
+    // Only present on circle-scoped types — page_reaction goes straight to
+    // the album owner and may have neither.
+    circle: z.string().optional(),
+    circleName: z.string().optional(),
     actorUsername: z.string(),
-    // Only present on the album_* types.
+    // Only present on the album_* and page_reaction types.
     album: z.string().optional(),
     albumTitle: z.string().optional(),
+    // Only present on page_reaction.
+    page: z.string().optional(),
+    reactionType: z.enum(REACTION_NOTIFICATION_TYPES).optional(),
     read: z.boolean(),
     createdAt: z.string(),
     updatedAt: z.string().optional(),

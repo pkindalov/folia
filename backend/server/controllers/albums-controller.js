@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
+const Reaction = require('../data/Reaction');
 const User = require('../data/User');
 const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
@@ -463,7 +464,9 @@ module.exports = {
 
           // Its pages (and their files) go with it — otherwise the Page
           // records would orphan once the album they reference is gone
-          return Page.deleteMany({ album: deletedAlbum._id }).then(() => {
+          return Page.deleteMany({ album: deletedAlbum._id }).then(() =>
+            Reaction.deleteMany({ album: deletedAlbum._id })
+          ).then(() => {
             storage.removeAlbumDir(deletedAlbum.owner, deletedAlbum._id);
             notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
             res.json({ deleted: true });

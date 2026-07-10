@@ -76,6 +76,76 @@ describe('Notification model', () => {
       expect(notification.albumTitle).toBeUndefined();
     });
 
+    test('accepts a page_reaction notification with no circle or circleName', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_reaction',
+        actorUsername: 'sam',
+        album: '507f191e810c19729de860eb',
+        albumTitle: 'Summer Trip',
+        page: '507f191e810c19729de860ec',
+        reactionType: 'love',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.circle).toBeUndefined();
+      expect(notification.circleName).toBeUndefined();
+    });
+
+    test('requires page and reactionType for a page_reaction notification', () => {
+      const err = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_reaction',
+        actorUsername: 'sam',
+      }).validateSync();
+      expect(err.errors.page).toBeDefined();
+      expect(err.errors.reactionType).toBeDefined();
+    });
+
+    test('page and reactionType are not required for non-page_reaction types', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'album_shared',
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+    });
+
+    test('a page_reaction notification can still carry a circle (e.g. reacting on a circle-shared album)', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_reaction',
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+        page: '507f191e810c19729de860ec',
+        reactionType: 'like',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+    });
+
+    test('rejects a page_reaction with a reactionType outside the enum', () => {
+      const err = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_reaction',
+        actorUsername: 'sam',
+        page: '507f191e810c19729de860ec',
+        reactionType: 'shrug',
+      }).validateSync();
+      expect(err.errors.reactionType).toBeDefined();
+    });
+
+    test('non-page_reaction types still require circle and circleName', () => {
+      const err = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'album_shared',
+        actorUsername: 'sam',
+      }).validateSync();
+      expect(err.errors.circle).toBeDefined();
+      expect(err.errors.circleName).toBeDefined();
+    });
+
     test('rejects a type outside the enum', () => {
       const err = new Notification({
         recipient: RECIPIENT_ID,

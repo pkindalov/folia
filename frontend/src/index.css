@@ -35,6 +35,17 @@
   --color-inverse-surface: #313030;
   --color-inverse-on-surface: #f4f0ef;
 
+  /* Reaction colors — hand-tinted ink stamps, pulled to the same muted
+     chroma/lightness family as --color-secondary/--color-success rather
+     than flat saturated emoji colors, so they sit next to sepia photos
+     instead of reading as stickers. */
+  --color-reaction-like: #3d5a73;
+  --color-reaction-love: #9d4400;
+  --color-reaction-haha: #a67c1e;
+  --color-reaction-wow: #b8622f;
+  --color-reaction-sad: #5b6b73;
+  --color-reaction-angry: #8c3a2b;
+
   --font-display: 'Newsreader', Georgia, serif;
   --font-body: 'Newsreader', Georgia, serif;
   --font-ui: 'Work Sans', system-ui, sans-serif;

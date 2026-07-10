@@ -8,6 +8,7 @@ jest.mock('../../server/utilities/storage', () => ({
 const mongoose = require('mongoose');
 const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
+const Reaction = require('../../server/data/Reaction');
 const User = require('../../server/data/User');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
@@ -88,6 +89,7 @@ beforeEach(() => {
   // Mongoose model, mirroring circles-controller.test.js's convention.
   jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
   jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
+  jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
 });
 
 describe('albums-controller', () => {
@@ -1260,6 +1262,18 @@ describe('albums-controller', () => {
       expect(findOneAndDelete).toHaveBeenCalledWith({ _id: ALBUM_ID });
       expect(deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
       expect(storage.removeAlbumDir).toHaveBeenCalledWith(album.owner, ALBUM_ID);
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
+
+    test('deletes the album\'s reactions along with its pages', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(Reaction.deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
 

@@ -54,6 +54,16 @@ export const albumFormSchema = z.object({
 
 export type AlbumFormInput = z.infer<typeof albumFormSchema>;
 
+export const REACTION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;
+export type ReactionType = (typeof REACTION_TYPES)[number];
+
+export const reactionSummarySchema = z.object({
+  counts: z.record(z.enum(REACTION_TYPES), z.number()),
+  total: z.number(),
+  viewerReaction: z.enum(REACTION_TYPES).nullable(),
+});
+export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
+
 export const pageSchema = z
   .object({
     _id: z.string(),
@@ -63,6 +73,7 @@ export const pageSchema = z
     size: z.number(),
     url: z.string(),
     caption: z.string().default(''),
+    reactions: reactionSummarySchema,
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -79,6 +90,7 @@ export const deletePageResponseSchema = z.object({
 });
 export const updatePageCaptionResponseSchema = z.object({ page: pageSchema });
 export const setCoverResponseSchema = z.object({ album: albumSchema });
+export const setPageReactionResponseSchema = z.object({ reactions: reactionSummarySchema });
 
 export const MAX_CAPTION_LENGTH = 500;
 

@@ -19,6 +19,12 @@ const ALBUM = {
   },
 };
 
+const NO_REACTIONS = {
+  counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+  total: 0,
+  viewerReaction: null,
+};
+
 const PAGE = {
   _id: 'p1',
   album: 'a1',
@@ -26,6 +32,7 @@ const PAGE = {
   mimeType: 'image/jpeg',
   size: 1024,
   url: '/uploads/id1/a1/photo1.jpg',
+  reactions: NO_REACTIONS,
 };
 
 const PAGE_2 = {
@@ -35,6 +42,7 @@ const PAGE_2 = {
   mimeType: 'image/jpeg',
   size: 1024,
   url: '/uploads/id1/a1/photo2.jpg',
+  reactions: NO_REACTIONS,
 };
 
 type Call = { url: string; options?: RequestInit };

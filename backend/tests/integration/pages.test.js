@@ -15,6 +15,8 @@ describe('album pages routes (integration)', () => {
   let Album;
   let Page;
   let Circle;
+  let Reaction;
+  let Notification;
   let auth;
   let signedUrl;
   let token;
@@ -46,6 +48,8 @@ describe('album pages routes (integration)', () => {
     Album = require('../../server/data/Album');
     Page = require('../../server/data/Page');
     Circle = require('../../server/data/Circle');
+    Reaction = require('../../server/data/Reaction');
+    Notification = require('../../server/data/Notification');
     auth = require('../../server/config/auth');
     signedUrl = require('../../server/utilities/signed-url');
 
@@ -61,6 +65,14 @@ describe('album pages routes (integration)', () => {
   afterAll(() => {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
     delete process.env.UPLOADS_DIR;
+  });
+
+  // GET .../pages now always resolves a reaction summary per page; stubbed
+  // to "no reactions" by default so tests that don't care about reactions
+  // can't accidentally hit the real Mongoose model.
+  beforeEach(() => {
+    jest.spyOn(Reaction, 'aggregate').mockResolvedValue([]);
+    jest.spyOn(Reaction, 'find').mockResolvedValue([]);
   });
 
   const fakeAlbum = (overrides = {}) => ({
@@ -299,6 +311,7 @@ describe('album pages routes (integration)', () => {
       authAs(OWNER_ID);
       jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
       jest.spyOn(Page, 'findOne').mockResolvedValue({
+        _id: PAGE_ID,
         filename: 'a.jpg',
         caption: '',
         save: jest.fn().mockImplementation(function () {
@@ -386,6 +399,7 @@ describe('album pages routes (integration)', () => {
         deleteOne: jest.fn().mockResolvedValue(undefined),
       });
       jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
+      jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
 
       const res = await request(app)
         .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}`)
@@ -393,6 +407,102 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ deleted: true, pageCount: 0 });
+    });
+  });
+
+  describe('PUT /api/albums/:id/pages/:pageId/reaction', () => {
+    beforeEach(() => {
+      jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
+      jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
+    });
+
+    test('401 without a token', async () => {
+      const res = await request(app).put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`);
+      expect(res.status).toBe(401);
+    });
+
+    test('403 when a stranger reacts to a private album', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ type: 'like' });
+      expect(res.status).toBe(403);
+    });
+
+    test('400 for a type outside the enum', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'shrug' });
+      expect(res.status).toBe(400);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'like' });
+      expect(res.status).toBe(404);
+    });
+
+    test('a circle member can react to a shared album, and the owner is notified', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({
+          name: 'Family',
+          owner: OWNER_ID,
+          members: [{ user: OTHER_ID, status: 'accepted' }],
+        })
+      );
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(null);
+      jest.spyOn(Reaction, 'create').mockResolvedValue({});
+
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ type: 'love' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        reactions: {
+          counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+          total: 0,
+          viewerReaction: null,
+        },
+      });
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID, type: 'page_reaction', reactionType: 'love' })
+      );
+    });
+
+    test('picking the same reaction twice removes it', async () => {
+      authAs(OWNER_ID);
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      const deleteOne = jest.fn().mockResolvedValue({});
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue({ type: 'like', deleteOne });
+
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'like' });
+
+      expect(res.status).toBe(200);
+      expect(deleteOne).toHaveBeenCalled();
     });
   });
 
