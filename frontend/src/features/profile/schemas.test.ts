@@ -19,6 +19,15 @@ describe('updateProfileSchema', () => {
     );
   });
 
+  test('rejects a whitespace-only username and trims valid input', () => {
+    expect(updateProfileSchema.safeParse({ ...valid, username: '   ' }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ ...valid, username: ' ab' }).success).toBe(false);
+
+    const result = updateProfileSchema.safeParse({ ...valid, username: '  pan  ' });
+    expect(result.success).toBe(true);
+    expect(result.data?.username).toBe('pan');
+  });
+
   test.each(['plainaddress', 'missing-at.com', 'no-domain@', 'two words@x.com'])(
     'rejects invalid email: "%s"',
     (email) => {

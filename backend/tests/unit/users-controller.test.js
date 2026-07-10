@@ -381,12 +381,23 @@ describe('users-controller', () => {
       ['too short', 'ab'],
       ['too long', 'x'.repeat(31)],
       ['not a string (injection)', { $gt: '' }],
+      ['whitespace-only', '   '],
+      ['too short once trimmed', ' ab'],
     ])('rejects an invalid username: %s', (_name, username) => {
       const user = makeUser();
       const res = mockRes();
       controller.updateMe({ body: { username }, user }, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(user.save).not.toHaveBeenCalled();
+    });
+
+    test('trims surrounding whitespace off a valid username before saving', async () => {
+      const user = makeUser();
+      const res = mockRes();
+      controller.updateMe({ body: { username: '  newname  ' }, user }, res);
+      await flush();
+      expect(user.username).toBe('newname');
+      expect(user.save).toHaveBeenCalled();
     });
 
     test('rejects an invalid email', () => {

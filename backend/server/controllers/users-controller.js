@@ -110,8 +110,16 @@ module.exports = {
     if (username === undefined && email === undefined) {
       return res.status(400).json({ error: 'username or email is required' });
     }
+    // Validate against the trimmed length — the schema trims on save, so
+    // checking the raw length here would let e.g. " ab" pass this check
+    // only to fail the schema's minlength validator once saved.
+    let trimmedUsername;
     if (username !== undefined) {
-      if (!isNonEmptyString(username) || username.length < 3 || username.length > 30) {
+      if (!isNonEmptyString(username)) {
+        return res.status(400).json({ error: 'username must be 3-30 characters' });
+      }
+      trimmedUsername = username.trim();
+      if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
         return res.status(400).json({ error: 'username must be 3-30 characters' });
       }
     }
@@ -122,7 +130,7 @@ module.exports = {
     }
 
     const user = req.user;
-    if (username !== undefined) user.username = username;
+    if (trimmedUsername !== undefined) user.username = trimmedUsername;
     if (email !== undefined) user.email = email;
 
     user
