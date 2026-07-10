@@ -1,3 +1,4 @@
+const fs = require('fs');
 const User = require('../../server/data/User');
 const controller = require('../../server/controllers/users-controller');
 
@@ -146,7 +147,7 @@ describe('users-controller', () => {
       await flush();
       expect(res.status).toHaveBeenCalledWith(201);
       const body = res.json.mock.calls[0][0];
-      expect(body.user).toBe(created);
+      expect(body.user).toEqual({ ...created, avatarUrl: null });
       expect(typeof body.token).toBe('string');
       expect(body.token.split('.')).toHaveLength(3);
     });
@@ -240,7 +241,7 @@ describe('users-controller', () => {
       controller.login({ body: { identifier: 'pan', password: 'secret123' } }, res);
       await flush();
       const body = res.json.mock.calls[0][0];
-      expect(body.user).toBe(user);
+      expect(body.user).toEqual({ ...user, avatarUrl: null });
       expect(body.token.split('.')).toHaveLength(3);
       expect(res.status).not.toHaveBeenCalledWith(401);
     });
@@ -260,7 +261,16 @@ describe('users-controller', () => {
       const res = mockRes();
       const user = { _id: 'id1', username: 'pan' };
       controller.me({ user }, res);
-      expect(res.json).toHaveBeenCalledWith({ user });
+      expect(res.json).toHaveBeenCalledWith({ user: { ...user, avatarUrl: null } });
+    });
+
+    test('includes a signed avatarUrl when the user has an avatar', () => {
+      const res = mockRes();
+      const user = { _id: 'id1', username: 'pan', avatarFilename: 'abc.jpg' };
+      controller.me({ user }, res);
+      const body = res.json.mock.calls[0][0];
+      expect(body.user.avatarUrl).toMatch(/^\/uploads\/avatars\/id1\/abc\.jpg\?exp=\d+&sig=[0-9a-f]+$/);
+      expect(body.user).not.toHaveProperty('avatarFilename');
     });
   });
 
@@ -271,7 +281,7 @@ describe('users-controller', () => {
       const res = mockRes();
       controller.profile({ params: { username: 'maria' } }, res);
       await flush();
-      expect(res.json).toHaveBeenCalledWith({ user });
+      expect(res.json).toHaveBeenCalledWith({ user: { ...user, avatarUrl: null } });
     });
 
     test('returns 404 for a missing user', async () => {
@@ -343,6 +353,240 @@ describe('users-controller', () => {
       jest.spyOn(User, 'find').mockReturnValue({ limit: jest.fn().mockRejectedValue(new Error('x')) });
       const res = mockRes();
       controller.search({ query: { q: 'ma' }, user: requester }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('updateMe', () => {
+    const makeUser = (overrides = {}) => ({
+      _id: 'id1',
+      username: 'pan',
+      email: 'pan@test.com',
+      save: jest.fn().mockImplementation(function () {
+        return Promise.resolve(this);
+      }),
+      ...overrides,
+    });
+
+    test('rejects a body with neither username nor email', () => {
+      const user = makeUser();
+      const res = mockRes();
+      controller.updateMe({ body: {}, user }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
+    test.each([
+      ['too short', 'ab'],
+      ['too long', 'x'.repeat(31)],
+      ['not a string (injection)', { $gt: '' }],
+    ])('rejects an invalid username: %s', (_name, username) => {
+      const user = makeUser();
+      const res = mockRes();
+      controller.updateMe({ body: { username }, user }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
+    test('rejects an invalid email', () => {
+      const user = makeUser();
+      const res = mockRes();
+      controller.updateMe({ body: { email: 'not-an-email' }, user }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
+    test('updates only the fields provided', async () => {
+      const user = makeUser();
+      const res = mockRes();
+      controller.updateMe({ body: { username: 'newname' }, user }, res);
+      await flush();
+      expect(user.username).toBe('newname');
+      expect(user.email).toBe('pan@test.com');
+      expect(user.save).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ user: { ...user, avatarUrl: null } });
+    });
+
+    test('maps a duplicate-key save rejection to 400', async () => {
+      const user = makeUser({
+        save: jest.fn().mockRejectedValue({ code: 11000, keyValue: { username: 'taken' } }),
+      });
+      const res = mockRes();
+      controller.updateMe({ body: { username: 'taken' }, user }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'username already exists' });
+    });
+  });
+
+  describe('uploadAvatar', () => {
+    const makeUser = (overrides = {}) => ({
+      _id: 'id1',
+      username: 'pan',
+      avatarFilename: undefined,
+      ...overrides,
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('rejects when no file was uploaded', () => {
+      const user = makeUser();
+      const res = mockRes();
+      const findOneAndUpdate = jest.spyOn(User, 'findOneAndUpdate');
+      controller.uploadAvatar({ user, file: undefined }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('atomically writes the new filename, conditioned on the previously-read one', async () => {
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: 'new.jpg' });
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, mockRes());
+      await flush();
+      expect(User.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: 'id1', avatarFilename: 'old.jpg' },
+        { avatarFilename: 'new.jpg' },
+        { new: true }
+      );
+    });
+
+    test('a user with no prior avatar is matched via avatarFilename: null', async () => {
+      const user = makeUser();
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: 'new.jpg' });
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, mockRes());
+      await flush();
+      expect(User.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: 'id1', avatarFilename: null },
+        { avatarFilename: 'new.jpg' },
+        { new: true }
+      );
+    });
+
+    test('returns a signed avatarUrl on success', async () => {
+      const user = makeUser();
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: 'new.jpg' });
+      const res = mockRes();
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, res);
+      await flush();
+      const body = res.json.mock.calls[0][0];
+      expect(body.user.avatarUrl).toMatch(/^\/uploads\/avatars\/id1\/new\.jpg\?/);
+    });
+
+    test('deletes the previous avatar file after a successful re-upload', async () => {
+      const rm = jest.spyOn(fs, 'rm').mockImplementation((_path, _opts, cb) => cb(null));
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: 'new.jpg' });
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, mockRes());
+      await flush();
+      expect(rm).toHaveBeenCalledWith(
+        expect.stringContaining('old.jpg'),
+        { force: true },
+        expect.any(Function)
+      );
+    });
+
+    test('409s and deletes the just-uploaded file when another request already changed the avatar', async () => {
+      const rm = jest.spyOn(fs, 'rm').mockImplementation((_path, _opts, cb) => cb(null));
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      // A concurrent request already moved avatarFilename on — the
+      // conditional update finds no matching document.
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue(null);
+      const res = mockRes();
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(rm).toHaveBeenCalledWith(
+        expect.stringContaining('new.jpg'),
+        { force: true },
+        expect.any(Function)
+      );
+    });
+
+    test('deletes the newly-uploaded file if the update fails', async () => {
+      const rm = jest.spyOn(fs, 'rm').mockImplementation((_path, _opts, cb) => cb(null));
+      const user = makeUser();
+      jest.spyOn(User, 'findOneAndUpdate').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.uploadAvatar({ user, file: { filename: 'new.jpg' } }, res);
+      await flush();
+      expect(rm).toHaveBeenCalledWith(
+        expect.stringContaining('new.jpg'),
+        { force: true },
+        expect.any(Function)
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe('removeAvatar', () => {
+    const makeUser = (overrides = {}) => ({
+      _id: 'id1',
+      username: 'pan',
+      avatarFilename: undefined,
+      ...overrides,
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('is a no-op 200 when the user has no avatar', async () => {
+      const user = makeUser();
+      const res = mockRes();
+      const findOneAndUpdate = jest.spyOn(User, 'findOneAndUpdate');
+      controller.removeAvatar({ user }, res);
+      await flush();
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ user: { ...user, avatarUrl: null } });
+    });
+
+    test('atomically clears the filename, conditioned on the previously-read one', async () => {
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: null });
+      controller.removeAvatar({ user }, mockRes());
+      await flush();
+      expect(User.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: 'id1', avatarFilename: 'old.jpg' },
+        { avatarFilename: null },
+        { new: true }
+      );
+    });
+
+    test('deletes the file and returns a null avatarUrl on success', async () => {
+      const rm = jest.spyOn(fs, 'rm').mockImplementation((_path, _opts, cb) => cb(null));
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue({ ...user, avatarFilename: null });
+      const res = mockRes();
+      controller.removeAvatar({ user }, res);
+      await flush();
+      expect(rm).toHaveBeenCalledWith(
+        expect.stringContaining('old.jpg'),
+        { force: true },
+        expect.any(Function)
+      );
+      const body = res.json.mock.calls[0][0];
+      expect(body.user.avatarUrl).toBeNull();
+    });
+
+    test('409s without touching disk when another request already changed the avatar', async () => {
+      const rm = jest.spyOn(fs, 'rm').mockImplementation((_path, _opts, cb) => cb(null));
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockResolvedValue(null);
+      const res = mockRes();
+      controller.removeAvatar({ user }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(rm).not.toHaveBeenCalled();
+    });
+
+    test('returns 500 when the update fails', async () => {
+      const user = makeUser({ avatarFilename: 'old.jpg' });
+      jest.spyOn(User, 'findOneAndUpdate').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.removeAvatar({ user }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
     });

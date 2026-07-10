@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
     salt: String,
     hashedPass: String,
     roles: [String],
+    avatarFilename: String,
   },
   { timestamps: true }
 );

@@ -61,4 +61,30 @@ describe('storage utility', () => {
       signedUrl.verify(parsed.pathname, parsed.searchParams.get('exp'), parsed.searchParams.get('sig'))
     ).toBe(true);
   });
+
+  test('avatarDir nests a per-user folder under an avatars folder', () => {
+    const dir = storage.avatarDir('user1');
+    expect(dir).toBe(path.resolve(tmpRoot, 'avatars', 'user1'));
+  });
+
+  test('ensureAvatarDir creates the folder recursively and is idempotent', () => {
+    const dir = storage.ensureAvatarDir('user1');
+    expect(fs.existsSync(dir)).toBe(true);
+    expect(() => storage.ensureAvatarDir('user1')).not.toThrow();
+  });
+
+  test('avatarPath resolves inside the user\'s own avatar folder', () => {
+    const avatarPath = storage.avatarPath('user1', 'abc.jpg');
+    expect(avatarPath).toBe(path.join(storage.avatarDir('user1'), 'abc.jpg'));
+  });
+
+  test('avatarUrl points at the /uploads/avatars route with a verifiable signature', () => {
+    const signedUrl = require('../../server/utilities/signed-url');
+    const url = storage.avatarUrl('user1', 'abc.jpg');
+    const parsed = new URL(url, 'http://localhost');
+    expect(parsed.pathname).toBe('/uploads/avatars/user1/abc.jpg');
+    expect(
+      signedUrl.verify(parsed.pathname, parsed.searchParams.get('exp'), parsed.searchParams.get('sig'))
+    ).toBe(true);
+  });
 });

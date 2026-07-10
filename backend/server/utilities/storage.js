@@ -10,8 +10,13 @@ const settings = require('../config/settings')[env];
 const albumDir = (ownerId, albumId) =>
   path.resolve(settings.uploadsDir, String(ownerId), String(albumId));
 
+// Avatars live in <uploadsDir>/avatars/<userId>/ — kept outside the album
+// directory tree so avatar files are never touched by album/page cleanup.
+const avatarDir = (userId) => path.resolve(settings.uploadsDir, 'avatars', String(userId));
+
 module.exports = {
   albumDir,
+  avatarDir,
 
   // Resolves a single photo's path inside its album's folder (filename is
   // always server-generated — see config/upload.js — so this stays safe).
@@ -33,5 +38,20 @@ module.exports = {
 
   removeAlbumDir: (ownerId, albumId) => {
     fs.rmSync(albumDir(ownerId, albumId), { recursive: true, force: true });
+  },
+
+  // Resolves a single avatar's path inside its owner's folder (filename is
+  // always server-generated — see config/avatar-upload.js — so this stays safe).
+  avatarPath: (userId, filename) => path.join(avatarDir(userId), filename),
+
+  // Public URL an avatar is served at — mirrors the static route mounted on
+  // /uploads. Signed for the same reason photoUrl is: the route only trusts
+  // a valid signature, not the path's unguessability alone.
+  avatarUrl: (userId, filename) => signedUrl.sign(`/uploads/avatars/${userId}/${filename}`),
+
+  ensureAvatarDir: (userId) => {
+    const dir = avatarDir(userId);
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
   },
 };

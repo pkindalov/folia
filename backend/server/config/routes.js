@@ -3,6 +3,7 @@ const multer = require('multer');
 const controllers = require('../controllers');
 const auth = require('./auth');
 const upload = require('./upload');
+const avatarUpload = require('./avatar-upload');
 
 // Slow down brute-force attempts on login/register
 const authLimiter = rateLimit({
@@ -33,6 +34,14 @@ module.exports = (app) => {
 
   // Users (protected)
   app.get('/api/users/me', auth.isAuthenticated, controllers.users.me);
+  app.put('/api/users/me', auth.isAuthenticated, controllers.users.updateMe);
+  app.post(
+    '/api/users/me/avatar',
+    auth.isAuthenticated,
+    avatarUpload.single('avatar'),
+    controllers.users.uploadAvatar
+  );
+  app.delete('/api/users/me/avatar', auth.isAuthenticated, controllers.users.removeAvatar);
   // Must come before /api/users/:username, or "search" would be parsed as a username.
   app.get('/api/users/search', auth.isAuthenticated, searchLimiter, controllers.users.search);
   app.get('/api/users/:username', auth.isAuthenticated, controllers.users.profile);
