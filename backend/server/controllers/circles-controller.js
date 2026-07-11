@@ -68,13 +68,14 @@ function withUsernames(circle) {
 // Fire-and-forget: notification bookkeeping must never turn an otherwise
 // successful circle-membership response into a failure, so every call site
 // below logs and swallows rather than propagating into the response chain.
-function notifyCircleInvite({ circleId, circleName, actorUsername, recipientId }) {
+function notifyCircleInvite({ circleId, circleName, actorUsername, actorId, recipientId }) {
   Notification.create({
     recipient: recipientId,
     type: 'circle_invite',
     circle: circleId,
     circleName,
     actorUsername,
+    actor: actorId,
   })
     .then(() => Notification.pruneExcessForRecipient(recipientId))
     .catch((err) => console.error('Failed to create/prune circle-invite notification', err));
@@ -99,6 +100,7 @@ function notifyCircleInviteResponse({ type, circleId, circleName, invitedBy, act
         circle: circleId,
         circleName,
         actorUsername: actingUser.username,
+        actor: actingUser._id,
       }).then(() => Notification.pruneExcessForRecipient(invitedBy));
     })
     .catch((err) => console.error('Failed to create/prune circle-invite-response notification', err));
@@ -124,6 +126,7 @@ function notifyCircleDeleted({ circle, circleName, actorUsername, actorId }) {
             circle: circle._id,
             circleName,
             actorUsername,
+            actor: actorId,
           }).then(() => Notification.pruneExcessForRecipient(recipientId))
         )
       );
@@ -366,6 +369,7 @@ module.exports = {
                 circleId: id,
                 circleName: updated.name,
                 actorUsername: req.user.username,
+                actorId: req.user._id,
                 recipientId: userId,
               });
               return withUsernames(updated).then((circle) => res.status(201).json({ circle }));

@@ -74,6 +74,17 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: '{PATH} is required',
     },
+    // Live reference to the acting user, kept alongside actorUsername rather
+    // than replacing it — actorUsername is an intentional historical
+    // snapshot (see above), while this is used only to look up the actor's
+    // *current* avatar at read time. Never denormalize an avatar URL onto
+    // this document: avatarUrl is signed and time-limited (see storage.js),
+    // so a stored one would go stale.
+    actor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     // Only set for the album_* and page_reaction types — a snapshot of
     // which album and what its title was, for the same reason circleName is
     // a snapshot: the notification should still read correctly even after

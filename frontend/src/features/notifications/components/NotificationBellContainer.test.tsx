@@ -23,6 +23,7 @@ type FakeNotification = {
   circle: string;
   circleName: string;
   actorUsername: string;
+  actorAvatarUrl?: string | null;
   albumTitle?: string;
   album?: string;
   read: boolean;
@@ -36,6 +37,7 @@ const baseNotification: FakeNotification = {
   circle: 'c1',
   circleName: 'The Sterling Family',
   actorUsername: 'maria',
+  actorAvatarUrl: null,
   read: false,
   createdAt: new Date().toISOString(),
 };
@@ -66,10 +68,30 @@ function mockApi() {
       const pageItems = notifications.slice(start, start + pageSize);
       return respond({ notifications: pageItems, total: notifications.length, page, limit: pageSize });
     }
+    if (method === 'PUT' && path.endsWith('/read-all')) {
+      const count = notifications.filter((n) => !n.read).length;
+      notifications = notifications.map((n) => ({ ...n, read: true }));
+      return respond({ updated: true, count });
+    }
+    if (method === 'PUT' && path.endsWith('/unread-all')) {
+      const count = notifications.filter((n) => n.read).length;
+      notifications = notifications.map((n) => ({ ...n, read: false }));
+      return respond({ updated: true, count });
+    }
     if (method === 'PUT' && /\/read$/.test(path)) {
       const id = path.split('/')[3];
       notifications = notifications.map((n) => (n._id === id ? { ...n, read: true } : n));
       return respond({ notification: notifications.find((n) => n._id === id) });
+    }
+    if (method === 'PUT' && /\/unread$/.test(path)) {
+      const id = path.split('/')[3];
+      notifications = notifications.map((n) => (n._id === id ? { ...n, read: false } : n));
+      return respond({ notification: notifications.find((n) => n._id === id) });
+    }
+    if (method === 'DELETE' && path === '/api/notifications') {
+      const count = notifications.length;
+      notifications = [];
+      return respond({ deleted: true, count });
     }
     if (method === 'DELETE') {
       const id = path.split('/').pop();
@@ -441,6 +463,148 @@ describe('NotificationBellContainer', () => {
       ).toBeInTheDocument()
     );
     expect(screen.queryByText('No notifications yet.')).not.toBeInTheDocument();
+  });
+
+  test('toggling an unread notification to read via the per-item button flips its style and does not navigate', async () => {
+    notifications = [baseNotification];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+    await user.click(screen.getByLabelText('Mark notification from maria as read'));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/notifications/n1/read'),
+        expect.objectContaining({ method: 'PUT' })
+      )
+    );
+    expect(screen.queryByText('Circles page reached')).not.toBeInTheDocument();
+  });
+
+  test('toggling a read notification to unread via the per-item button hits the unread endpoint', async () => {
+    notifications = [{ ...baseNotification, read: true }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+    await user.click(screen.getByLabelText('Mark notification from maria as unread'));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/notifications/n1/unread'),
+        expect.objectContaining({ method: 'PUT' })
+      )
+    );
+  });
+
+  test('marking all notifications read hits the bulk endpoint', async () => {
+    notifications = [baseNotification, { ...baseNotification, _id: 'n2', read: false }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+
+    await user.click(screen.getByLabelText('Mark all notifications as read'));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/notifications/read-all'),
+        expect.objectContaining({ method: 'PUT' })
+      )
+    );
+  });
+
+  test('marking all notifications unread hits the bulk endpoint', async () => {
+    notifications = [{ ...baseNotification, read: true }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+
+    await user.click(screen.getByLabelText('Mark all notifications as unread'));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/notifications/unread-all'),
+        expect.objectContaining({ method: 'PUT' })
+      )
+    );
+  });
+
+  test('"Mark all read" is disabled when there are no unread notifications', async () => {
+    notifications = [{ ...baseNotification, read: true }];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+
+    expect(screen.getByLabelText('Mark all notifications as read')).toBeDisabled();
+  });
+
+  test('bulk buttons are disabled when there are no notifications at all', async () => {
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText('No notifications yet.');
+
+    expect(screen.getByLabelText('Mark all notifications as read')).toBeDisabled();
+    expect(screen.getByLabelText('Mark all notifications as unread')).toBeDisabled();
+    expect(screen.getByLabelText('Delete all notifications')).toBeDisabled();
+  });
+
+  test('delete all asks for confirmation and does nothing if declined', async () => {
+    notifications = [baseNotification];
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+
+    await user.click(screen.getByLabelText('Delete all notifications'));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith('/api/notifications', expect.objectContaining({ method: 'DELETE' }));
+    expect(
+      screen.getByText((_, element) => element?.textContent === 'maria invited you to The Sterling Family')
+    ).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  test('delete all removes every notification once confirmed', async () => {
+    notifications = [baseNotification, { ...baseNotification, _id: 'n2' }];
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+
+    await user.click(screen.getByLabelText('Delete all notifications'));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/notifications',
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    );
+    await waitFor(() => expect(screen.getByText('No notifications yet.')).toBeInTheDocument());
+    confirmSpy.mockRestore();
   });
 
   test('Escape closes the panel', async () => {

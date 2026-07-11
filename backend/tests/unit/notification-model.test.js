@@ -3,16 +3,18 @@ const Notification = require('../../server/data/Notification');
 const RECIPIENT_ID = '507f1f77bcf86cd799439011';
 const OTHER_RECIPIENT_ID = '507f1f77bcf86cd799439099';
 const CIRCLE_ID = '507f191e810c19729de860ea';
+const ACTOR_ID = '507f1f77bcf86cd799439044';
 
 describe('Notification model', () => {
   describe('schema validation (offline)', () => {
-    test('requires recipient, type, circle, circleName and actorUsername', () => {
+    test('requires recipient, type, circle, circleName, actorUsername and actor', () => {
       const err = new Notification({}).validateSync();
       expect(err.errors.recipient).toBeDefined();
       expect(err.errors.type).toBeDefined();
       expect(err.errors.circle).toBeDefined();
       expect(err.errors.circleName).toBeDefined();
       expect(err.errors.actorUsername).toBeDefined();
+      expect(err.errors.actor).toBeDefined();
     });
 
     test('accepts a valid circle_invite notification', () => {
@@ -22,6 +24,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'pan',
+        actor: ACTOR_ID,
       });
       expect(notification.validateSync()).toBeUndefined();
       expect(notification.read).toBe(false);
@@ -44,6 +47,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
       });
       expect(notification.validateSync()).toBeUndefined();
     });
@@ -55,6 +59,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
         album: '507f191e810c19729de860eb',
         albumTitle: 'Summer Trip',
       });
@@ -70,6 +75,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
       });
       expect(notification.validateSync()).toBeUndefined();
       expect(notification.album).toBeUndefined();
@@ -81,6 +87,7 @@ describe('Notification model', () => {
         recipient: RECIPIENT_ID,
         type: 'page_reaction',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
         album: '507f191e810c19729de860eb',
         albumTitle: 'Summer Trip',
         page: '507f191e810c19729de860ec',
@@ -96,6 +103,7 @@ describe('Notification model', () => {
         recipient: RECIPIENT_ID,
         type: 'page_reaction',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
       }).validateSync();
       expect(err.errors.page).toBeDefined();
       expect(err.errors.reactionType).toBeDefined();
@@ -108,6 +116,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
       });
       expect(notification.validateSync()).toBeUndefined();
     });
@@ -119,6 +128,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
         page: '507f191e810c19729de860ec',
         reactionType: 'like',
       });
@@ -130,6 +140,7 @@ describe('Notification model', () => {
         recipient: RECIPIENT_ID,
         type: 'page_reaction',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
         page: '507f191e810c19729de860ec',
         reactionType: 'shrug',
       }).validateSync();
@@ -141,6 +152,7 @@ describe('Notification model', () => {
         recipient: RECIPIENT_ID,
         type: 'album_shared',
         actorUsername: 'sam',
+        actor: ACTOR_ID,
       }).validateSync();
       expect(err.errors.circle).toBeDefined();
       expect(err.errors.circleName).toBeDefined();
@@ -153,6 +165,7 @@ describe('Notification model', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'pan',
+        actor: ACTOR_ID,
       }).validateSync();
       expect(err.errors.type).toBeDefined();
     });

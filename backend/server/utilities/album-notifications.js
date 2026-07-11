@@ -25,6 +25,7 @@ function notifyAlbumEvent({ type, album, actorUser }) {
               circle: circle._id,
               circleName: circle.name,
               actorUsername: actorUser.username,
+              actor: actorUser._id,
               album: album._id,
               albumTitle: album.title,
             }).then(() => Notification.pruneExcessForRecipient(recipientId))
@@ -49,6 +50,7 @@ function notifyPageReaction({ page, album, reactionType, reactorUser }) {
     recipient: ownerId,
     type: 'page_reaction',
     actorUsername: reactorUser.username,
+    actor: reactorUser._id,
     album: album._id,
     albumTitle: album.title,
     page: page._id,

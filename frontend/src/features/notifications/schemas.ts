@@ -26,6 +26,10 @@ export const notificationSchema = z
     circle: z.string().optional(),
     circleName: z.string().optional(),
     actorUsername: z.string(),
+    // Signed, time-limited avatar URL for the actor, resolved fresh on every
+    // response — null for a legacy notification with no recorded actor, or
+    // one whose actor account no longer exists.
+    actorAvatarUrl: z.string().nullable(),
     // Only present on the album_* and page_reaction types.
     album: z.string().optional(),
     albumTitle: z.string().optional(),
@@ -47,6 +51,8 @@ export const notificationsResponseSchema = z.object({
 
 export const notificationResponseSchema = z.object({ notification: notificationSchema });
 export const unreadCountResponseSchema = z.object({ count: z.number() });
+export const bulkUpdateResponseSchema = z.object({ updated: z.boolean(), count: z.number() });
+export const bulkDeleteResponseSchema = z.object({ deleted: z.boolean(), count: z.number() });
 
 // Named AppNotification (not Notification) to avoid shadowing the DOM's
 // built-in Notification API in any file that imports this bare.

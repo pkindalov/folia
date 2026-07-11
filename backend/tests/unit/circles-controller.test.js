@@ -474,6 +474,7 @@ describe('circles-controller', () => {
           circle: CIRCLE_ID,
           circleName: 'The Sterling Family',
           actorUsername: 'pan',
+          actor: OWNER_ID,
         })
       );
       expect(Notification.create).toHaveBeenCalledWith(
@@ -506,7 +507,12 @@ describe('circles-controller', () => {
       controller.remove({ params: { id: CIRCLE_ID }, user: admin }, res);
       await flush();
       expect(Notification.create).toHaveBeenCalledWith(
-        expect.objectContaining({ recipient: OWNER_ID, type: 'circle_deleted', actorUsername: 'root' })
+        expect.objectContaining({
+          recipient: OWNER_ID,
+          type: 'circle_deleted',
+          actorUsername: 'root',
+          actor: OTHER_ID,
+        })
       );
       expect(Notification.create).toHaveBeenCalledWith(
         expect.objectContaining({ recipient: MEMBER_ID, type: 'circle_deleted' })
@@ -677,6 +683,7 @@ describe('circles-controller', () => {
           circle: CIRCLE_ID,
           circleName: 'The Sterling Family',
           actorUsername: 'pan',
+          actor: OWNER_ID,
         })
       );
     });
@@ -940,6 +947,7 @@ describe('circles-controller', () => {
           circle: CIRCLE_ID,
           circleName: 'The Sterling Family',
           actorUsername: 'sam',
+          actor: MEMBER_ID,
         })
       );
     });
@@ -1215,6 +1223,7 @@ describe('circles-controller', () => {
           circle: CIRCLE_ID,
           circleName: 'The Sterling Family',
           actorUsername: 'sam',
+          actor: MEMBER_ID,
         })
       );
     });

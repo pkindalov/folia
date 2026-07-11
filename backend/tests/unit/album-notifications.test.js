@@ -54,12 +54,13 @@ describe('notifyAlbumEvent', () => {
         circle: CIRCLE_ID,
         circleName: 'The Sterling Family',
         actorUsername: 'pan',
+        actor: ACTOR_ID,
         album: ALBUM_ID,
         albumTitle: 'Summer Trip',
       })
     );
     expect(Notification.create).toHaveBeenCalledWith(
-      expect.objectContaining({ recipient: MEMBER_ID, type: 'album_shared' })
+      expect.objectContaining({ recipient: MEMBER_ID, type: 'album_shared', actor: ACTOR_ID })
     );
     expect(Notification.create).not.toHaveBeenCalledWith(
       expect.objectContaining({ recipient: PENDING_MEMBER_ID })
@@ -167,6 +168,7 @@ describe('notifyPageReaction', () => {
         recipient: OWNER_ID,
         type: 'page_reaction',
         actorUsername: 'pan',
+        actor: ACTOR_ID,
         album: ALBUM_ID,
         albumTitle: 'Summer Trip',
         page: PAGE_ID,

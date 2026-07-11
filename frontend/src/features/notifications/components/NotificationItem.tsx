@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
+import Avatar from '../../../components/Avatar';
 import type { NotificationItemData } from './NotificationBell';
 import { REACTION_NOTIFICATION_TYPES } from '../schemas';
 
@@ -13,6 +14,8 @@ type NotificationItemProps = {
   onItemClick: (notification: NotificationItemData) => void;
   onDismiss: (id: string) => void;
   isDismissing: boolean;
+  onToggleRead: (id: string, nextRead: boolean) => void;
+  isTogglingRead: boolean;
 };
 
 // A message reads as "{actor} {leading} {subject} {trailing}", with actor
@@ -118,14 +121,21 @@ export default function NotificationItem({
   onItemClick,
   onDismiss,
   isDismissing,
+  onToggleRead,
+  isTogglingRead,
 }: NotificationItemProps) {
-  const { _id, actorUsername, read, relativeTime } = notification;
+  const { _id, actorUsername, actorAvatarUrl, read, relativeTime } = notification;
   const { leading, subject, trailing } = MESSAGE_PARTS_BY_TYPE[notification.type](notification);
   const linkTo = LINK_TO_BY_TYPE[notification.type](notification);
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     onDismiss(_id);
+  };
+
+  const onToggleReadClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onToggleRead(_id, !read);
   };
 
   return (
@@ -137,10 +147,16 @@ export default function NotificationItem({
       <Link
         to={linkTo}
         onClick={() => onItemClick(notification)}
-        className="flex items-start px-5 py-4 hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-secondary -outline-offset-2"
+        className="flex items-start gap-3 px-5 py-4 hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-secondary -outline-offset-2"
       >
-        <span className="w-5 shrink-0 flex justify-center pt-1.5" aria-hidden="true">
-          {!read && <span className="w-2 h-2 rounded-full bg-secondary" />}
+        <span className="relative shrink-0">
+          <Avatar username={actorUsername} avatarUrl={actorAvatarUrl} size="sm" />
+          {!read && (
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-secondary border-2 border-surface-container-lowest"
+            />
+          )}
         </span>
         <span className="flex-1">
           <span
@@ -165,15 +181,30 @@ export default function NotificationItem({
         </span>
       </Link>
 
-      <button
-        type="button"
-        onClick={onDismissClick}
-        disabled={isDismissing}
-        aria-label={`Dismiss notification from ${actorUsername}`}
-        className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-      >
-        <Icon name="close" className="text-base" />
-      </button>
+      <span className="absolute top-3 right-3 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={onToggleReadClick}
+          disabled={isTogglingRead}
+          aria-label={
+            read
+              ? `Mark notification from ${actorUsername} as unread`
+              : `Mark notification from ${actorUsername} as read`
+          }
+          className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Icon name={read ? 'mark_email_unread' : 'mark_email_read'} className="text-base" />
+        </button>
+        <button
+          type="button"
+          onClick={onDismissClick}
+          disabled={isDismissing}
+          aria-label={`Dismiss notification from ${actorUsername}`}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Icon name="close" className="text-base" />
+        </button>
+      </span>
     </li>
   );
 }

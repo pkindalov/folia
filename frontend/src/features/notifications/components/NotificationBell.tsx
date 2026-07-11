@@ -11,6 +11,7 @@ export type NotificationItemData = {
   _id: string;
   type: AppNotification['type'];
   actorUsername: string;
+  actorAvatarUrl: string | null;
   // Only present on circle-scoped types — page_reaction has neither.
   circleName: string | null;
   // Only present on the album_* and page_reaction types.
@@ -37,6 +38,13 @@ type NotificationBellProps = {
   onItemClick: (notification: NotificationItemData) => void;
   onDismiss: (id: string) => void;
   dismissingIds: Set<string>;
+  onToggleRead: (id: string, nextRead: boolean) => void;
+  togglingReadIds: Set<string>;
+  totalCount: number;
+  onMarkAllRead: () => void;
+  onMarkAllUnread: () => void;
+  onDeleteAll: () => void;
+  isBulkActionPending: boolean;
 };
 
 const MAX_DISPLAYED_UNREAD_COUNT = 9;
@@ -92,6 +100,13 @@ export default function NotificationBell({
   onItemClick,
   onDismiss,
   dismissingIds,
+  onToggleRead,
+  togglingReadIds,
+  totalCount,
+  onMarkAllRead,
+  onMarkAllUnread,
+  onDeleteAll,
+  isBulkActionPending,
 }: NotificationBellProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -191,6 +206,42 @@ export default function NotificationBell({
             Notifications
           </div>
 
+          <div
+            role="group"
+            aria-label="Bulk notification actions"
+            className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-outline-variant/40"
+          >
+            <button
+              type="button"
+              onClick={onMarkAllRead}
+              disabled={isBulkActionPending || unreadCount === 0}
+              aria-label="Mark all notifications as read"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon name="done_all" className="text-base" />
+            </button>
+            <button
+              type="button"
+              onClick={onMarkAllUnread}
+              disabled={isBulkActionPending || totalCount - unreadCount === 0}
+              aria-label="Mark all notifications as unread"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon name="mark_email_unread" className="text-base" />
+            </button>
+            <span className="flex-1" aria-hidden="true" />
+            <span className="w-px h-5 bg-outline-variant/40" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={onDeleteAll}
+              disabled={isBulkActionPending || totalCount === 0}
+              aria-label="Delete all notifications"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error-container/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon name="delete_sweep" className="text-base" />
+            </button>
+          </div>
+
           <div className="flex-1 min-h-0 overflow-y-auto">
             {isLoading && (
               <p className="py-16 text-center font-body italic text-on-surface-variant text-sm">
@@ -226,6 +277,8 @@ export default function NotificationBell({
                     onItemClick={handleItemClick}
                     onDismiss={onDismiss}
                     isDismissing={dismissingIds.has(notification._id)}
+                    onToggleRead={onToggleRead}
+                    isTogglingRead={togglingReadIds.has(notification._id)}
                   />
                 ))}
               </ul>

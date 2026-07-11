@@ -35,10 +35,50 @@ export function useMarkNotificationRead() {
   });
 }
 
+export function useMarkNotificationUnread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: notificationsApi.markNotificationUnread,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
 export function useDismissNotification() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: notificationsApi.dismissNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: notificationsApi.markAllNotificationsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsUnread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: notificationsApi.markAllNotificationsUnread,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useDeleteAllNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: notificationsApi.deleteAllNotifications,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },

@@ -140,7 +140,23 @@ module.exports = (app) => {
     auth.isAuthenticated,
     controllers.notifications.markRead
   );
+  app.put(
+    '/api/notifications/:id/unread',
+    auth.isAuthenticated,
+    controllers.notifications.markUnread
+  );
+  app.put(
+    '/api/notifications/read-all',
+    auth.isAuthenticated,
+    controllers.notifications.markAllRead
+  );
+  app.put(
+    '/api/notifications/unread-all',
+    auth.isAuthenticated,
+    controllers.notifications.markAllUnread
+  );
   app.delete('/api/notifications/:id', auth.isAuthenticated, controllers.notifications.dismiss);
+  app.delete('/api/notifications', auth.isAuthenticated, controllers.notifications.deleteAll);
 
   // 404 for unknown routes
   app.all('*', (req, res) => {

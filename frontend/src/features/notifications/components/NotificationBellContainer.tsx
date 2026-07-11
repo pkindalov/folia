@@ -4,7 +4,11 @@ import {
   useUnreadNotificationCount,
   useNotifications,
   useMarkNotificationRead,
+  useMarkNotificationUnread,
   useDismissNotification,
+  useMarkAllNotificationsRead,
+  useMarkAllNotificationsUnread,
+  useDeleteAllNotifications,
 } from '../hooks';
 import { formatRelativeTime } from '../relativeTime';
 import { toast } from '../../../lib/toast';
@@ -24,11 +28,16 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
+  const [togglingReadIds, setTogglingReadIds] = useState<Set<string>>(new Set());
 
   const unreadCountQuery = useUnreadNotificationCount();
   const notificationsQuery = useNotifications(page, isOpen);
   const markRead = useMarkNotificationRead();
+  const markUnread = useMarkNotificationUnread();
   const dismiss = useDismissNotification();
+  const markAllRead = useMarkAllNotificationsRead();
+  const markAllUnread = useMarkAllNotificationsUnread();
+  const deleteAll = useDeleteAllNotifications();
 
   const onToggleOpen = () => {
     if (!isOpen) setPage(1);
@@ -57,11 +66,40 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
     });
   };
 
+  // Same double-click guard as onDismiss, keyed separately since a toggle
+  // and a dismiss can be in flight for the same notification at once.
+  const onToggleRead = (id: string, nextRead: boolean) => {
+    if (togglingReadIds.has(id)) return;
+
+    setTogglingReadIds((prev) => withId(prev, id));
+    const mutation = nextRead ? markRead : markUnread;
+    mutation.mutate(id, {
+      onError: (error) => toast.error(error.message),
+      onSettled: () => setTogglingReadIds((prev) => withoutId(prev, id)),
+    });
+  };
+
+  const isBulkActionPending = markAllRead.isPending || markAllUnread.isPending || deleteAll.isPending;
+
+  const onMarkAllRead = () => {
+    markAllRead.mutate(undefined, { onError: (error) => toast.error(error.message) });
+  };
+
+  const onMarkAllUnread = () => {
+    markAllUnread.mutate(undefined, { onError: (error) => toast.error(error.message) });
+  };
+
+  const onDeleteAll = () => {
+    if (!window.confirm("Delete all notifications? This can't be undone.")) return;
+    deleteAll.mutate(undefined, { onError: (error) => toast.error(error.message) });
+  };
+
   const notifications: NotificationItemData[] = (notificationsQuery.data?.notifications ?? []).map(
     (notification) => ({
       _id: notification._id,
       type: notification.type,
       actorUsername: notification.actorUsername,
+      actorAvatarUrl: notification.actorAvatarUrl,
       circleName: notification.circleName ?? null,
       albumTitle: notification.albumTitle ?? null,
       album: notification.album ?? null,
@@ -95,6 +133,13 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
       onItemClick={onItemClick}
       onDismiss={onDismiss}
       dismissingIds={dismissingIds}
+      onToggleRead={onToggleRead}
+      togglingReadIds={togglingReadIds}
+      totalCount={total}
+      onMarkAllRead={onMarkAllRead}
+      onMarkAllUnread={onMarkAllUnread}
+      onDeleteAll={onDeleteAll}
+      isBulkActionPending={isBulkActionPending}
     />
   );
 }
