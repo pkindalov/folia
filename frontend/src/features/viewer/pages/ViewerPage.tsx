@@ -5,6 +5,7 @@ import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
 import ReactionControl from '../../../components/ReactionControl';
 import AlbumLoveButton from '../../../components/AlbumLoveButton';
+import ReactorsPopover from '../../../components/ReactorsPopover';
 import { toast } from '../../../lib/toast';
 import {
   useAlbum,
@@ -100,6 +101,20 @@ export default function ViewerPage() {
                   onToggle={handleToggleAlbumLove}
                   isPending={setAlbumReaction.isPending}
                 />
+              )}
+              {album && album.reactions.total > 0 && (
+                <ReactorsPopover
+                  reactors={album.reactions.reactors.map((username) => ({
+                    username,
+                    type: 'love' as const,
+                  }))}
+                  variant="light"
+                  triggerAriaLabel={`See who loved this album (${album.reactions.total})`}
+                  panelAriaLabel="People who loved this album"
+                  className="w-10 h-10 justify-center bg-surface-container-lowest border border-outline-variant/50 shadow-md text-on-surface-variant hover:border-secondary hover:text-secondary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                >
+                  <Icon name="group" className="text-lg" />
+                </ReactorsPopover>
               )}
               <Link
                 to="/flipbooks"

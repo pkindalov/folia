@@ -3,10 +3,13 @@ import { z } from 'zod';
 // Only present on the responses that resolve it (getOne and the owner's own
 // gallery list) — every other album-listing endpoint (public, archived,
 // shared-with-me) doesn't render the love button, so this defaults to "no
-// reactions" instead, rather than that being real data.
+// reactions" instead, rather than that being real data. reactors (who has
+// loved the album) is resolved only by getOne — the batched gallery-list
+// summary omits it since no UI there renders it — so it also defaults.
 export const albumReactionSummarySchema = z.object({
   total: z.number(),
   viewerReacted: z.boolean(),
+  reactors: z.array(z.string()).default([]),
 });
 export type AlbumReactionSummary = z.infer<typeof albumReactionSummarySchema>;
 
@@ -22,7 +25,7 @@ export const albumSchema = z
     coverPage: z.string().nullable().optional(),
     coverImage: z.string().nullable().optional(),
     archived: z.boolean().default(false),
-    reactions: albumReactionSummarySchema.default({ total: 0, viewerReacted: false }),
+    reactions: albumReactionSummarySchema.default({ total: 0, viewerReacted: false, reactors: [] }),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -68,10 +71,19 @@ export type AlbumFormInput = z.infer<typeof albumFormSchema>;
 export const REACTION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
+export const reactorSchema = z.object({
+  username: z.string(),
+  type: z.enum(REACTION_TYPES),
+});
+export type Reactor = z.infer<typeof reactorSchema>;
+
 export const reactionSummarySchema = z.object({
   counts: z.record(z.enum(REACTION_TYPES), z.number()),
   total: z.number(),
   viewerReaction: z.enum(REACTION_TYPES).nullable(),
+  // Defaulted rather than required so existing fixtures/mocks that predate
+  // this field don't need updating just to keep parsing.
+  reactors: z.array(reactorSchema).default([]),
 });
 export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
 

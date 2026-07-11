@@ -8,6 +8,7 @@ const NO_REACTIONS: ReactionSummary = {
   counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
   total: 0,
   viewerReaction: null,
+  reactors: [],
 };
 
 describe('ReactionControl', () => {
@@ -54,6 +55,7 @@ describe('ReactionControl', () => {
       counts: { ...NO_REACTIONS.counts, love: 1 },
       total: 1,
       viewerReaction: 'love',
+      reactors: [{ username: 'pan', type: 'love' }],
     };
     render(
       <ReactionControl pageId="p1" reactions={reactions} onReact={onReact} isPending={false} variant="light" />
@@ -70,6 +72,7 @@ describe('ReactionControl', () => {
       counts: { ...NO_REACTIONS.counts, haha: 1 },
       total: 1,
       viewerReaction: 'haha',
+      reactors: [{ username: 'pan', type: 'haha' }],
     };
     render(
       <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
@@ -82,11 +85,56 @@ describe('ReactionControl', () => {
       counts: { ...NO_REACTIONS.counts, like: 2, love: 3 },
       total: 5,
       viewerReaction: null,
+      reactors: [
+        { username: 'maria', type: 'love' },
+        { username: 'sam', type: 'like' },
+      ],
     };
     render(
       <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
     );
-    expect(screen.getByLabelText('5 reactions')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'See who reacted (5)' })).toHaveTextContent('5');
+  });
+
+  test('shows a per-type breakdown on hover', () => {
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, like: 2, love: 3 },
+      total: 5,
+      viewerReaction: null,
+      reactors: [
+        { username: 'maria', type: 'love' },
+        { username: 'sam', type: 'like' },
+      ],
+    };
+    render(
+      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
+    );
+    expect(screen.getByRole('button', { name: 'See who reacted (5)' })).toHaveAttribute(
+      'title',
+      'Love: 3 · Like: 2'
+    );
+  });
+
+  test('clicking the reaction count opens a list of who reacted', async () => {
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, like: 1, love: 1 },
+      total: 2,
+      viewerReaction: null,
+      reactors: [
+        { username: 'maria', type: 'love' },
+        { username: 'sam', type: 'like' },
+      ],
+    };
+    const user = userEvent.setup();
+    render(
+      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
+    );
+
+    expect(screen.queryByText('maria')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'See who reacted (2)' }));
+
+    expect(screen.getByText('maria')).toBeInTheDocument();
+    expect(screen.getByText('sam')).toBeInTheDocument();
   });
 
   test('disables the trigger and shows a spinner while a request is in flight', () => {

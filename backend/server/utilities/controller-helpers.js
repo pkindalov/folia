@@ -1,4 +1,23 @@
 const Circle = require('../data/Circle');
+const User = require('../data/User');
+
+const DELETED_USER_LABEL = 'Deleted user';
+
+// Resolves an array of user ObjectIds to their current usernames, in the
+// same order as the input — one batched query instead of one lookup per id.
+// Falls back to DELETED_USER_LABEL for a user account that no longer exists
+// (mirrors withOwnerUsernamesAndCovers's fallback in albums-controller.js).
+// Shared by pages-controller.js and album-reactions.js so "who reacted"
+// resolves usernames the same way in both places.
+function resolveUsernames(userIds) {
+  const uniqueIds = [...new Set(userIds.map((id) => id.toString()))];
+  if (uniqueIds.length === 0) return Promise.resolve([]);
+
+  return User.find({ _id: { $in: uniqueIds } }, 'username').then((users) => {
+    const usernameById = new Map(users.map((user) => [user._id.toString(), user.username]));
+    return userIds.map((id) => usernameById.get(id.toString()) ?? DELETED_USER_LABEL);
+  });
+}
 
 // A 'shared' album with no circle attached keeps the legacy behavior of
 // being open to any authenticated user. Once a circle is attached, access
@@ -79,10 +98,11 @@ module.exports = {
 
   // Shown in place of a username when the referenced User document no longer
   // exists — keeps the response shape valid instead of omitting the field.
-  DELETED_USER_LABEL: 'Deleted user',
+  DELETED_USER_LABEL,
 
   canAccessSharedAlbum,
   isOwnerOrAdmin,
   checkAlbumReadAccess,
   circleRecipientIds,
+  resolveUsernames,
 };

@@ -1,12 +1,29 @@
 const AlbumReaction = require('../data/AlbumReaction');
+const { resolveUsernames } = require('./controller-helpers');
 
-// Reaction summary for a single album — total love count plus whether this
-// viewer has loved it.
+// Caps how many reactors are resolved and shipped — the "who loved this"
+// list is a convenience popover, not a full audit log, so a popular public
+// album doesn't balloon this response.
+const MAX_REACTORS = 50;
+
+// Reaction summary for a single album — total love count, whether this
+// viewer has loved it, and the usernames of up to MAX_REACTORS people who
+// have, most recent first. Only used by getOne, the one endpoint that
+// renders "who loved this" — resolveAlbumReactionSummaries below (used by
+// the owner's own gallery list, which has no such UI) intentionally skips
+// resolving this.
 function resolveAlbumReactionSummary(albumId, viewerId) {
   return Promise.all([
     AlbumReaction.countDocuments({ album: albumId }),
     AlbumReaction.exists({ album: albumId, user: viewerId }),
-  ]).then(([total, viewerReacted]) => ({ total, viewerReacted: Boolean(viewerReacted) }));
+    AlbumReaction.find({ album: albumId }, 'user').sort('-createdAt').limit(MAX_REACTORS),
+  ]).then(([total, viewerReacted, reactionDocs]) =>
+    resolveUsernames(reactionDocs.map((doc) => doc.user)).then((reactors) => ({
+      total,
+      viewerReacted: Boolean(viewerReacted),
+      reactors,
+    }))
+  );
 }
 
 // Batched counterpart to resolveAlbumReactionSummary for a page of Album

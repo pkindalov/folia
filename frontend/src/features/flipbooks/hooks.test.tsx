@@ -15,7 +15,7 @@ const CACHED_ALBUM: Album = {
   owner: 'id1',
   pageCount: 2,
   archived: false,
-  reactions: { total: 5, viewerReacted: true },
+  reactions: { total: 5, viewerReacted: true, reactors: ['maria', 'sam'] },
 };
 
 function respond(body: unknown, status = 200) {
@@ -51,6 +51,7 @@ describe('useSetCoverPhoto', () => {
     expect(queryClient.getQueryData<Album>(['albums', 'a1'])?.reactions).toEqual({
       total: 5,
       viewerReacted: true,
+      reactors: ['maria', 'sam'],
     });
   });
 });
@@ -73,6 +74,7 @@ describe('useArchiveAlbum', () => {
     expect(queryClient.getQueryData<Album>(['albums', 'a1'])?.reactions).toEqual({
       total: 5,
       viewerReacted: true,
+      reactors: ['maria', 'sam'],
     });
   });
 });

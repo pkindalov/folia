@@ -481,6 +481,7 @@ describe('album pages routes (integration)', () => {
           counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
           total: 0,
           viewerReaction: null,
+          reactors: [],
         },
       });
       expect(Notification.create).toHaveBeenCalledWith(

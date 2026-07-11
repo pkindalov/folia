@@ -5,6 +5,7 @@ import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
 import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
+import ReactorsPopover from './ReactorsPopover';
 
 type ReactionControlProps = {
   /** Identifies which page/photo this control is showing reactions for — used to close the picker when the underlying photo changes. */
@@ -58,7 +59,7 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
     close();
   };
 
-  const { viewerReaction, counts, total } = reactions;
+  const { viewerReaction, counts, total, reactors } = reactions;
   const isLight = variant === 'light';
 
   const topReactionTypes = REACTION_TYPES.filter((type) => counts[type] > 0)
@@ -105,10 +106,14 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
       </button>
 
       {total > 0 && (
-        <span
-          aria-label={`${total} reaction${total === 1 ? '' : 's'}`}
-          title={topReactionTypes.map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`).join(' · ')}
-          className="flex items-center gap-1"
+        <ReactorsPopover
+          reactors={reactors}
+          variant={variant}
+          triggerAriaLabel={`See who reacted (${total})`}
+          panelAriaLabel="People who reacted"
+          triggerTitle={topReactionTypes
+            .map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`)
+            .join(' · ')}
         >
           {topReactionTypes.map((type) => (
             <Icon
@@ -121,7 +126,7 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
           <span className={`font-ui text-xs ${isLight ? 'text-on-surface-variant' : 'text-white/70'}`}>
             {total}
           </span>
-        </span>
+        </ReactorsPopover>
       )}
 
       {isOpen && (

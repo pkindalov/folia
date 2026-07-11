@@ -19,6 +19,22 @@ function TestDialog({ isActive }: { isActive: boolean }) {
   );
 }
 
+// Mirrors a read-only popover (e.g. ReactorsPopover) with no interactive
+// content of its own inside the trapped container.
+function TestEmptyDialog({ isActive }: { isActive: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(containerRef, isActive);
+
+  return (
+    <div>
+      <div ref={containerRef}>
+        <span>Read-only content</span>
+      </div>
+      <button>After</button>
+    </div>
+  );
+}
+
 describe('useFocusTrap', () => {
   test('moves focus to the first focusable element when activated', () => {
     render(<TestDialog isActive />);
@@ -61,5 +77,17 @@ describe('useFocusTrap', () => {
     render(<TestDialog isActive={false} />);
     expect(outsideButton).toHaveFocus();
     outsideButton.remove();
+  });
+
+  test('does not trap Tab when the container has no focusable content', () => {
+    render(<TestEmptyDialog isActive />);
+
+    // fireEvent.keyDown returns false when a listener called
+    // preventDefault() — asserting true confirms Tab was left free to fall
+    // through to its default (focus-moving) behavior instead of being
+    // blocked with nowhere for focus to go.
+    const notPrevented = fireEvent.keyDown(document.activeElement!, { key: 'Tab' });
+
+    expect(notPrevented).toBe(true);
   });
 });

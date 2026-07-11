@@ -78,6 +78,18 @@ const mockNoPages = () => {
   jest.spyOn(Page, 'aggregate').mockResolvedValue([]);
 };
 
+// AlbumReaction.find(...) is called two ways depending on the caller:
+// unchained (resolveAlbumReactionSummaries, the batched list variant) and
+// chained with .sort().limit() (resolveAlbumReactionSummary, the single
+// getOne/setReaction variant). A thenable with sort/limit no-ops that
+// return itself satisfies both call shapes with one mock.
+const mockReactorQuery = (docs) => {
+  const query = Promise.resolve(docs);
+  query.sort = () => query;
+  query.limit = () => query;
+  return query;
+};
+
 beforeEach(() => {
   mockNoPages();
   // Default: the referenced circle still exists, so healDanglingCircleReference
@@ -98,7 +110,7 @@ beforeEach(() => {
   jest.spyOn(AlbumReaction, 'countDocuments').mockResolvedValue(0);
   jest.spyOn(AlbumReaction, 'exists').mockResolvedValue(null);
   jest.spyOn(AlbumReaction, 'aggregate').mockResolvedValue([]);
-  jest.spyOn(AlbumReaction, 'find').mockResolvedValue([]);
+  jest.spyOn(AlbumReaction, 'find').mockImplementation(() => mockReactorQuery([]));
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
   // setReaction re-verifies the album still exists before writing; default
   // to "still there" so tests that don't care about the concurrent-delete
@@ -107,6 +119,10 @@ beforeEach(() => {
 });
 
 const ZERO_ALBUM_REACTIONS = { total: 0, viewerReacted: false };
+// getOne and setReaction resolve the single-album summary (which also
+// includes who reacted); list resolves the batched one (which doesn't,
+// since no UI currently renders it there) — see album-reactions.js.
+const ZERO_ALBUM_REACTIONS_WITH_REACTORS = { ...ZERO_ALBUM_REACTIONS, reactors: [] };
 
 describe('albums-controller', () => {
   describe('create — validation', () => {
@@ -792,7 +808,7 @@ describe('albums-controller', () => {
       controller.getOne({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
       expect(res.json).toHaveBeenCalledWith({
-        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS },
+        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS },
       });
     });
 
@@ -803,7 +819,7 @@ describe('albums-controller', () => {
       controller.getOne({ params: { id: ALBUM_ID }, user: stranger }, res);
       await flush();
       expect(res.json).toHaveBeenCalledWith({
-        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS },
+        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS },
       });
     });
 
@@ -814,7 +830,7 @@ describe('albums-controller', () => {
       controller.getOne({ params: { id: ALBUM_ID }, user: admin }, res);
       await flush();
       expect(res.json).toHaveBeenCalledWith({
-        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS },
+        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS },
       });
     });
 
@@ -842,7 +858,7 @@ describe('albums-controller', () => {
       await flush();
       expect(res.status).not.toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS },
+        album: { ...album.toJSON(), coverImage: null, reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS },
       });
     });
 
@@ -1318,7 +1334,9 @@ describe('albums-controller', () => {
           albumTitle: 'Summer',
         })
       );
-      expect(res.json).toHaveBeenCalledWith({ reactions: { total: 1, viewerReacted: true } });
+      expect(res.json).toHaveBeenCalledWith({
+        reactions: { total: 1, viewerReacted: true, reactors: [] },
+      });
     });
 
     test('does not notify when the reactor is the album owner', async () => {
@@ -1342,7 +1360,7 @@ describe('albums-controller', () => {
       expect(existing.deleteOne).toHaveBeenCalled();
       expect(create).not.toHaveBeenCalled();
       expect(Notification.create).not.toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ reactions: ZERO_ALBUM_REACTIONS });
+      expect(res.json).toHaveBeenCalledWith({ reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS });
     });
 
     test('a concurrent duplicate-key error on create is swallowed — no 500, no double notification', async () => {
@@ -1355,7 +1373,7 @@ describe('albums-controller', () => {
       await flush();
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(Notification.create).not.toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ reactions: ZERO_ALBUM_REACTIONS });
+      expect(res.json).toHaveBeenCalledWith({ reactions: ZERO_ALBUM_REACTIONS_WITH_REACTORS });
     });
 
     test('500 for a non-duplicate-key error', async () => {

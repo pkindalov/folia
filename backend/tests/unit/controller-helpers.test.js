@@ -1,4 +1,9 @@
-const { parsePage, circleRecipientIds } = require('../../server/utilities/controller-helpers');
+const User = require('../../server/data/User');
+const {
+  parsePage,
+  circleRecipientIds,
+  resolveUsernames,
+} = require('../../server/utilities/controller-helpers');
 
 describe('circleRecipientIds', () => {
   const OWNER_ID = '507f1f77bcf86cd799439011';
@@ -60,5 +65,58 @@ describe('parsePage', () => {
 
   test('caps an unreasonably large page number instead of passing it through', () => {
     expect(parsePage({ page: '99999999999' })).toBe(100000);
+  });
+});
+
+describe('resolveUsernames', () => {
+  const USER_A = '507f1f77bcf86cd799439011';
+  const USER_B = '507f1f77bcf86cd799439022';
+
+  test('returns an empty array for an empty input without querying', async () => {
+    const find = jest.spyOn(User, 'find');
+
+    const usernames = await resolveUsernames([]);
+
+    expect(usernames).toEqual([]);
+    expect(find).not.toHaveBeenCalled();
+  });
+
+  test('resolves ids to usernames in the same order as the input', async () => {
+    jest.spyOn(User, 'find').mockResolvedValue([
+      { _id: USER_A, username: 'pan' },
+      { _id: USER_B, username: 'maria' },
+    ]);
+
+    const usernames = await resolveUsernames([USER_B, USER_A]);
+
+    expect(usernames).toEqual(['maria', 'pan']);
+  });
+
+  test('falls back to DELETED_USER_LABEL for an id with no matching user', async () => {
+    jest.spyOn(User, 'find').mockResolvedValue([{ _id: USER_A, username: 'pan' }]);
+
+    const usernames = await resolveUsernames([USER_A, USER_B]);
+
+    expect(usernames).toEqual(['pan', 'Deleted user']);
+  });
+
+  test('queries User.find once with deduped ids, but still maps every duplicate in the input', async () => {
+    const find = jest
+      .spyOn(User, 'find')
+      .mockResolvedValue([{ _id: USER_A, username: 'pan' }, { _id: USER_B, username: 'maria' }]);
+
+    const usernames = await resolveUsernames([USER_A, USER_B, USER_A]);
+
+    expect(usernames).toEqual(['pan', 'maria', 'pan']);
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(find.mock.calls[0][0]).toEqual({ _id: { $in: [USER_A, USER_B] } });
+  });
+
+  test('accepts ObjectId-like values (with a toString method), not just plain strings', async () => {
+    jest.spyOn(User, 'find').mockResolvedValue([{ _id: USER_A, username: 'pan' }]);
+
+    const usernames = await resolveUsernames([{ toString: () => USER_A }]);
+
+    expect(usernames).toEqual(['pan']);
   });
 });

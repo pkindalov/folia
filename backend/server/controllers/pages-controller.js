@@ -5,7 +5,11 @@ const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const storage = require('../utilities/storage');
 const { notifyAlbumEvent, notifyPageReaction } = require('../utilities/album-notifications');
-const { isOwnerOrAdmin, checkAlbumReadAccess } = require('../utilities/controller-helpers');
+const {
+  isOwnerOrAdmin,
+  checkAlbumReadAccess,
+  resolveUsernames,
+} = require('../utilities/controller-helpers');
 
 const env = process.env.NODE_ENV || 'development';
 const settings = require('../config/settings')[env];
@@ -42,11 +46,21 @@ function zeroFilledCounts() {
   return Object.fromEntries(Reaction.REACTION_TYPES.map((type) => [type, 0]));
 }
 
-// Batched reaction summary for a page of Page documents — two queries total
-// (grouped counts + the viewer's own reactions) instead of one pair per
-// page, same N+1-avoidance shape as resolveCoverImages in
-// albums-controller.js. Returns a Map from page id (string) to
-// { counts, total, viewerReaction }.
+// Caps how many reactors are resolved and shipped per page — the "who
+// reacted" list is a convenience popover, not a full audit log, so a page
+// with hundreds of reactions doesn't balloon every pages-list response.
+// Applied per page (via $slice inside the $group below), not as one global
+// limit across the batch — a global limit would let one heavily-reacted
+// page starve every other page's reactors list of its own fair share.
+const MAX_REACTORS_PER_PAGE = 50;
+
+// Batched reaction summary for a page of Page documents — three queries
+// total (grouped counts + the viewer's own reactions + every reactor's
+// username, each batched across all pages) instead of one set per page,
+// same N+1-avoidance shape as resolveCoverImages in albums-controller.js.
+// Returns a Map from page id (string) to
+// { counts, total, viewerReaction, reactors }, reactors being up to
+// MAX_REACTORS_PER_PAGE { username, type } entries, most recent first.
 function resolveReactionSummaries(pages, viewerId) {
   const pageIds = pages.map((page) => page._id);
   if (pageIds.length === 0) return Promise.resolve(new Map());
@@ -57,7 +71,13 @@ function resolveReactionSummaries(pages, viewerId) {
       { $group: { _id: { page: '$page', type: '$type' }, count: { $sum: 1 } } },
     ]),
     Reaction.find({ page: { $in: pageIds }, user: viewerId }, 'page type'),
-  ]).then(([grouped, viewerReactions]) => {
+    Reaction.aggregate([
+      { $match: { page: { $in: pageIds } } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: '$page', reactors: { $push: { user: '$user', type: '$type' } } } },
+      { $project: { reactors: { $slice: ['$reactors', MAX_REACTORS_PER_PAGE] } } },
+    ]),
+  ]).then(([grouped, viewerReactions, reactorGroups]) => {
     const viewerReactionByPageId = new Map(
       viewerReactions.map((reaction) => [reaction.page.toString(), reaction.type])
     );
@@ -65,7 +85,7 @@ function resolveReactionSummaries(pages, viewerId) {
     const summaryByPageId = new Map(
       pageIds.map((pageId) => [
         pageId.toString(),
-        { counts: zeroFilledCounts(), total: 0, viewerReaction: null },
+        { counts: zeroFilledCounts(), total: 0, viewerReaction: null, reactors: [] },
       ])
     );
 
@@ -79,7 +99,21 @@ function resolveReactionSummaries(pages, viewerId) {
       summary.viewerReaction = viewerReactionByPageId.get(pageId) ?? null;
     }
 
-    return summaryByPageId;
+    const allReactorUserIds = reactorGroups.flatMap((group) =>
+      group.reactors.map((reactor) => reactor.user)
+    );
+
+    return resolveUsernames(allReactorUserIds).then((usernames) => {
+      let cursor = 0;
+      for (const group of reactorGroups) {
+        const summary = summaryByPageId.get(group._id.toString());
+        summary.reactors = group.reactors.map((reactor) => ({
+          username: usernames[cursor++],
+          type: reactor.type,
+        }));
+      }
+      return summaryByPageId;
+    });
   });
 }
 

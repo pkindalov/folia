@@ -27,11 +27,14 @@ export default function useFocusTrap(containerRef: RefObject<HTMLElement | null>
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return;
 
+      // Nothing inside to trap Tab between (e.g. a read-only list with no
+      // interactive rows) — previously this called preventDefault() here,
+      // which pinned focus on the container with no keyboard way out.
+      // Letting Tab fall through to its default behavior instead moves
+      // focus off the container and out of the trap, same as if the trap
+      // were not applied at all.
       const focusable = getFocusable(container);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        return;
-      }
+      if (focusable.length === 0) return;
 
       const first = focusable[0];
       const last = focusable[focusable.length - 1];

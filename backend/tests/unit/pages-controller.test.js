@@ -16,6 +16,7 @@ const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
+const User = require('../../server/data/User');
 const fs = require('fs');
 const controller = require('../../server/controllers/pages-controller');
 
@@ -101,6 +102,7 @@ beforeEach(() => {
   jest.spyOn(Reaction, 'aggregate').mockResolvedValue([]);
   jest.spyOn(Reaction, 'find').mockResolvedValue([]);
   jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(User, 'find').mockResolvedValue([]);
 });
 
 describe('pages-controller', () => {
@@ -233,7 +235,7 @@ describe('pages-controller', () => {
         pages: [
           expect.objectContaining({
             url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
-            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
           }),
         ],
       });
@@ -243,13 +245,17 @@ describe('pages-controller', () => {
       jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
       const sort = jest.fn().mockResolvedValue([fakePage()]);
       jest.spyOn(Page, 'find').mockReturnValue({ sort });
-      jest.spyOn(Reaction, 'aggregate').mockResolvedValue([
-        { _id: { page: PAGE_ID, type: 'love' }, count: 3 },
-        { _id: { page: PAGE_ID, type: 'like' }, count: 1 },
-      ]);
+      jest
+        .spyOn(Reaction, 'aggregate')
+        .mockResolvedValueOnce([
+          { _id: { page: PAGE_ID, type: 'love' }, count: 3 },
+          { _id: { page: PAGE_ID, type: 'like' }, count: 1 },
+        ])
+        .mockResolvedValueOnce([{ _id: PAGE_ID, reactors: [{ user: OTHER_ID, type: 'love' }] }]);
       jest
         .spyOn(Reaction, 'find')
         .mockResolvedValue([{ page: { toString: () => PAGE_ID }, type: 'love' }]);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria' }]);
       const res = mockRes();
       controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
@@ -260,7 +266,39 @@ describe('pages-controller', () => {
               counts: { ...ZERO_REACTION_COUNTS, love: 3, like: 1 },
               total: 4,
               viewerReaction: 'love',
+              reactors: [{ username: 'maria', type: 'love' }],
             },
+          }),
+        ],
+      });
+    });
+
+    test("includes who reacted, falling back to a placeholder for a deleted account", async () => {
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const sort = jest.fn().mockResolvedValue([fakePage()]);
+      jest.spyOn(Page, 'find').mockReturnValue({ sort });
+      jest.spyOn(Reaction, 'aggregate').mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          _id: PAGE_ID,
+          reactors: [
+            { user: OTHER_ID, type: 'love' },
+            { user: MEMBER_ID, type: 'like' },
+          ],
+        },
+      ]);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria' }]);
+      const res = mockRes();
+      controller.list({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.json).toHaveBeenCalledWith({
+        pages: [
+          expect.objectContaining({
+            reactions: expect.objectContaining({
+              reactors: [
+                { username: 'maria', type: 'love' },
+                { username: 'Deleted user', type: 'like' },
+              ],
+            }),
           }),
         ],
       });
@@ -326,7 +364,7 @@ describe('pages-controller', () => {
         pages: [
           expect.objectContaining({
             url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
-            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+            reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
           }),
         ],
         pageCount: 1,
@@ -518,7 +556,7 @@ describe('pages-controller', () => {
         page: expect.objectContaining({
           caption: 'A day at the lake',
           url: `/uploads/${OWNER_ID}/${ALBUM_ID}/abc.jpg`,
-          reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+          reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
         }),
       });
     });
@@ -830,7 +868,7 @@ describe('pages-controller', () => {
         })
       );
       expect(res.json).toHaveBeenCalledWith({
-        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
       });
     });
 
@@ -894,7 +932,7 @@ describe('pages-controller', () => {
       expect(Notification.create).not.toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
       });
     });
 
@@ -949,7 +987,7 @@ describe('pages-controller', () => {
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(winnerSave).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
-        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null, reactors: [] },
       });
     });
 

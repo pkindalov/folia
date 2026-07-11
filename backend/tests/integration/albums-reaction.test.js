@@ -47,11 +47,21 @@ describe('PUT /api/albums/:id/reaction (integration)', () => {
     jest.spyOn(User, 'findById').mockResolvedValue({ _id: id, username: 'pan', roles });
   };
 
+  // resolveAlbumReactionSummary chains AlbumReaction.find(...).sort().limit()
+  // — a thenable with sort/limit no-ops satisfies that chain.
+  const mockReactorQuery = (docs) => {
+    const query = Promise.resolve(docs);
+    query.sort = () => query;
+    query.limit = () => query;
+    return query;
+  };
+
   beforeEach(() => {
     jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
     jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
     jest.spyOn(AlbumReaction, 'countDocuments').mockResolvedValue(0);
     jest.spyOn(AlbumReaction, 'exists').mockResolvedValue(null);
+    jest.spyOn(AlbumReaction, 'find').mockImplementation(() => mockReactorQuery([]));
     jest.spyOn(Album, 'exists').mockResolvedValue(true);
   });
 
@@ -90,7 +100,7 @@ describe('PUT /api/albums/:id/reaction (integration)', () => {
       .set('Authorization', `Bearer ${strangerToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ reactions: { total: 1, viewerReacted: true } });
+    expect(res.body).toEqual({ reactions: { total: 1, viewerReacted: true, reactors: [] } });
     expect(Notification.create).toHaveBeenCalledWith(
       expect.objectContaining({ recipient: OWNER_ID, type: 'album_reaction' })
     );

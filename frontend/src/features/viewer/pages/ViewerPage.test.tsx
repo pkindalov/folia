@@ -438,4 +438,41 @@ describe('ViewerPage', () => {
 
     expect(await screen.findByText('Could not save reaction')).toBeInTheDocument();
   });
+
+  test('shows who loved the album when the reactors button is clicked', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': {
+        body: {
+          album: {
+            ...ALBUM.album,
+            reactions: { total: 2, viewerReacted: true, reactors: ['maria', 'sam'] },
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    const reactorsButton = await screen.findByRole('button', {
+      name: 'See who loved this album (2)',
+    });
+    expect(screen.queryByText('maria')).not.toBeInTheDocument();
+
+    await user.click(reactorsButton);
+
+    expect(screen.getByText('maria')).toBeInTheDocument();
+    expect(screen.getByText('sam')).toBeInTheDocument();
+  });
+
+  test('does not show a reactors button when nobody has loved the album yet', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderViewer();
+
+    await screen.findByRole('button', { name: 'Love this album' });
+    expect(screen.queryByRole('button', { name: /See who loved this album/ })).not.toBeInTheDocument();
+  });
 });
