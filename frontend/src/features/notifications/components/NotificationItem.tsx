@@ -1,7 +1,11 @@
-import { useState, type MouseEvent } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../../../components/Icon";
 import Avatar from "../../../components/Avatar";
+import {
+  REACTION_ICON,
+  REACTION_TEXT_COLOR,
+} from "../../../components/reactionPresentation";
 import type { NotificationItemData } from "./NotificationBell";
 import { REACTION_NOTIFICATION_TYPES } from "../schemas";
 
@@ -25,7 +29,7 @@ type NotificationItemProps = {
 // shared with). Record over NotificationItemData['type'] rather than a
 // switch: adding a notification type without a case here is a compile error,
 // not a silent runtime gap.
-type MessageParts = { leading: string; subject: string; trailing?: string };
+type MessageParts = { leading: ReactNode; subject: string; trailing?: string };
 
 const REACTION_LABELS: Record<ReactionNotificationType, string> = {
   like: "Like",
@@ -35,6 +39,24 @@ const REACTION_LABELS: Record<ReactionNotificationType, string> = {
   sad: "Sad",
   angry: "Angry",
 };
+
+// Rendered inline in place of the reaction name (e.g. "reacted [heart icon] to
+// a photo in") — the sr-only label keeps the reaction type announced to
+// screen readers even though the icon itself is decorative.
+function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
+  return (
+    <>
+      reacted{" "}
+      <Icon
+        name={REACTION_ICON[type]}
+        filled
+        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR[type]}`}
+      />
+      <span className="sr-only">{REACTION_LABELS[type]}</span>{" "}
+      to a photo in
+    </>
+  );
+}
 
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
@@ -87,7 +109,7 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     trailing: `shared with ${circleName}`,
   }),
   page_reaction: ({ albumTitle, circleName, reactionType }) => ({
-    leading: `reacted "${REACTION_LABELS[reactionType ?? "like"]}" to a photo in`,
+    leading: <ReactionMessageIcon type={reactionType ?? "like"} />,
     subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),

@@ -4,6 +4,7 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
+import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
 
 type ReactionControlProps = {
   /** Identifies which page/photo this control is showing reactions for — used to close the picker when the underlying photo changes. */
@@ -15,15 +16,6 @@ type ReactionControlProps = {
   variant: 'light' | 'dark';
 };
 
-const REACTION_ICON: Record<ReactionType, string> = {
-  like: 'thumb_up',
-  love: 'favorite',
-  haha: 'sentiment_very_satisfied',
-  wow: 'sentiment_excited',
-  sad: 'sentiment_sad',
-  angry: 'mood_bad',
-};
-
 const REACTION_LABEL: Record<ReactionType, string> = {
   like: 'Like',
   love: 'Love',
@@ -31,15 +23,6 @@ const REACTION_LABEL: Record<ReactionType, string> = {
   wow: 'Wow',
   sad: 'Sad',
   angry: 'Angry',
-};
-
-const REACTION_TEXT_COLOR: Record<ReactionType, string> = {
-  like: 'text-reaction-like',
-  love: 'text-reaction-love',
-  haha: 'text-reaction-haha',
-  wow: 'text-reaction-wow',
-  sad: 'text-reaction-sad',
-  angry: 'text-reaction-angry',
 };
 
 const MAX_SUMMARY_ICONS = 3;
