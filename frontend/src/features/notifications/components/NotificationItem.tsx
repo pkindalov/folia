@@ -58,6 +58,21 @@ function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
   );
 }
 
+// Rendered inline for album_reaction — always the love icon, since an album
+// (unlike a photo) can only be loved, not reacted to with the full picker.
+function AlbumLoveMessageIcon() {
+  return (
+    <>
+      loved{" "}
+      <Icon
+        name={REACTION_ICON.love}
+        filled
+        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR.love}`}
+      />
+    </>
+  );
+}
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
   (notification: NotificationItemData) => MessageParts
@@ -113,6 +128,11 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),
+  album_reaction: ({ albumTitle, circleName }) => ({
+    leading: <AlbumLoveMessageIcon />,
+    subject: albumTitle ?? "an album",
+    trailing: circleName ? `shared with ${circleName}` : undefined,
+  }),
 };
 
 // Where clicking the row navigates. Most album_* types link straight to the
@@ -142,6 +162,7 @@ const LINK_TO_BY_TYPE: Record<
   album_photo_caption_updated: ({ album }) =>
     album ? `/book/${album}` : "/circles",
   page_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  album_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
 };
 
 // No fallback content on load failure (unlike Avatar, which always has an

@@ -73,6 +73,12 @@ module.exports = (app) => {
   app.get('/api/albums/:id', auth.isAuthenticated, controllers.albums.getOne);
   app.put('/api/albums/:id', auth.isAuthenticated, controllers.albums.update);
   app.delete('/api/albums/:id', auth.isAuthenticated, controllers.albums.remove);
+  app.put(
+    '/api/albums/:id/reaction',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.albums.setReaction
+  );
 
   // Album pages (photos)
   app.get('/api/albums/:id/pages', auth.isAuthenticated, controllers.pages.list);

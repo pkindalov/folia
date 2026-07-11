@@ -147,6 +147,22 @@ describe('Notification model', () => {
       expect(err.errors.reactionType).toBeDefined();
     });
 
+    test('accepts an album_reaction notification with no circle, circleName, page, or reactionType', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'album_reaction',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+        album: '507f191e810c19729de860eb',
+        albumTitle: 'Summer Trip',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.circle).toBeUndefined();
+      expect(notification.circleName).toBeUndefined();
+      expect(notification.page).toBeUndefined();
+      expect(notification.reactionType).toBeUndefined();
+    });
+
     test('non-page_reaction types still require circle and circleName', () => {
       const err = new Notification({
         recipient: RECIPIENT_ID,

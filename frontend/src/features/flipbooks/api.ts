@@ -9,8 +9,10 @@ import {
   updatePageCaptionResponseSchema,
   setCoverResponseSchema,
   setPageReactionResponseSchema,
+  setAlbumReactionResponseSchema,
   type Album,
   type AlbumFormInput,
+  type AlbumReactionSummary,
   type Page,
   type PaginatedAlbums,
   type PaginatedPublicAlbums,
@@ -120,4 +122,9 @@ export async function setPageReaction(
     body: JSON.stringify({ type }),
   });
   return setPageReactionResponseSchema.parse(data).reactions;
+}
+
+export async function setAlbumReaction(albumId: string): Promise<AlbumReactionSummary> {
+  const data = await api(`/api/albums/${albumId}/reaction`, { method: 'PUT' });
+  return setAlbumReactionResponseSchema.parse(data).reactions;
 }

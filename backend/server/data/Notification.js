@@ -14,15 +14,17 @@ const NOTIFICATION_TYPES = [
   'album_photo_removed',
   'album_photo_caption_updated',
   'page_reaction',
+  'album_reaction',
 ];
 
-// Every other type is scoped to a circle (it's an event on something shared
-// with one), so circle/circleName stay required for those. page_reaction
-// goes straight to the album owner instead of fanning out to a circle, and
-// can fire on a public album with no circle involved at all — required only
-// for the types that actually have one.
+// Types that go straight to a single recipient (the album owner) rather than
+// fanning out to a circle, and can fire on a public album with no circle
+// involved at all — circle/circleName stay required for every other type,
+// which is scoped to a circle (an event on something shared with one).
+const CIRCLE_EXEMPT_TYPES = ['page_reaction', 'album_reaction'];
+
 const requiresCircle = function () {
-  return this.type !== 'page_reaction';
+  return !CIRCLE_EXEMPT_TYPES.includes(this.type);
 };
 
 // The inverse: reactionType only ever applies to page_reaction, and is

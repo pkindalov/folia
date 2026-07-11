@@ -136,7 +136,13 @@ export function useSetCoverPhoto(albumId: string) {
   return useMutation({
     mutationFn: (pageId: string) => albumsApi.setCoverPhoto(albumId, pageId),
     onSuccess: (album) => {
-      queryClient.setQueryData(['albums', albumId], album);
+      // setCover's response never resolves a reaction summary, so it parses
+      // to the schema's zeroed default — preserve whatever was already
+      // cached instead of overwriting a real love count with that default.
+      queryClient.setQueryData<Album>(['albums', albumId], (previous) => ({
+        ...album,
+        reactions: previous?.reactions ?? album.reactions,
+      }));
       queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
   });
@@ -153,12 +159,35 @@ export function useSetPageReaction(albumId: string) {
   });
 }
 
+export function useSetAlbumReaction(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => albumsApi.setAlbumReaction(albumId),
+    onSuccess: (reactions) => {
+      // The endpoint already returns the fresh summary, so write it straight
+      // into the cached album rather than refetching the whole album.
+      queryClient.setQueryData<Album>(['albums', albumId], (album) =>
+        album ? { ...album, reactions } : album
+      );
+      // The owner's own gallery list shows the same count on its cards —
+      // invalidated (not written) since a mutation here doesn't know which
+      // list page/filter is currently in view.
+      queryClient.invalidateQueries({ queryKey: ['albums', 'list'] });
+    },
+  });
+}
+
 export function useArchiveAlbum(albumId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (archived: boolean) => albumsApi.archiveAlbum(albumId, archived),
     onSuccess: (album) => {
-      queryClient.setQueryData(['albums', albumId], album);
+      // update's response never resolves a reaction summary either — same
+      // preserve-what-was-cached reasoning as useSetCoverPhoto above.
+      queryClient.setQueryData<Album>(['albums', albumId], (previous) => ({
+        ...album,
+        reactions: previous?.reactions ?? album.reactions,
+      }));
       queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
   });

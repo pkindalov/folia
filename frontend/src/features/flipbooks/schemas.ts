@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+// Only present on the responses that resolve it (getOne and the owner's own
+// gallery list) — every other album-listing endpoint (public, archived,
+// shared-with-me) doesn't render the love button, so this defaults to "no
+// reactions" instead, rather than that being real data.
+export const albumReactionSummarySchema = z.object({
+  total: z.number(),
+  viewerReacted: z.boolean(),
+});
+export type AlbumReactionSummary = z.infer<typeof albumReactionSummarySchema>;
+
 export const albumSchema = z
   .object({
     _id: z.string(),
@@ -12,6 +22,7 @@ export const albumSchema = z
     coverPage: z.string().nullable().optional(),
     coverImage: z.string().nullable().optional(),
     archived: z.boolean().default(false),
+    reactions: albumReactionSummarySchema.default({ total: 0, viewerReacted: false }),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -91,6 +102,7 @@ export const deletePageResponseSchema = z.object({
 export const updatePageCaptionResponseSchema = z.object({ page: pageSchema });
 export const setCoverResponseSchema = z.object({ album: albumSchema });
 export const setPageReactionResponseSchema = z.object({ reactions: reactionSummarySchema });
+export const setAlbumReactionResponseSchema = z.object({ reactions: albumReactionSummarySchema });
 
 export const MAX_CAPTION_LENGTH = 500;
 

@@ -19,6 +19,21 @@ const reactionNotification: NotificationItemData = {
   relativeTime: 'Just now',
 };
 
+const albumReactionNotification: NotificationItemData = {
+  _id: 'n2',
+  type: 'album_reaction',
+  actorUsername: 'maria',
+  actorAvatarUrl: null,
+  circleName: null,
+  albumTitle: 'Summer Trip',
+  album: 'a2',
+  page: null,
+  reactionType: null,
+  thumbnailUrl: null,
+  read: false,
+  relativeTime: 'Just now',
+};
+
 function renderItem(notification: NotificationItemData) {
   return render(
     <MemoryRouter>
@@ -49,5 +64,19 @@ describe('NotificationItem', () => {
     renderItem(reactionNotification);
 
     expect(screen.getByText('Love', { selector: '.sr-only' })).toBeInTheDocument();
+  });
+
+  test('renders an album_reaction notification as "loved [heart] AlbumTitle"', () => {
+    renderItem(albumReactionNotification);
+
+    expect(screen.getByText(/loved/)).toBeInTheDocument();
+    expect(screen.getByText('favorite')).toBeInTheDocument();
+    expect(screen.getByText('Summer Trip')).toBeInTheDocument();
+  });
+
+  test('links an album_reaction notification to the album', () => {
+    renderItem(albumReactionNotification);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a2');
   });
 });

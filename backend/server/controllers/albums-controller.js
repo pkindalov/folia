@@ -2,12 +2,17 @@ const mongoose = require('mongoose');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
+const AlbumReaction = require('../data/AlbumReaction');
 const User = require('../data/User');
 const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
 const storage = require('../utilities/storage');
-const { notifyAlbumEvent } = require('../utilities/album-notifications');
+const { notifyAlbumEvent, notifyAlbumReaction } = require('../utilities/album-notifications');
 const { resolveCoverImage, resolveCoverImages } = require('../utilities/album-cover-image');
+const {
+  resolveAlbumReactionSummary,
+  resolveAlbumReactionSummaries,
+} = require('../utilities/album-reactions');
 const {
   isNonEmptyString,
   parsePage,
@@ -116,6 +121,21 @@ function withCoverImages(albums) {
   );
 }
 
+// Only used by the owner's own gallery list (list) — the one listing
+// endpoint that currently surfaces the love button/count on its cards.
+// listPublic/listArchived/listSharedWithMe stay on withCoverImages alone
+// until they need it too.
+function withCoverImagesAndReactions(albums, viewerId) {
+  return Promise.all([resolveCoverImages(albums), resolveAlbumReactionSummaries(albums, viewerId)]).then(
+    ([coverImageByAlbumId, reactionsByAlbumId]) =>
+      albums.map((album) => ({
+        ...album.toJSON(),
+        coverImage: coverImageByAlbumId.get(album._id.toString()) ?? null,
+        reactions: reactionsByAlbumId.get(album._id.toString()) ?? { total: 0, viewerReacted: false },
+      }))
+  );
+}
+
 // Attaches ownerUsername and coverImage to each album — shared by listPublic
 // and listSharedWithMe, which both need the same owner-lookup + cover shape.
 function withOwnerUsernamesAndCovers(albums) {
@@ -154,7 +174,9 @@ module.exports = {
         .skip((page - 1) * ALBUMS_PAGE_SIZE)
         .limit(ALBUMS_PAGE_SIZE),
     ])
-      .then(([total, albums]) => withCoverImages(albums).then((albums) => ({ total, albums })))
+      .then(([total, albums]) =>
+        withCoverImagesAndReactions(albums, req.user._id).then((albums) => ({ total, albums }))
+      )
       .then(({ total, albums }) => res.json({ albums, total, page, limit: ALBUMS_PAGE_SIZE }))
       .catch(() => res.status(500).json({ error: 'Failed to load albums' }));
   },
@@ -245,7 +267,10 @@ module.exports = {
         if (!album) return res.status(404).json({ error: 'Album not found' });
         return checkAlbumReadAccess(album, req.user).then((denied) => {
           if (denied) return res.status(denied.status).json({ error: denied.error });
-          return withCoverImage(album).then((album) => res.json({ album }));
+          return Promise.all([
+            withCoverImage(album),
+            resolveAlbumReactionSummary(album._id, req.user._id),
+          ]).then(([album, reactions]) => res.json({ album: { ...album, reactions } }));
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load album' }));
@@ -380,6 +405,49 @@ module.exports = {
       .catch(() => res.status(500).json({ error: 'Failed to update album' }));
   },
 
+  // Toggles the requester's love reaction on the album: creates it if
+  // absent, removes it if present. Gated by read access (not ownership) via
+  // the requireReadableAlbum middleware, which stashes the album on
+  // req.album — mirrors pages-controller.js's setReaction, but simpler:
+  // there's only one reaction type, so there's no "switch an existing
+  // reaction" case to reconcile.
+  setReaction: (req, res) => {
+    const album = req.album;
+
+    // req.album is a snapshot from requireReadableAlbum's earlier load — a
+    // concurrent delete could have removed it (and cascade-deleted its
+    // AlbumReaction rows) in the meantime. Without this re-check, both the
+    // create and toggle-off branches below would happily write a fresh,
+    // permanently orphaned AlbumReaction row for an album that's already
+    // gone, and the create branch would fire a notification pointing at
+    // nothing. Mirrors pages-controller.js's setReaction, which gets the
+    // same guarantee for free via its Page.findOne re-lookup.
+    Album.exists({ _id: album._id })
+      .then((stillExists) => {
+        if (!stillExists) return res.status(404).json({ error: 'Album not found' });
+
+        return AlbumReaction.findOne({ album: album._id, user: req.user._id })
+          .then((existing) => {
+            if (existing) return existing.deleteOne();
+
+            return AlbumReaction.create({ album: album._id, user: req.user._id })
+              .then(() => notifyAlbumReaction({ album, reactorUser: req.user }))
+              .catch((err) => {
+                if (err.code !== 11000) throw err;
+                // Two concurrent first-reactions from the same user can both
+                // pass the findOne above before either writes — the unique
+                // {album, user} index rejects the loser here. The winner's row
+                // is already exactly correct (there's no type to reconcile,
+                // unlike a page reaction), and the winner's write already
+                // notified the owner, so there's nothing left to do.
+              });
+          })
+          .then(() => resolveAlbumReactionSummary(album._id, req.user._id))
+          .then((reactions) => res.json({ reactions }));
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to save reaction' }));
+  },
+
   remove: (req, res) => {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
@@ -406,9 +474,10 @@ module.exports = {
 
           // Its pages (and their files) go with it — otherwise the Page
           // records would orphan once the album they reference is gone
-          return Page.deleteMany({ album: deletedAlbum._id }).then(() =>
-            Reaction.deleteMany({ album: deletedAlbum._id })
-          ).then(() => {
+          return Page.deleteMany({ album: deletedAlbum._id })
+            .then(() => Reaction.deleteMany({ album: deletedAlbum._id }))
+            .then(() => AlbumReaction.deleteMany({ album: deletedAlbum._id }))
+            .then(() => {
             storage.removeAlbumDir(deletedAlbum.owner, deletedAlbum._id);
             notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
             res.json({ deleted: true });

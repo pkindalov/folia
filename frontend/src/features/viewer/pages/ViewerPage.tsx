@@ -4,8 +4,15 @@ import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
 import ReactionControl from '../../../components/ReactionControl';
+import AlbumLoveButton from '../../../components/AlbumLoveButton';
 import { toast } from '../../../lib/toast';
-import { useAlbum, usePages, useSetPageReaction, type ReactionType } from '../../flipbooks';
+import {
+  useAlbum,
+  usePages,
+  useSetPageReaction,
+  useSetAlbumReaction,
+  type ReactionType,
+} from '../../flipbooks';
 
 export default function ViewerPage() {
   const { id } = useParams();
@@ -22,6 +29,13 @@ export default function ViewerPage() {
       { pageId, type },
       { onError: (mutationError) => toast.error(mutationError.message) }
     );
+  };
+
+  const setAlbumReaction = useSetAlbumReaction(id ?? '');
+  const handleToggleAlbumLove = () => {
+    setAlbumReaction.mutate(undefined, {
+      onError: (mutationError) => toast.error(mutationError.message),
+    });
   };
 
   // Tracked by photo id, not array index — a raw index would go stale (and
@@ -78,6 +92,14 @@ export default function ViewerPage() {
                 <span className="font-body italic text-on-surface-variant text-sm">
                   {album.pageCount} pages
                 </span>
+              )}
+              {album && (
+                <AlbumLoveButton
+                  isLoved={album.reactions.viewerReacted}
+                  count={album.reactions.total}
+                  onToggle={handleToggleAlbumLove}
+                  isPending={setAlbumReaction.isPending}
+                />
               )}
               <Link
                 to="/flipbooks"

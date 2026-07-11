@@ -388,4 +388,54 @@ describe('ViewerPage', () => {
 
     expect(await screen.findByText('Could not save reaction')).toBeInTheDocument();
   });
+
+  test("shows the album love button reflecting the album's current reaction state", async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': {
+        body: { album: { ...ALBUM.album, reactions: { total: 3, viewerReacted: true } } },
+      },
+    });
+    renderViewer();
+
+    const button = await screen.findByRole('button', {
+      name: 'You loved this album — tap to remove',
+    });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveTextContent('3');
+  });
+
+  test('toggling the love button sends a request and reflects the new state once saved', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': {
+        body: { album: { ...ALBUM.album, reactions: { total: 2, viewerReacted: false } } },
+      },
+      'PUT /api/albums/a1/reaction': { body: { reactions: { total: 3, viewerReacted: true } } },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    const button = await screen.findByRole('button', { name: 'Love this album' });
+    expect(button).toHaveTextContent('2');
+    await user.click(button);
+
+    expect(
+      await screen.findByRole('button', { name: 'You loved this album — tap to remove' })
+    ).toHaveTextContent('3');
+  });
+
+  test('shows an error toast when toggling the album love reaction fails', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': { body: ALBUM },
+      'PUT /api/albums/a1/reaction': { body: { error: 'Could not save reaction' }, status: 500 },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: 'Love this album' }));
+
+    expect(await screen.findByText('Could not save reaction')).toBeInTheDocument();
+  });
 });

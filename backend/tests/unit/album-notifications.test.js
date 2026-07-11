@@ -1,6 +1,10 @@
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
-const { notifyAlbumEvent, notifyPageReaction } = require('../../server/utilities/album-notifications');
+const {
+  notifyAlbumEvent,
+  notifyPageReaction,
+  notifyAlbumReaction,
+} = require('../../server/utilities/album-notifications');
 
 const flush = () => new Promise(setImmediate);
 
@@ -231,6 +235,54 @@ describe('notifyPageReaction', () => {
         reactionType: 'wow',
         reactorUser: actorUser,
       })
+    ).not.toThrow();
+    await flush();
+
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe('notifyAlbumReaction', () => {
+  test('notifies the album owner with the actor and album snapshot', async () => {
+    notifyAlbumReaction({ album: fakeAlbum(), reactorUser: actorUser });
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: OWNER_ID,
+        type: 'album_reaction',
+        actorUsername: 'pan',
+        actor: ACTOR_ID,
+        album: ALBUM_ID,
+        albumTitle: 'Summer Trip',
+      })
+    );
+  });
+
+  test('does not notify when the reactor is the album owner (no self-notification)', async () => {
+    notifyAlbumReaction({
+      album: fakeAlbum(),
+      reactorUser: { _id: OWNER_ID, username: 'owner' },
+    });
+    await flush();
+
+    expect(Notification.create).not.toHaveBeenCalled();
+  });
+
+  test('prunes the recipient\'s notifications after creating one', async () => {
+    notifyAlbumReaction({ album: fakeAlbum(), reactorUser: actorUser });
+    await flush();
+
+    expect(Notification.pruneExcessForRecipient).toHaveBeenCalledWith(OWNER_ID);
+  });
+
+  test('never throws when Notification.create fails — logs and swallows', async () => {
+    Notification.create.mockRejectedValue(new Error('db down'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      notifyAlbumReaction({ album: fakeAlbum(), reactorUser: actorUser })
     ).not.toThrow();
     await flush();
 

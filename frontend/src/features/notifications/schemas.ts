@@ -12,6 +12,7 @@ export const NOTIFICATION_TYPES = [
   'album_photo_removed',
   'album_photo_caption_updated',
   'page_reaction',
+  'album_reaction',
 ] as const;
 
 export const REACTION_NOTIFICATION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;

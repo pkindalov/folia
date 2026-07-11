@@ -66,4 +66,25 @@ function notifyPageReaction({ page, album, reactionType, reactorUser }) {
     .catch((err) => console.error('Failed to create/prune page_reaction notification', err));
 }
 
-module.exports = { notifyAlbumEvent, notifyPageReaction };
+// Fire-and-forget: notifies an album's owner that someone loved the album
+// itself (as opposed to notifyPageReaction, which is about one of its
+// pages). Same single-recipient, self-reaction-skipping shape as
+// notifyPageReaction — reacting to an album is available to anyone who can
+// view it (private, shared, or public), not just circle-shared ones.
+function notifyAlbumReaction({ album, reactorUser }) {
+  const ownerId = album.owner.toString();
+  if (ownerId === reactorUser._id.toString()) return;
+
+  Notification.create({
+    recipient: ownerId,
+    type: 'album_reaction',
+    actorUsername: reactorUser.username,
+    actor: reactorUser._id,
+    album: album._id,
+    albumTitle: album.title,
+  })
+    .then(() => Notification.pruneExcessForRecipient(ownerId))
+    .catch((err) => console.error('Failed to create/prune album_reaction notification', err));
+}
+
+module.exports = { notifyAlbumEvent, notifyPageReaction, notifyAlbumReaction };
