@@ -113,10 +113,6 @@ function resolveThumbnailUrls(notifications, user) {
   );
 }
 
-function withActorAvatarUrl(notification) {
-  return withActorAvatarUrls([notification]).then(([withAvatar]) => withAvatar);
-}
-
 // Merges both per-notification extras (actor avatar + thumbnail) computed by
 // the two resolvers above, keeping each resolver single-purpose.
 function withNotificationExtras(notifications, user) {

@@ -80,4 +80,11 @@ describe('ReactorsModal', () => {
     renderModal({ reactors: [] });
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
+
+  test('renders a deleted user as plain text, not a link to a dead-end profile', () => {
+    renderModal({ reactors: [{ username: 'Deleted user', type: 'love' }] });
+
+    expect(screen.getByText('Deleted user')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Deleted user' })).not.toBeInTheDocument();
+  });
 });
