@@ -2,15 +2,7 @@ import { useState } from 'react';
 import AvatarUploader from './AvatarUploader';
 import EditProfileForm from './EditProfileForm';
 import type { User } from '../../auth';
-
-function formatMemberSince(createdAt: string | undefined): string | null {
-  if (!createdAt) return null;
-  return new Date(createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+import { formatMemberSince } from '../formatMemberSince';
 
 export default function ProfileIdentityCard({ user }: { user: User }) {
   const [isEditing, setIsEditing] = useState(false);

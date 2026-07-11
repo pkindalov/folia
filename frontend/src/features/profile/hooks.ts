@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../lib/api-client';
 import * as profileApi from './api';
 
@@ -40,5 +40,13 @@ export function useRemoveAvatar() {
       queryClient.setQueryData(['me'], user);
     },
     onError: (error) => refetchMeOnConflict(queryClient, error),
+  });
+}
+
+export function usePublicProfile(username: string | undefined) {
+  return useQuery({
+    queryKey: ['users', username],
+    queryFn: () => profileApi.getPublicProfile(username!),
+    enabled: username !== undefined,
   });
 }

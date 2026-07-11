@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { updateProfileSchema } from './schemas';
+import { updateProfileSchema, publicUserSchema, publicProfileResponseSchema } from './schemas';
 
 describe('updateProfileSchema', () => {
   const valid = { username: 'pan', email: 'pan@test.com' };
@@ -43,5 +43,32 @@ describe('updateProfileSchema', () => {
   test('provides human-readable messages', () => {
     const result = updateProfileSchema.safeParse({ ...valid, username: 'ab' });
     expect(result.error!.issues[0].message).toBe('Username must be at least 3 characters');
+  });
+});
+
+describe('publicUserSchema', () => {
+  const valid = { _id: 'id2', username: 'maria', roles: ['User'], avatarUrl: null };
+
+  test('accepts a valid public user, without an email field', () => {
+    const result = publicUserSchema.safeParse(valid);
+    expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty('email');
+  });
+
+  test('rejects a payload missing username', () => {
+    const { username: _username, ...rest } = valid;
+    expect(publicUserSchema.safeParse(rest).success).toBe(false);
+  });
+
+  test('strips an email field if the backend ever regresses and includes one', () => {
+    const result = publicUserSchema.safeParse({ ...valid, email: 'leaked@test.com' });
+    expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty('email');
+  });
+
+  test('publicProfileResponseSchema parses the { user } envelope', () => {
+    const result = publicProfileResponseSchema.safeParse({ user: valid });
+    expect(result.success).toBe(true);
+    expect(result.data?.user.username).toBe('maria');
   });
 });

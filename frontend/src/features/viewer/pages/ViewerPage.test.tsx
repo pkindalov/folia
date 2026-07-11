@@ -402,7 +402,9 @@ describe('ViewerPage', () => {
       name: 'You loved this album — tap to remove',
     });
     expect(button).toHaveAttribute('aria-pressed', 'true');
-    expect(button).toHaveTextContent('3');
+    expect(
+      screen.getByRole('button', { name: 'See who loved this album (3)' })
+    ).toHaveTextContent('3');
   });
 
   test('toggling the love button sends a request and reflects the new state once saved', async () => {
@@ -416,12 +418,14 @@ describe('ViewerPage', () => {
     const user = userEvent.setup();
     renderViewer();
 
-    const button = await screen.findByRole('button', { name: 'Love this album' });
-    expect(button).toHaveTextContent('2');
-    await user.click(button);
-
     expect(
-      await screen.findByRole('button', { name: 'You loved this album — tap to remove' })
+      await screen.findByRole('button', { name: 'See who loved this album (2)' })
+    ).toHaveTextContent('2');
+    await user.click(screen.getByRole('button', { name: 'Love this album' }));
+
+    await screen.findByRole('button', { name: 'You loved this album — tap to remove' });
+    expect(
+      screen.getByRole('button', { name: 'See who loved this album (3)' })
     ).toHaveTextContent('3');
   });
 
@@ -439,7 +443,7 @@ describe('ViewerPage', () => {
     expect(await screen.findByText('Could not save reaction')).toBeInTheDocument();
   });
 
-  test('shows who loved the album when the reactors button is clicked', async () => {
+  test('shows who loved the album, linked to their profiles, when the count is clicked', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
       'GET /api/albums/a1': {
@@ -454,18 +458,45 @@ describe('ViewerPage', () => {
     const user = userEvent.setup();
     renderViewer();
 
-    const reactorsButton = await screen.findByRole('button', {
+    const countButton = await screen.findByRole('button', {
       name: 'See who loved this album (2)',
     });
-    expect(screen.queryByText('maria')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'maria' })).not.toBeInTheDocument();
 
-    await user.click(reactorsButton);
+    await user.click(countButton);
 
-    expect(screen.getByText('maria')).toBeInTheDocument();
-    expect(screen.getByText('sam')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'maria' })).toHaveAttribute('href', '/users/maria');
+    expect(screen.getByRole('link', { name: 'sam' })).toHaveAttribute('href', '/users/sam');
   });
 
-  test('does not show a reactors button when nobody has loved the album yet', async () => {
+  test('the reactor list reflects a reaction toggled while the modal was closed', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': {
+        body: {
+          album: {
+            ...ALBUM.album,
+            reactions: { total: 1, viewerReacted: false, reactors: ['maria'] },
+          },
+        },
+      },
+      'PUT /api/albums/a1/reaction': {
+        body: { reactions: { total: 2, viewerReacted: true, reactors: ['sam', 'maria'] } },
+      },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: 'Love this album' }));
+    await screen.findByRole('button', { name: 'See who loved this album (2)' });
+
+    await user.click(screen.getByRole('button', { name: 'See who loved this album (2)' }));
+
+    expect(screen.getByRole('link', { name: 'sam' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+  });
+
+  test('disables the count button when nobody has loved the album yet', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
       'GET /api/albums/a1': { body: ALBUM },
@@ -473,6 +504,6 @@ describe('ViewerPage', () => {
     renderViewer();
 
     await screen.findByRole('button', { name: 'Love this album' });
-    expect(screen.queryByRole('button', { name: /See who loved this album/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'See who loved this album (0)' })).toBeDisabled();
   });
 });
