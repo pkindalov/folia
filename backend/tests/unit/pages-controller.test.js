@@ -849,7 +849,7 @@ describe('pages-controller', () => {
       expect(Notification.create).not.toHaveBeenCalled();
     });
 
-    test('falls through to creating a fresh reaction when a concurrent request deletes it out from under a switch', async () => {
+    test('falls through to creating a fresh reaction when a concurrent request deletes it out from under a switch, without notifying (it is still just a switch from this user\'s perspective)', async () => {
       const album = fakeAlbum();
       const page = fakePage();
       const existing = {
@@ -867,6 +867,7 @@ describe('pages-controller', () => {
       );
       await flush();
       expect(create).toHaveBeenCalledWith({ page: PAGE_ID, album: ALBUM_ID, user: OTHER_ID, type: 'wow' });
+      expect(Notification.create).not.toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },

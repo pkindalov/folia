@@ -303,12 +303,16 @@ module.exports = {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
 
         // Creates this user's reaction fresh. Used both for "no existing
-        // reaction" and as the fallback when a concurrent request deleted
-        // the reaction out from under a switch (see below).
-        const createReaction = () =>
+        // reaction" (notify: true — this is a genuinely new reaction) and
+        // as the fallback when a concurrent request deleted the reaction
+        // out from under a switch (notify: false — from this user's
+        // perspective it's still just a switch, and the owner shouldn't
+        // get a notification purely because of an unrelated concurrent
+        // delete's timing).
+        const createReaction = (notify) =>
           Reaction.create({ page: page._id, album: album._id, user: req.user._id, type })
             .then(() => {
-              notifyPageReaction({ page, album, reactionType: type, reactorUser: req.user });
+              if (notify) notifyPageReaction({ page, album, reactionType: type, reactorUser: req.user });
             })
             .catch((err) => {
               if (err.code !== 11000) throw err;
@@ -321,6 +325,12 @@ module.exports = {
               // "switch an existing reaction" branch below) — no
               // additional notification, since the owner was already
               // notified once by the winner's write.
+              // winner.save() below has the same theoretical
+              // DocumentNotFoundError race as the switch branch above (a
+              // third concurrent request), just one layer deeper — not
+              // closed here, on the same "not worth it at this app's
+              // scale" basis as the other unguarded races in this file
+              // (see upload's page-count check).
               return Reaction.findOne({ page: page._id, user: req.user._id }).then((winner) => {
                 if (!winner || winner.type === type) return;
                 winner.type = type;
@@ -341,11 +351,11 @@ module.exports = {
                 // from another tab/device) deleted this reaction between
                 // the findOne above and this save — nothing left to
                 // switch, so create it fresh with the intended type.
-                return createReaction();
+                return createReaction(false);
               });
             }
 
-            return createReaction();
+            return createReaction(true);
           })
           .then(() => resolveReactionSummaries([page], req.user._id))
           .then((summaryByPageId) => {
