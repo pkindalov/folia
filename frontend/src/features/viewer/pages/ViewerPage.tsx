@@ -131,6 +131,7 @@ export default function ViewerPage() {
                       </p>
                     )}
                     <ReactionControl
+                      pageId={currentPhoto._id}
                       reactions={currentPhoto.reactions}
                       onReact={(type) => handleReact(currentPhoto._id, type)}
                       isPending={setReaction.isPending}

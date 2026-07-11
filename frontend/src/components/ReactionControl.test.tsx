@@ -12,14 +12,18 @@ const NO_REACTIONS: ReactionSummary = {
 
 describe('ReactionControl', () => {
   test('shows a neutral "React" trigger and no summary when there are no reactions', () => {
-    render(<ReactionControl reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
+    );
     expect(screen.getByRole('button', { name: /react to this photo/i })).toHaveTextContent('React');
     expect(screen.queryByLabelText(/reactions?$/i)).not.toBeInTheDocument();
   });
 
   test('opens a picker with all six reaction options when the trigger is clicked', async () => {
     const user = userEvent.setup();
-    render(<ReactionControl reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
+    );
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
 
@@ -32,7 +36,9 @@ describe('ReactionControl', () => {
   test('picking a reaction calls onReact with that type and closes the picker', async () => {
     const onReact = vi.fn();
     const user = userEvent.setup();
-    render(<ReactionControl reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />
+    );
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     await user.click(screen.getByRole('button', { name: 'Love' }));
@@ -49,7 +55,9 @@ describe('ReactionControl', () => {
       total: 1,
       viewerReaction: 'love',
     };
-    render(<ReactionControl reactions={reactions} onReact={onReact} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={reactions} onReact={onReact} isPending={false} variant="light" />
+    );
 
     await user.click(screen.getByRole('button', { name: /you reacted: love/i }));
     await user.click(screen.getByRole('button', { name: 'Love' }));
@@ -63,7 +71,9 @@ describe('ReactionControl', () => {
       total: 1,
       viewerReaction: 'haha',
     };
-    render(<ReactionControl reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
+    );
     expect(screen.getByRole('button', { name: /you reacted: haha/i })).toHaveTextContent('Haha');
   });
 
@@ -73,19 +83,23 @@ describe('ReactionControl', () => {
       total: 5,
       viewerReaction: null,
     };
-    render(<ReactionControl reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
+    );
     expect(screen.getByLabelText('5 reactions')).toBeInTheDocument();
   });
 
   test('disables the trigger and shows a spinner while a request is in flight', () => {
-    render(<ReactionControl reactions={NO_REACTIONS} onReact={vi.fn()} isPending variant="light" />);
+    render(<ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending variant="light" />);
     expect(screen.getByRole('button', { name: /react to this photo/i })).toBeDisabled();
   });
 
   test('closes the picker on Escape without calling onReact', async () => {
     const onReact = vi.fn();
     const user = userEvent.setup();
-    render(<ReactionControl reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />);
+    render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />
+    );
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
@@ -94,5 +108,37 @@ describe('ReactionControl', () => {
 
     expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
     expect(onReact).not.toHaveBeenCalled();
+  });
+
+  test('closes the picker when the underlying photo changes (e.g. keyboard navigation in the lightbox)', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="dark" />
+    );
+
+    await user.click(screen.getByRole('button', { name: /react to this photo/i }));
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    rerender(
+      <ReactionControl pageId="p2" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="dark" />
+    );
+
+    expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
+  });
+
+  test('does not close the picker on an unrelated re-render for the same photo', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
+    );
+
+    await user.click(screen.getByRole('button', { name: /react to this photo/i }));
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    rerender(
+      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
+    );
+
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
   });
 });

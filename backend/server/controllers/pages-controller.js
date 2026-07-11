@@ -302,36 +302,50 @@ module.exports = {
       .then((page) => {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
 
+        // Creates this user's reaction fresh. Used both for "no existing
+        // reaction" and as the fallback when a concurrent request deleted
+        // the reaction out from under a switch (see below).
+        const createReaction = () =>
+          Reaction.create({ page: page._id, album: album._id, user: req.user._id, type })
+            .then(() => {
+              notifyPageReaction({ page, album, reactionType: type, reactorUser: req.user });
+            })
+            .catch((err) => {
+              if (err.code !== 11000) throw err;
+              // Two concurrent first-reactions from the same user can both
+              // pass the findOne above before either writes — the unique
+              // {page, user} index rejects the loser here. Reconcile
+              // rather than silently dropping this request's intended
+              // type: if the winner's stored reaction doesn't match what
+              // this request asked for, update it to match (same as the
+              // "switch an existing reaction" branch below) — no
+              // additional notification, since the owner was already
+              // notified once by the winner's write.
+              return Reaction.findOne({ page: page._id, user: req.user._id }).then((winner) => {
+                if (!winner || winner.type === type) return;
+                winner.type = type;
+                return winner.save();
+              });
+            });
+
         return Reaction.findOne({ page: page._id, user: req.user._id })
           .then((existing) => {
             // Picking the same reaction again removes it (toggle-off).
             if (existing && existing.type === type) return existing.deleteOne();
+
             if (existing) {
               existing.type = type;
-              return existing.save();
+              return existing.save().catch((err) => {
+                if (!(err instanceof mongoose.Error.DocumentNotFoundError)) throw err;
+                // A concurrent request (e.g. this same user's toggle-off
+                // from another tab/device) deleted this reaction between
+                // the findOne above and this save — nothing left to
+                // switch, so create it fresh with the intended type.
+                return createReaction();
+              });
             }
 
-            return Reaction.create({ page: page._id, album: album._id, user: req.user._id, type })
-              .then(() => {
-                notifyPageReaction({ page, album, reactionType: type, reactorUser: req.user });
-              })
-              .catch((err) => {
-                if (err.code !== 11000) throw err;
-                // Two concurrent first-reactions from the same user can both
-                // pass the findOne above before either writes — the unique
-                // {page, user} index rejects the loser here. Reconcile
-                // rather than silently dropping this request's intended
-                // type: if the winner's stored reaction doesn't match what
-                // this request asked for, update it to match (same as the
-                // "switch an existing reaction" branch above) — no
-                // additional notification, since the owner was already
-                // notified once by the winner's write.
-                return Reaction.findOne({ page: page._id, user: req.user._id }).then((winner) => {
-                  if (!winner || winner.type === type) return;
-                  winner.type = type;
-                  return winner.save();
-                });
-              });
+            return createReaction();
           })
           .then(() => resolveReactionSummaries([page], req.user._id))
           .then((summaryByPageId) => {

@@ -849,6 +849,45 @@ describe('pages-controller', () => {
       expect(Notification.create).not.toHaveBeenCalled();
     });
 
+    test('falls through to creating a fresh reaction when a concurrent request deletes it out from under a switch', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      const existing = {
+        type: 'like',
+        save: jest.fn().mockRejectedValue(new mongoose.Error.DocumentNotFoundError({})),
+        deleteOne: jest.fn(),
+      };
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(existing);
+      const create = jest.spyOn(Reaction, 'create').mockResolvedValue({});
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'wow' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(create).toHaveBeenCalledWith({ page: PAGE_ID, album: ALBUM_ID, user: OTHER_ID, type: 'wow' });
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        reactions: { counts: ZERO_REACTION_COUNTS, total: 0, viewerReaction: null },
+      });
+    });
+
+    test('a non-DocumentNotFoundError from an existing-reaction save still responds 500', async () => {
+      const album = fakeAlbum();
+      const page = fakePage();
+      const existing = { type: 'like', save: jest.fn().mockRejectedValue(new Error('db down')) };
+      jest.spyOn(Page, 'findOne').mockResolvedValue(page);
+      jest.spyOn(Reaction, 'findOne').mockResolvedValue(existing);
+      const res = mockRes();
+      controller.setReaction(
+        { album, params: { pageId: PAGE_ID }, body: { type: 'wow' }, user: stranger },
+        res
+      );
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
     test('picking the same reaction again removes it (toggle-off)', async () => {
       const album = fakeAlbum();
       const page = fakePage();

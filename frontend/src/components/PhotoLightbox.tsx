@@ -101,6 +101,7 @@ export default function PhotoLightbox({
           )}
           {onReact && photo.reactions && (
             <ReactionControl
+              pageId={photo._id}
               reactions={photo.reactions}
               onReact={(type) => onReact(photo._id, type)}
               isPending={isReactionPending}

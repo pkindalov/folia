@@ -6,6 +6,8 @@ import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
 
 type ReactionControlProps = {
+  /** Identifies which page/photo this control is showing reactions for — used to close the picker when the underlying photo changes. */
+  pageId: string;
   reactions: ReactionSummary;
   onReact: (type: ReactionType) => void;
   isPending: boolean;
@@ -43,11 +45,25 @@ const REACTION_TEXT_COLOR: Record<ReactionType, string> = {
 const MAX_SUMMARY_ICONS = 3;
 
 /** Facebook-style reaction trigger + picker popover, for a single page/photo. */
-export default function ReactionControl({ reactions, onReact, isPending, variant }: ReactionControlProps) {
+export default function ReactionControl({ pageId, reactions, onReact, isPending, variant }: ReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const outsideClickRefs = useMemo(() => [panelRef, triggerRef], []);
+
+  // This same component instance is reused across photo navigation (no
+  // `key` prop), and PhotoLightbox's arrow-key navigation changes the
+  // current photo via a window keydown listener that bypasses
+  // useOutsideClick — so without this, the picker could stay open,
+  // re-anchored to a different photo than the one it was opened for.
+  // Resetting synchronously during render (rather than in an effect) avoids
+  // a frame where the stale picker is still visible. See:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [lastPageId, setLastPageId] = useState(pageId);
+  if (pageId !== lastPageId) {
+    setLastPageId(pageId);
+    setIsOpen(false);
+  }
 
   const close = useCallback(() => setIsOpen(false), []);
   useFocusTrap(panelRef, isOpen);
