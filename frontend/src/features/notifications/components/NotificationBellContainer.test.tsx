@@ -26,6 +26,8 @@ type FakeNotification = {
   actorAvatarUrl?: string | null;
   albumTitle?: string;
   album?: string;
+  page?: string;
+  thumbnailUrl?: string | null;
   read: boolean;
   createdAt: string;
 };
@@ -38,6 +40,7 @@ const baseNotification: FakeNotification = {
   circleName: 'The Sterling Family',
   actorUsername: 'maria',
   actorAvatarUrl: null,
+  thumbnailUrl: null,
   read: false,
   createdAt: new Date().toISOString(),
 };
@@ -327,6 +330,42 @@ describe('NotificationBellContainer', () => {
     }
   );
 
+  test('an album_photos_added notification with a recorded page deep-links to that photo', async () => {
+    notifications = [
+      {
+        ...baseNotification,
+        type: 'album_photos_added',
+        albumTitle: 'Summer Trip',
+        album: 'album-42',
+        page: 'page-7',
+      },
+    ];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    const message = await screen.findByText(
+      (_, element) => element?.textContent === EXPECTED_MESSAGE_BY_TYPE.album_photos_added
+    );
+    const link = message.closest('a')!;
+    expect(link).toHaveAttribute('href', '/book/album-42?photo=page-7');
+  });
+
+  test('a legacy album_photos_added notification with no recorded page links to just the album', async () => {
+    notifications = [
+      { ...baseNotification, type: 'album_photos_added', albumTitle: 'Summer Trip', album: 'album-42' },
+    ];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    const message = await screen.findByText(
+      (_, element) => element?.textContent === EXPECTED_MESSAGE_BY_TYPE.album_photos_added
+    );
+    const link = message.closest('a')!;
+    expect(link).toHaveAttribute('href', '/book/album-42');
+  });
+
   test('clicking an album-deleted notification falls back to the circles list — there is no album left to view', async () => {
     notifications = [
       { ...baseNotification, type: 'album_deleted', albumTitle: 'Summer Trip', album: 'album-42' },
@@ -341,6 +380,39 @@ describe('NotificationBellContainer', () => {
     await user.click(message.closest('a')!);
 
     expect(await screen.findByText('Circles page reached')).toBeInTheDocument();
+  });
+
+  test('renders a thumbnail for a notification that has one', async () => {
+    notifications = [
+      {
+        ...baseNotification,
+        type: 'album_shared',
+        albumTitle: 'Summer Trip',
+        album: 'album-42',
+        thumbnailUrl: 'https://signed.example/cover.jpg',
+      },
+    ];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria shared a new album Summer Trip with The Sterling Family'
+    );
+    const thumbnail = screen.getByAltText('');
+    expect(thumbnail).toHaveAttribute('src', 'https://signed.example/cover.jpg');
+  });
+
+  test('renders no thumbnail for a notification type that never has one', async () => {
+    notifications = [baseNotification];
+    const user = userEvent.setup();
+    renderBell();
+    await openPanel(user);
+
+    await screen.findByText(
+      (_, element) => element?.textContent === 'maria invited you to The Sterling Family'
+    );
+    expect(screen.queryByAltText('')).not.toBeInTheDocument();
   });
 
   test('shows an empty state when there are no notifications', async () => {

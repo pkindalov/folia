@@ -193,8 +193,15 @@ module.exports = {
               // the frontend's pageSchema is used.
               resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
                 // One notification per upload request, not per photo — a
-                // batch of 10 photos is one "new photos added" event.
-                notifyAlbumEvent({ type: 'album_photos_added', album, actorUser: req.user });
+                // batch of 10 photos is one "new photos added" event. The
+                // first uploaded photo rides along as a representative
+                // thumbnail/deep-link target for that one notification.
+                notifyAlbumEvent({
+                  type: 'album_photos_added',
+                  album,
+                  actorUser: req.user,
+                  page: pages[0],
+                });
                 res.status(201).json({
                   pages: pages.map((page) => ({
                     ...page.toJSON(),

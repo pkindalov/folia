@@ -1,5 +1,8 @@
 const Notification = require('../../server/data/Notification');
 const User = require('../../server/data/User');
+const Album = require('../../server/data/Album');
+const Page = require('../../server/data/Page');
+const Circle = require('../../server/data/Circle');
 const storage = require('../../server/utilities/storage');
 const controller = require('../../server/controllers/notifications-controller');
 
@@ -9,6 +12,9 @@ const USER_ID = '507f1f77bcf86cd799439011';
 const OTHER_USER_ID = '507f1f77bcf86cd799439022';
 const NOTIFICATION_ID = '507f191e810c19729de860ea';
 const ACTOR_ID = '507f1f77bcf86cd799439044';
+const ALBUM_ID = '507f1f77bcf86cd799439055';
+const OWNER_ID = '507f1f77bcf86cd799439066';
+const PAGE_ID = '507f1f77bcf86cd799439077';
 
 const user = { _id: USER_ID, username: 'pan', roles: ['User'] };
 
@@ -167,6 +173,283 @@ describe('notifications-controller', () => {
         })
       );
     });
+
+    test('resolves thumbnailUrl to the album cover image for album_shared/album_updated notifications', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(
+          mockNotificationQuery([fakeNotification({ type: 'album_shared', album: ALBUM_ID })])
+        );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      const albumFind = jest
+        .spyOn(Album, 'find')
+        .mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID, coverPage: null }]);
+      jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'cover.jpg' }]);
+      const photoUrl = jest
+        .spyOn(storage, 'photoUrl')
+        .mockReturnValue('https://signed.example/cover.jpg');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(albumFind).toHaveBeenCalledWith({ _id: { $in: [ALBUM_ID] } });
+      expect(photoUrl).toHaveBeenCalledWith(OWNER_ID, ALBUM_ID, 'cover.jpg');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ thumbnailUrl: 'https://signed.example/cover.jpg' }),
+          ],
+        })
+      );
+    });
+
+    test('resolves thumbnailUrl to the referenced photo for album_photos_added notifications', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({ type: 'album_photos_added', album: ALBUM_ID, page: PAGE_ID }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      const pageFind = jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      const photoUrl = jest
+        .spyOn(storage, 'photoUrl')
+        .mockReturnValue('https://signed.example/photo.jpg');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(pageFind).toHaveBeenCalledWith({ _id: { $in: [PAGE_ID] } }, 'album filename');
+      expect(photoUrl).toHaveBeenCalledWith(OWNER_ID, ALBUM_ID, 'photo.jpg');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ thumbnailUrl: 'https://signed.example/photo.jpg' }),
+          ],
+        })
+      );
+    });
+
+    test('falls back to null thumbnailUrl when the referenced album no longer exists', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(
+          mockNotificationQuery([fakeNotification({ type: 'album_updated', album: ALBUM_ID })])
+        );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('falls back to null thumbnailUrl when the referenced page no longer exists', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({ type: 'album_photos_added', album: ALBUM_ID, page: PAGE_ID }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      jest.spyOn(Page, 'find').mockResolvedValue([]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('falls back to null thumbnailUrl when the referenced page belongs to a different album', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({ type: 'album_photos_added', album: ALBUM_ID, page: PAGE_ID }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: 'some-other-album-id', filename: 'photo.jpg' }]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('does not query Album/Page for a notification type with no thumbnail (e.g. circle_invite)', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(mockNotificationQuery([fakeNotification({ type: 'circle_invite' })]));
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      const albumFind = jest.spyOn(Album, 'find');
+      const pageFind = jest.spyOn(Page, 'find');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(albumFind).not.toHaveBeenCalled();
+      expect(pageFind).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('falls back to null thumbnailUrl when the requester no longer has access to the album (e.g. re-privated after the notification was created)', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(
+          mockNotificationQuery([fakeNotification({ type: 'album_shared', album: ALBUM_ID })])
+        );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest
+        .spyOn(Album, 'find')
+        .mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID, visibility: 'private', coverPage: null }]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('resolves thumbnailUrl when the requester is still an accepted member of the circle the album is shared with', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(
+          mockNotificationQuery([fakeNotification({ type: 'album_shared', album: ALBUM_ID })])
+        );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([
+        {
+          _id: ALBUM_ID,
+          owner: OWNER_ID,
+          visibility: 'shared',
+          sharedWithCircle: 'circle-1',
+          coverPage: null,
+        },
+      ]);
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValue({ isOwnerOrMember: () => true });
+      jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'cover.jpg' }]);
+      jest.spyOn(storage, 'photoUrl').mockReturnValue('https://signed.example/cover.jpg');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ thumbnailUrl: 'https://signed.example/cover.jpg' }),
+          ],
+        })
+      );
+    });
+
+    test('falls back to null thumbnailUrl once removed from the circle the album is shared with', async () => {
+      jest
+        .spyOn(Notification, 'find')
+        .mockReturnValue(
+          mockNotificationQuery([fakeNotification({ type: 'album_photos_added', album: ALBUM_ID, page: PAGE_ID })])
+        );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([
+        {
+          _id: ALBUM_ID,
+          owner: OWNER_ID,
+          visibility: 'shared',
+          sharedWithCircle: 'circle-1',
+          coverPage: null,
+        },
+      ]);
+      jest
+        .spyOn(Circle, 'findById')
+        .mockResolvedValue({ isOwnerOrMember: () => false });
+      jest.spyOn(Page, 'find').mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [expect.objectContaining({ thumbnailUrl: null })],
+        })
+      );
+    });
+
+    test('resolves both a cover thumbnail and a page thumbnail correctly when both types share one response', async () => {
+      const OTHER_ALBUM_ID = '507f1f77bcf86cd799439088';
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({ _id: 'n1', type: 'album_shared', album: ALBUM_ID }),
+          fakeNotification({
+            _id: 'n2',
+            type: 'album_photos_added',
+            album: OTHER_ALBUM_ID,
+            page: PAGE_ID,
+          }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(2);
+      const albumFind = jest.spyOn(Album, 'find').mockResolvedValue([
+        { _id: ALBUM_ID, owner: OWNER_ID, coverPage: null },
+        { _id: OTHER_ALBUM_ID, owner: OWNER_ID, coverPage: null },
+      ]);
+      jest
+        .spyOn(Page, 'aggregate')
+        .mockResolvedValue([{ _id: ALBUM_ID, filename: 'cover.jpg' }]);
+      jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: OTHER_ALBUM_ID, filename: 'photo.jpg' }]);
+      jest
+        .spyOn(storage, 'photoUrl')
+        .mockImplementation((ownerId, albumId, filename) => `https://signed.example/${filename}`);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(albumFind).toHaveBeenCalledWith({ _id: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ _id: 'n1', thumbnailUrl: 'https://signed.example/cover.jpg' }),
+            expect.objectContaining({ _id: 'n2', thumbnailUrl: 'https://signed.example/photo.jpg' }),
+          ],
+        })
+      );
+    });
   });
 
   describe('unreadCount', () => {
@@ -275,6 +558,29 @@ describe('notifications-controller', () => {
         expect.objectContaining({
           notification: expect.objectContaining({
             actorAvatarUrl: 'https://signed.example/photo.jpg',
+          }),
+        })
+      );
+    });
+
+    test('response carries thumbnailUrl', async () => {
+      jest.spyOn(Notification, 'findOneAndUpdate').mockResolvedValue(
+        fakeNotification({ read: true, type: 'album_photos_added', album: ALBUM_ID, page: PAGE_ID })
+      );
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      jest.spyOn(storage, 'photoUrl').mockReturnValue('https://signed.example/photo.jpg');
+      const res = mockRes();
+
+      controller.markRead({ params: { id: NOTIFICATION_ID }, user }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            thumbnailUrl: 'https://signed.example/photo.jpg',
           }),
         })
       );

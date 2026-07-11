@@ -296,6 +296,36 @@ describe('ViewerPage', () => {
     );
   });
 
+  test('seeds the viewer at the photo referenced by ?photo=, not the first photo', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2, PAGE_3] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderWithProviders(<ViewerPage />, {
+      route: '/book/a1?photo=p2',
+      path: '/book/:id',
+    });
+
+    expect(await screen.findByAltText('photo2.jpg')).toBeInTheDocument();
+    expect(screen.getByText('Photo 2 of 3')).toBeInTheDocument();
+  });
+
+  test('falls back to the first photo when ?photo= does not match any page', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    renderWithProviders(<ViewerPage />, {
+      route: '/book/a1?photo=does-not-exist',
+      path: '/book/:id',
+    });
+
+    expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument();
+  });
+
   test('picking a reaction sends it to the server and reflects the new state once saved', async () => {
     let pagesFetchCount = 0;
     vi.mocked(fetch).mockImplementation((url, options) => {

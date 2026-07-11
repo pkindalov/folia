@@ -17,8 +17,12 @@ export type NotificationItemData = {
   // Only present on the album_* and page_reaction types.
   albumTitle: string | null;
   album: string | null;
+  // Required for page_reaction; also present on album_photos_added as the
+  // representative uploaded photo (thumbnail + deep-link target).
+  page: string | null;
   // Only present on page_reaction.
   reactionType: AppNotification['reactionType'] | null;
+  thumbnailUrl: string | null;
   read: boolean;
   relativeTime: string; // pre-formatted, just render it
 };

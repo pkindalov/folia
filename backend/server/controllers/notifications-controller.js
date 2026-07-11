@@ -1,10 +1,20 @@
 const mongoose = require('mongoose');
 const Notification = require('../data/Notification');
 const User = require('../data/User');
+const Album = require('../data/Album');
+const Page = require('../data/Page');
 const storage = require('../utilities/storage');
-const { parsePage } = require('../utilities/controller-helpers');
+const { resolveCoverImages } = require('../utilities/album-cover-image');
+const { parsePage, checkAlbumReadAccess } = require('../utilities/controller-helpers');
 
 const NOTIFICATIONS_PAGE_SIZE = 20;
+
+// album_shared/album_updated show the album's current cover image;
+// album_photos_added shows the specific uploaded photo it references
+// instead (see album-notifications.js's notifyAlbumEvent) — every other
+// type has no thumbnail at all.
+const COVER_THUMBNAIL_TYPES = ['album_shared', 'album_updated'];
+const PAGE_THUMBNAIL_TYPE = 'album_photos_added';
 
 // Batches actor-avatar resolution for a page of notifications into a single
 // User lookup (mirrors albums-controller.js's resolveCoverImages) instead of
@@ -37,8 +47,90 @@ function withActorAvatarUrls(notifications) {
   );
 }
 
+// Batches thumbnail resolution the same way withActorAvatarUrls batches
+// avatars: never stored on the notification (photoUrl is signed and
+// time-limited, same as avatarUrl), so it's recomputed fresh on every read.
+// A notification's existence only proves `user` had access *when it was
+// created* — the circle membership or album visibility that granted it can
+// change afterward (removed from the circle, album unshared/re-privated)
+// without the notification itself being touched. checkAlbumReadAccess is
+// re-run against every referenced album here, the same gate every other
+// photo-serving path in this codebase goes through, so a since-revoked album
+// degrades to no thumbnail instead of quietly leaking photo content the
+// recipient can no longer otherwise reach. Returns a Map from notification
+// id (string) to thumbnail url or null.
+function resolveThumbnailUrls(notifications, user) {
+  const coverNotifications = notifications.filter(
+    (notification) => COVER_THUMBNAIL_TYPES.includes(notification.type) && notification.album
+  );
+  const pageNotifications = notifications.filter(
+    (notification) => notification.type === PAGE_THUMBNAIL_TYPE && notification.page && notification.album
+  );
+
+  const albumIds = [
+    ...new Set([...coverNotifications, ...pageNotifications].map((n) => n.album.toString())),
+  ];
+  const pageIds = [...new Set(pageNotifications.map((n) => n.page.toString()))];
+
+  return Promise.all([
+    albumIds.length > 0 ? Album.find({ _id: { $in: albumIds } }) : Promise.resolve([]),
+    pageIds.length > 0 ? Page.find({ _id: { $in: pageIds } }, 'album filename') : Promise.resolve([]),
+  ]).then(([albums, pages]) =>
+    Promise.all(albums.map((album) => checkAlbumReadAccess(album, user).then((denied) => [album, denied]))).then(
+      (albumAccessResults) => {
+        const accessibleAlbums = albumAccessResults
+          .filter(([, denied]) => denied === null)
+          .map(([album]) => album);
+        const albumById = new Map(accessibleAlbums.map((album) => [album._id.toString(), album]));
+        const pageById = new Map(pages.map((page) => [page._id.toString(), page]));
+
+        return resolveCoverImages(accessibleAlbums).then((coverImageByAlbumId) => {
+          return new Map(
+            notifications.map((notification) => {
+              if (COVER_THUMBNAIL_TYPES.includes(notification.type) && notification.album) {
+                const thumbnailUrl = coverImageByAlbumId.get(notification.album.toString()) ?? null;
+                return [notification._id.toString(), thumbnailUrl];
+              }
+
+              if (notification.type === PAGE_THUMBNAIL_TYPE && notification.page && notification.album) {
+                const album = albumById.get(notification.album.toString());
+                const page = pageById.get(notification.page.toString());
+                // Guard against a page that (somehow) belongs to a different
+                // album, same defensive check resolveCoverImages already
+                // makes for an explicit coverPage.
+                const belongsToAlbum = page && page.album.toString() === notification.album.toString();
+                const thumbnailUrl =
+                  album && belongsToAlbum ? storage.photoUrl(album.owner, notification.album, page.filename) : null;
+                return [notification._id.toString(), thumbnailUrl];
+              }
+
+              return [notification._id.toString(), null];
+            })
+          );
+        });
+      }
+    )
+  );
+}
+
 function withActorAvatarUrl(notification) {
   return withActorAvatarUrls([notification]).then(([withAvatar]) => withAvatar);
+}
+
+// Merges both per-notification extras (actor avatar + thumbnail) computed by
+// the two resolvers above, keeping each resolver single-purpose.
+function withNotificationExtras(notifications, user) {
+  return Promise.all([withActorAvatarUrls(notifications), resolveThumbnailUrls(notifications, user)]).then(
+    ([withAvatars, thumbnailUrlById]) =>
+      withAvatars.map((notification) => ({
+        ...notification,
+        thumbnailUrl: thumbnailUrlById.get(notification._id.toString()) ?? null,
+      }))
+  );
+}
+
+function withNotificationExtra(notification, user) {
+  return withNotificationExtras([notification], user).then(([withExtras]) => withExtras);
 }
 
 module.exports = {
@@ -54,8 +146,8 @@ module.exports = {
         .limit(NOTIFICATIONS_PAGE_SIZE),
     ])
       .then(([total, notifications]) =>
-        withActorAvatarUrls(notifications).then((notificationsWithAvatars) =>
-          res.json({ notifications: notificationsWithAvatars, total, page, limit: NOTIFICATIONS_PAGE_SIZE })
+        withNotificationExtras(notifications, req.user).then((notificationsWithExtras) =>
+          res.json({ notifications: notificationsWithExtras, total, page, limit: NOTIFICATIONS_PAGE_SIZE })
         )
       )
       .catch(() => res.status(500).json({ error: 'Failed to load notifications' }));
@@ -83,7 +175,7 @@ module.exports = {
     )
       .then((updated) => {
         if (!updated) return res.status(404).json({ error: 'Notification not found' });
-        return withActorAvatarUrl(updated).then((notification) => res.json({ notification }));
+        return withNotificationExtra(updated, req.user).then((notification) => res.json({ notification }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to update notification' }));
   },
@@ -104,7 +196,7 @@ module.exports = {
     )
       .then((updated) => {
         if (!updated) return res.status(404).json({ error: 'Notification not found' });
-        return withActorAvatarUrl(updated).then((notification) => res.json({ notification }));
+        return withNotificationExtra(updated, req.user).then((notification) => res.json({ notification }));
       })
       .catch(() => res.status(500).json({ error: 'Failed to update notification' }));
   },

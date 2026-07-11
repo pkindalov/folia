@@ -68,6 +68,25 @@ describe('notifyAlbumEvent', () => {
     expect(Notification.create).toHaveBeenCalledTimes(2);
   });
 
+  test('sets page on the created notification when a representative page is passed', async () => {
+    jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+    notifyAlbumEvent({ type: 'album_photos_added', album: fakeAlbum(), actorUser, page: fakePage() });
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({ recipient: MEMBER_ID, type: 'album_photos_added', page: PAGE_ID })
+    );
+  });
+
+  test('does not set page on the created notification when none is passed', async () => {
+    jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+    notifyAlbumEvent({ type: 'album_shared', album: fakeAlbum(), actorUser });
+    await flush();
+
+    const call = Notification.create.mock.calls.find(([arg]) => arg.recipient === MEMBER_ID);
+    expect(call[0]).not.toHaveProperty('page');
+  });
+
   test('excludes the actor from recipients when the actor is the circle owner', async () => {
     jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
     notifyAlbumEvent({

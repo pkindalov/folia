@@ -33,9 +33,16 @@ export const notificationSchema = z
     // Only present on the album_* and page_reaction types.
     album: z.string().optional(),
     albumTitle: z.string().optional(),
-    // Only present on page_reaction.
+    // Required for page_reaction (which page was reacted to). Also present,
+    // optionally, on album_photos_added as the representative uploaded photo
+    // used for the thumbnail below and to deep-link into the viewer.
     page: z.string().optional(),
     reactionType: z.enum(REACTION_NOTIFICATION_TYPES).optional(),
+    // Signed, time-limited thumbnail URL — the album's cover image for
+    // album_shared/album_updated, the referenced photo for
+    // album_photos_added, resolved fresh on every response. Null for every
+    // other type, or when the underlying album/photo no longer exists.
+    thumbnailUrl: z.string().nullable(),
     read: z.boolean(),
     createdAt: z.string(),
     updatedAt: z.string().optional(),

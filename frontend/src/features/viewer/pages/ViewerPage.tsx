@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
@@ -9,6 +9,8 @@ import { useAlbum, usePages, useSetPageReaction, type ReactionType } from '../..
 
 export default function ViewerPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const deepLinkedPhotoId = searchParams.get('photo');
   const { data: album, isLoading, isError, error } = useAlbum(id);
   const { data: pagesData } = usePages(id);
   const pages = pagesData ?? [];
@@ -24,9 +26,13 @@ export default function ViewerPage() {
 
   // Tracked by photo id, not array index — a raw index would go stale (and
   // could silently point at an unrelated photo) if the page list changes
-  // while the lightbox is open.
-  const [photoId, setPhotoId] = useState<string | null>(null);
-  useEffect(() => setPhotoId(null), [id]);
+  // while the lightbox is open. Seeded from ?photo=<pageId> so a notification
+  // (or any other link) can deep-link straight to a specific photo; falls
+  // back to the first photo when absent, same as before this existed. Only
+  // re-seeds when the album or the query param itself changes — not on every
+  // in-viewer navigation, which sets photoId directly via setPhotoId.
+  const [photoId, setPhotoId] = useState<string | null>(deepLinkedPhotoId);
+  useEffect(() => setPhotoId(deepLinkedPhotoId), [id, deepLinkedPhotoId]);
   const selectedIndex = pages.findIndex((page) => page._id === photoId);
   const currentIndex = selectedIndex !== -1 ? selectedIndex : 0;
   const currentPhoto = pages[currentIndex];

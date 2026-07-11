@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
 import Avatar from '../../../components/Avatar';
@@ -95,9 +95,12 @@ const MESSAGE_PARTS_BY_TYPE: Record<
 
 // Where clicking the row navigates. Most album_* types link straight to the
 // album itself; album_deleted is the one exception — there's no album left
-// to view, so it falls back to /circles like the circle_* types. Record
-// over NotificationItemData['type'] rather than a switch, for the same
-// exhaustiveness reason as MESSAGE_PARTS_BY_TYPE above.
+// to view, so it falls back to /circles like the circle_* types.
+// album_photos_added deep-links to the specific uploaded photo when one is
+// recorded (?photo=<pageId>, read by ViewerPage) — a legacy notification
+// with no recorded page just opens the album like the other album_* types.
+// Record over NotificationItemData['type'] rather than a switch, for the
+// same exhaustiveness reason as MESSAGE_PARTS_BY_TYPE above.
 const LINK_TO_BY_TYPE: Record<NotificationItemData['type'], (notification: NotificationItemData) => string> = {
   circle_invite: () => '/circles',
   circle_invite_accepted: () => '/circles',
@@ -106,11 +109,33 @@ const LINK_TO_BY_TYPE: Record<NotificationItemData['type'], (notification: Notif
   album_shared: ({ album }) => (album ? `/book/${album}` : '/circles'),
   album_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
   album_deleted: () => '/circles',
-  album_photos_added: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_photos_added: ({ album, page }) => {
+    if (!album) return '/circles';
+    return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
+  },
   album_photo_removed: ({ album }) => (album ? `/book/${album}` : '/circles'),
   album_photo_caption_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
   page_reaction: ({ album }) => (album ? `/book/${album}` : '/circles'),
 };
+
+// No fallback content on load failure (unlike Avatar, which always has an
+// initials circle to fall back to) — a signed thumbnail URL can 404 if the
+// underlying photo/album is deleted after the notification was created but
+// before it's viewed, so a failed load hides the image rather than leaving
+// the browser's broken-image glyph in the list.
+function NotificationThumbnail({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="block mt-2 w-10 h-10 shrink-0 rounded-card object-cover border border-outline-variant/40"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // Two sibling interactive elements, not a nested button-in-link: the row
 // Link is the primary click target, and the dismiss button sits beside it
@@ -124,7 +149,7 @@ export default function NotificationItem({
   onToggleRead,
   isTogglingRead,
 }: NotificationItemProps) {
-  const { _id, actorUsername, actorAvatarUrl, read, relativeTime } = notification;
+  const { _id, actorUsername, actorAvatarUrl, thumbnailUrl, read, relativeTime } = notification;
   const { leading, subject, trailing } = MESSAGE_PARTS_BY_TYPE[notification.type](notification);
   const linkTo = LINK_TO_BY_TYPE[notification.type](notification);
 
@@ -178,6 +203,7 @@ export default function NotificationItem({
             )}
           </span>
           <span className="block font-ui text-[11px] text-on-surface-variant mt-1">{relativeTime}</span>
+          {thumbnailUrl && <NotificationThumbnail src={thumbnailUrl} />}
         </span>
       </Link>
 

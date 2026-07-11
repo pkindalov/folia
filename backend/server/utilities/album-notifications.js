@@ -9,7 +9,12 @@ const { circleRecipientIds } = require('./controller-helpers');
 // created the same way. No-ops silently — not an error — for a
 // private/public album (nobody but the owner/Admin has access, so there's
 // nobody to notify) or one whose shared circle no longer exists.
-function notifyAlbumEvent({ type, album, actorUser }) {
+// `page` is optional and only meaningful for album_photos_added — the first
+// photo of the uploaded batch, kept as a representative thumbnail/deep-link
+// target for the single notification that batch produces (see
+// pages-controller.js's upload handler: one notification per upload
+// request, not per photo).
+function notifyAlbumEvent({ type, album, actorUser, page }) {
   Promise.resolve()
     .then(() => {
       if (album.visibility !== 'shared' || !album.sharedWithCircle) return null;
@@ -28,6 +33,7 @@ function notifyAlbumEvent({ type, album, actorUser }) {
               actor: actorUser._id,
               album: album._id,
               albumTitle: album.title,
+              ...(page ? { page: page._id } : {}),
             }).then(() => Notification.pruneExcessForRecipient(recipientId))
           )
         );

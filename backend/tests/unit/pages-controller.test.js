@@ -402,6 +402,30 @@ describe('pages-controller', () => {
       expect(photosAddedCalls).toHaveLength(1);
     });
 
+    test('the single album_photos_added notification references the first uploaded page', async () => {
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: SHARED_CIRCLE_ID });
+      jest.spyOn(Circle, 'findById').mockResolvedValue(fakeCircle());
+      jest.spyOn(Page, 'countDocuments').mockResolvedValueOnce(0).mockResolvedValueOnce(3);
+      jest
+        .spyOn(Page, 'insertMany')
+        .mockResolvedValue([fakePage(), fakePage({ _id: 'p2' }), fakePage({ _id: 'p3' })]);
+      const res = mockRes();
+      const files = [
+        { filename: 'a.jpg', mimetype: 'image/jpeg', size: 10 },
+        { filename: 'b.jpg', mimetype: 'image/jpeg', size: 10 },
+        { filename: 'c.jpg', mimetype: 'image/jpeg', size: 10 },
+      ];
+      controller.upload({ album, files, user: owner }, res);
+      await flush();
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'album_photos_added',
+          recipient: MEMBER_ID,
+          page: PAGE_ID,
+        })
+      );
+    });
+
     test('does not notify when uploading to a private album', async () => {
       const album = fakeAlbum();
       const findById = jest.spyOn(Circle, 'findById');

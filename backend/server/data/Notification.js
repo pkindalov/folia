@@ -25,9 +25,11 @@ const requiresCircle = function () {
   return this.type !== 'page_reaction';
 };
 
-// The inverse: page/reactionType only ever apply to page_reaction, and are
+// The inverse: reactionType only ever applies to page_reaction, and is
 // required there — mirrors requiresCircle's conditional-required treatment
-// rather than leaving these two fields unconstrained.
+// rather than leaving it unconstrained. page is also gated by this (required
+// for page_reaction), but unlike reactionType it isn't exclusive to that
+// type — see the comment on the page field below.
 const requiresPageReaction = function () {
   return this.type === 'page_reaction';
 };
@@ -96,7 +98,11 @@ const notificationSchema = new mongoose.Schema(
     albumTitle: {
       type: String,
     },
-    // Only set for page_reaction — which page was reacted to and with what.
+    // Required for page_reaction (which page was reacted to). Also set,
+    // optionally, on album_photos_added as a representative photo from the
+    // uploaded batch — used to show a thumbnail and deep-link to that photo,
+    // not required there since a notification predating this feature (or
+    // one whose batch somehow yielded no pages) simply has none.
     page: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Page',
