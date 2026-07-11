@@ -5,7 +5,7 @@ import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
 import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
-import ReactorsPopover from './ReactorsPopover';
+import ReactorsModal from './ReactorsModal';
 
 type ReactionControlProps = {
   /** Identifies which page/photo this control is showing reactions for — used to close the picker when the underlying photo changes. */
@@ -31,6 +31,7 @@ const MAX_SUMMARY_ICONS = 3;
 /** Facebook-style reaction trigger + picker popover, for a single page/photo. */
 export default function ReactionControl({ pageId, reactions, onReact, isPending, variant }: ReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const outsideClickRefs = useMemo(() => [panelRef, triggerRef], []);
@@ -38,15 +39,16 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
   // This same component instance is reused across photo navigation (no
   // `key` prop), and PhotoLightbox's arrow-key navigation changes the
   // current photo via a window keydown listener that bypasses
-  // useOutsideClick — so without this, the picker could stay open,
-  // re-anchored to a different photo than the one it was opened for.
-  // Resetting synchronously during render (rather than in an effect) avoids
-  // a frame where the stale picker is still visible. See:
+  // useOutsideClick — so without this, the picker (and the reactors modal)
+  // could stay open, re-anchored to a different photo than the one it was
+  // opened for. Resetting synchronously during render (rather than in an
+  // effect) avoids a frame where the stale picker is still visible. See:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [lastPageId, setLastPageId] = useState(pageId);
   if (pageId !== lastPageId) {
     setLastPageId(pageId);
     setIsOpen(false);
+    setIsReactorsModalOpen(false);
   }
 
   const close = useCallback(() => setIsOpen(false), []);
@@ -106,14 +108,17 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
       </button>
 
       {total > 0 && (
-        <ReactorsPopover
-          reactors={reactors}
-          variant={variant}
-          triggerAriaLabel={`See who reacted (${total})`}
-          panelAriaLabel="People who reacted"
-          triggerTitle={topReactionTypes
+        <button
+          type="button"
+          onClick={() => setIsReactorsModalOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={`See who reacted (${total})`}
+          title={topReactionTypes
             .map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`)
             .join(' · ')}
+          className={`flex items-center gap-1 rounded-full transition-colors ${
+            isLight ? 'hover:text-secondary' : 'hover:text-white'
+          }`}
         >
           {topReactionTypes.map((type) => (
             <Icon
@@ -126,7 +131,7 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
           <span className={`font-ui text-xs ${isLight ? 'text-on-surface-variant' : 'text-white/70'}`}>
             {total}
           </span>
-        </ReactorsPopover>
+        </button>
       )}
 
       {isOpen && (
@@ -157,6 +162,13 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
           ))}
         </div>
       )}
+
+      <ReactorsModal
+        isOpen={isReactorsModalOpen}
+        onClose={() => setIsReactorsModalOpen(false)}
+        heading="People who reacted"
+        reactors={reactors}
+      />
     </div>
   );
 }

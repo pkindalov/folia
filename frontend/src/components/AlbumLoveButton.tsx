@@ -43,6 +43,7 @@ export default function AlbumLoveButton({
         type="button"
         onClick={onCountClick}
         disabled={count === 0}
+        aria-haspopup="dialog"
         aria-label={`See who loved this album (${count})`}
         className="pr-3 pl-1.5 py-1.5 rounded-r-full font-ui text-sm transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
       >

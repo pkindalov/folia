@@ -7,7 +7,14 @@ export default function useEscapeKey(isActive: boolean, onEscape: () => void) {
     if (!isActive) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onEscape();
+      // Stops the keypress from reaching an ancestor's own Escape listener
+      // (e.g. PhotoLightbox's window-level handler) — otherwise dismissing a
+      // nested overlay like a modal or dropdown also closes whatever it's
+      // layered on top of.
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onEscape();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

@@ -19,8 +19,8 @@ function TestDialog({ isActive }: { isActive: boolean }) {
   );
 }
 
-// Mirrors a read-only popover (e.g. ReactorsPopover) with no interactive
-// content of its own inside the trapped container.
+// Covers the edge case of a trapped container with zero focusable
+// descendants (e.g. a panel that hasn't rendered its dismiss control yet).
 function TestEmptyDialog({ isActive }: { isActive: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   useFocusTrap(containerRef, isActive);

@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react';
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import ReactionControl from './ReactionControl';
 import type { ReactionSummary } from '../features/flipbooks';
 
@@ -11,20 +13,33 @@ const NO_REACTIONS: ReactionSummary = {
   reactors: [],
 };
 
+const DEFAULT_PROPS: ComponentProps<typeof ReactionControl> = {
+  pageId: 'p1',
+  reactions: NO_REACTIONS,
+  onReact: vi.fn(),
+  isPending: false,
+  variant: 'light',
+};
+
+const withRouter = (props: Partial<ComponentProps<typeof ReactionControl>>) => (
+  <MemoryRouter>
+    <ReactionControl {...DEFAULT_PROPS} {...props} />
+  </MemoryRouter>
+);
+
+const renderControl = (props: Partial<ComponentProps<typeof ReactionControl>> = {}) =>
+  render(withRouter(props));
+
 describe('ReactionControl', () => {
   test('shows a neutral "React" trigger and no summary when there are no reactions', () => {
-    render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl();
     expect(screen.getByRole('button', { name: /react to this photo/i })).toHaveTextContent('React');
     expect(screen.queryByLabelText(/reactions?$/i)).not.toBeInTheDocument();
   });
 
   test('opens a picker with all six reaction options when the trigger is clicked', async () => {
     const user = userEvent.setup();
-    render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl();
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
 
@@ -37,9 +52,7 @@ describe('ReactionControl', () => {
   test('picking a reaction calls onReact with that type and closes the picker', async () => {
     const onReact = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />
-    );
+    renderControl({ onReact });
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     await user.click(screen.getByRole('button', { name: 'Love' }));
@@ -57,9 +70,7 @@ describe('ReactionControl', () => {
       viewerReaction: 'love',
       reactors: [{ username: 'pan', type: 'love' }],
     };
-    render(
-      <ReactionControl pageId="p1" reactions={reactions} onReact={onReact} isPending={false} variant="light" />
-    );
+    renderControl({ reactions, onReact });
 
     await user.click(screen.getByRole('button', { name: /you reacted: love/i }));
     await user.click(screen.getByRole('button', { name: 'Love' }));
@@ -74,9 +85,7 @@ describe('ReactionControl', () => {
       viewerReaction: 'haha',
       reactors: [{ username: 'pan', type: 'haha' }],
     };
-    render(
-      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl({ reactions });
     expect(screen.getByRole('button', { name: /you reacted: haha/i })).toHaveTextContent('Haha');
   });
 
@@ -90,9 +99,7 @@ describe('ReactionControl', () => {
         { username: 'sam', type: 'like' },
       ],
     };
-    render(
-      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl({ reactions });
     expect(screen.getByRole('button', { name: 'See who reacted (5)' })).toHaveTextContent('5');
   });
 
@@ -106,16 +113,14 @@ describe('ReactionControl', () => {
         { username: 'sam', type: 'like' },
       ],
     };
-    render(
-      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl({ reactions });
     expect(screen.getByRole('button', { name: 'See who reacted (5)' })).toHaveAttribute(
       'title',
       'Love: 3 · Like: 2'
     );
   });
 
-  test('clicking the reaction count opens a list of who reacted', async () => {
+  test('clicking the reaction count opens a modal linking to each reactor\'s profile', async () => {
     const reactions: ReactionSummary = {
       counts: { ...NO_REACTIONS.counts, like: 1, love: 1 },
       total: 2,
@@ -126,28 +131,24 @@ describe('ReactionControl', () => {
       ],
     };
     const user = userEvent.setup();
-    render(
-      <ReactionControl pageId="p1" reactions={reactions} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    renderControl({ reactions });
 
-    expect(screen.queryByText('maria')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'maria' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'See who reacted (2)' }));
 
-    expect(screen.getByText('maria')).toBeInTheDocument();
-    expect(screen.getByText('sam')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'maria' })).toHaveAttribute('href', '/users/maria');
+    expect(screen.getByRole('link', { name: 'sam' })).toHaveAttribute('href', '/users/sam');
   });
 
   test('disables the trigger and shows a spinner while a request is in flight', () => {
-    render(<ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending variant="light" />);
+    renderControl({ isPending: true });
     expect(screen.getByRole('button', { name: /react to this photo/i })).toBeDisabled();
   });
 
   test('closes the picker on Escape without calling onReact', async () => {
     const onReact = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={onReact} isPending={false} variant="light" />
-    );
+    renderControl({ onReact });
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
@@ -160,33 +161,43 @@ describe('ReactionControl', () => {
 
   test('closes the picker when the underlying photo changes (e.g. keyboard navigation in the lightbox)', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="dark" />
-    );
+    const { rerender } = renderControl({ pageId: 'p1', variant: 'dark' });
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
 
-    rerender(
-      <ReactionControl pageId="p2" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="dark" />
-    );
+    rerender(withRouter({ pageId: 'p2', variant: 'dark' }));
 
     expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
   });
 
   test('does not close the picker on an unrelated re-render for the same photo', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    const { rerender } = renderControl({ pageId: 'p1' });
 
     await user.click(screen.getByRole('button', { name: /react to this photo/i }));
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
 
-    rerender(
-      <ReactionControl pageId="p1" reactions={NO_REACTIONS} onReact={vi.fn()} isPending={false} variant="light" />
-    );
+    rerender(withRouter({ pageId: 'p1' }));
 
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+  });
+
+  test('closes the reactors modal when the underlying photo changes', async () => {
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, love: 1 },
+      total: 1,
+      viewerReaction: null,
+      reactors: [{ username: 'maria', type: 'love' }],
+    };
+    const user = userEvent.setup();
+    const { rerender } = renderControl({ pageId: 'p1', reactions });
+
+    await user.click(screen.getByRole('button', { name: 'See who reacted (1)' }));
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+
+    rerender(withRouter({ pageId: 'p2', reactions: NO_REACTIONS }));
+
+    expect(screen.queryByRole('link', { name: 'maria' })).not.toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
 import ReactionControl from '../../../components/ReactionControl';
 import AlbumLoveButton from '../../../components/AlbumLoveButton';
-import AlbumReactorsModal from '../../../components/AlbumReactorsModal';
+import ReactorsModal from '../../../components/ReactorsModal';
 import { toast } from '../../../lib/toast';
 import {
   useAlbum,
@@ -224,10 +224,11 @@ export default function ViewerPage() {
       )}
 
       {album && (
-        <AlbumReactorsModal
+        <ReactorsModal
           isOpen={isReactorsModalOpen}
           onClose={() => setIsReactorsModalOpen(false)}
-          reactors={album.reactions.reactors}
+          heading="People who loved this album"
+          reactors={album.reactions.reactors.map((username) => ({ username, type: 'love' as const }))}
         />
       )}
     </AppShell>
