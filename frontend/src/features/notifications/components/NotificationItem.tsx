@@ -1,9 +1,9 @@
-import { useState, type MouseEvent } from 'react';
-import { Link } from 'react-router-dom';
-import Icon from '../../../components/Icon';
-import Avatar from '../../../components/Avatar';
-import type { NotificationItemData } from './NotificationBell';
-import { REACTION_NOTIFICATION_TYPES } from '../schemas';
+import { useState, type MouseEvent } from "react";
+import { Link } from "react-router-dom";
+import Icon from "../../../components/Icon";
+import Avatar from "../../../components/Avatar";
+import type { NotificationItemData } from "./NotificationBell";
+import { REACTION_NOTIFICATION_TYPES } from "../schemas";
 
 type ReactionNotificationType = (typeof REACTION_NOTIFICATION_TYPES)[number];
 
@@ -28,67 +28,67 @@ type NotificationItemProps = {
 type MessageParts = { leading: string; subject: string; trailing?: string };
 
 const REACTION_LABELS: Record<ReactionNotificationType, string> = {
-  like: 'Like',
-  love: 'Love',
-  haha: 'Haha',
-  wow: 'Wow',
-  sad: 'Sad',
-  angry: 'Angry',
+  like: "Like",
+  love: "Love",
+  haha: "Haha",
+  wow: "Wow",
+  sad: "Sad",
+  angry: "Angry",
 };
 
 const MESSAGE_PARTS_BY_TYPE: Record<
-  NotificationItemData['type'],
+  NotificationItemData["type"],
   (notification: NotificationItemData) => MessageParts
 > = {
   circle_invite: ({ circleName }) => ({
-    leading: 'invited you to',
-    subject: circleName ?? 'a circle',
+    leading: "invited you to",
+    subject: circleName ?? "a circle",
   }),
   circle_invite_accepted: ({ circleName }) => ({
-    leading: 'accepted your invite to',
-    subject: circleName ?? 'a circle',
+    leading: "accepted your invite to",
+    subject: circleName ?? "a circle",
   }),
   circle_invite_declined: ({ circleName }) => ({
-    leading: 'declined your invite to',
-    subject: circleName ?? 'a circle',
+    leading: "declined your invite to",
+    subject: circleName ?? "a circle",
   }),
   circle_deleted: ({ circleName }) => ({
-    leading: 'deleted the circle',
-    subject: circleName ?? 'a circle',
+    leading: "deleted the circle",
+    subject: circleName ?? "a circle",
   }),
   album_shared: ({ albumTitle, circleName }) => ({
-    leading: 'shared a new album',
-    subject: albumTitle ?? 'an album',
+    leading: "shared a new album",
+    subject: albumTitle ?? "an album",
     trailing: `with ${circleName}`,
   }),
   album_updated: ({ albumTitle, circleName }) => ({
-    leading: 'updated the album',
-    subject: albumTitle ?? 'an album',
+    leading: "updated the album",
+    subject: albumTitle ?? "an album",
     trailing: `shared with ${circleName}`,
   }),
   album_deleted: ({ albumTitle, circleName }) => ({
-    leading: 'deleted the album',
-    subject: albumTitle ?? 'an album',
+    leading: "deleted the album",
+    subject: albumTitle ?? "an album",
     trailing: `shared with ${circleName}`,
   }),
   album_photos_added: ({ albumTitle, circleName }) => ({
-    leading: 'added new photos to',
-    subject: albumTitle ?? 'an album',
+    leading: "added new photos to",
+    subject: albumTitle ?? "an album",
     trailing: `in ${circleName}`,
   }),
   album_photo_removed: ({ albumTitle, circleName }) => ({
-    leading: 'removed a photo from',
-    subject: albumTitle ?? 'an album',
+    leading: "removed a photo from",
+    subject: albumTitle ?? "an album",
     trailing: `in ${circleName}`,
   }),
   album_photo_caption_updated: ({ albumTitle, circleName }) => ({
     leading: "updated a photo's caption in",
-    subject: albumTitle ?? 'an album',
+    subject: albumTitle ?? "an album",
     trailing: `shared with ${circleName}`,
   }),
   page_reaction: ({ albumTitle, circleName, reactionType }) => ({
-    leading: `reacted "${REACTION_LABELS[reactionType ?? 'like']}" to a photo in`,
-    subject: albumTitle ?? 'an album',
+    leading: `reacted "${REACTION_LABELS[reactionType ?? "like"]}" to a photo in`,
+    subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),
 };
@@ -101,21 +101,25 @@ const MESSAGE_PARTS_BY_TYPE: Record<
 // with no recorded page just opens the album like the other album_* types.
 // Record over NotificationItemData['type'] rather than a switch, for the
 // same exhaustiveness reason as MESSAGE_PARTS_BY_TYPE above.
-const LINK_TO_BY_TYPE: Record<NotificationItemData['type'], (notification: NotificationItemData) => string> = {
-  circle_invite: () => '/circles',
-  circle_invite_accepted: () => '/circles',
-  circle_invite_declined: () => '/circles',
-  circle_deleted: () => '/circles',
-  album_shared: ({ album }) => (album ? `/book/${album}` : '/circles'),
-  album_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
-  album_deleted: () => '/circles',
+const LINK_TO_BY_TYPE: Record<
+  NotificationItemData["type"],
+  (notification: NotificationItemData) => string
+> = {
+  circle_invite: () => "/circles",
+  circle_invite_accepted: () => "/circles",
+  circle_invite_declined: () => "/circles",
+  circle_deleted: () => "/circles",
+  album_shared: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  album_updated: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  album_deleted: () => "/circles",
   album_photos_added: ({ album, page }) => {
-    if (!album) return '/circles';
+    if (!album) return "/circles";
     return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
   },
-  album_photo_removed: ({ album }) => (album ? `/book/${album}` : '/circles'),
-  album_photo_caption_updated: ({ album }) => (album ? `/book/${album}` : '/circles'),
-  page_reaction: ({ album }) => (album ? `/book/${album}` : '/circles'),
+  album_photo_removed: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  album_photo_caption_updated: ({ album }) =>
+    album ? `/book/${album}` : "/circles",
+  page_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
 };
 
 // No fallback content on load failure (unlike Avatar, which always has an
@@ -131,7 +135,7 @@ function NotificationThumbnail({ src }: { src: string }) {
     <img
       src={src}
       alt=""
-      className="block mt-2 w-10 h-10 shrink-0 rounded-card object-cover border border-outline-variant/40"
+      className="block mt-3 w-50 h-50 max-w-full shrink-0 rounded-card object-cover border border-outline-variant/40"
       onError={() => setFailed(true)}
     />
   );
@@ -149,8 +153,16 @@ export default function NotificationItem({
   onToggleRead,
   isTogglingRead,
 }: NotificationItemProps) {
-  const { _id, actorUsername, actorAvatarUrl, thumbnailUrl, read, relativeTime } = notification;
-  const { leading, subject, trailing } = MESSAGE_PARTS_BY_TYPE[notification.type](notification);
+  const {
+    _id,
+    actorUsername,
+    actorAvatarUrl,
+    thumbnailUrl,
+    read,
+    relativeTime,
+  } = notification;
+  const { leading, subject, trailing } =
+    MESSAGE_PARTS_BY_TYPE[notification.type](notification);
   const linkTo = LINK_TO_BY_TYPE[notification.type](notification);
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -165,8 +177,8 @@ export default function NotificationItem({
 
   return (
     <li
-      className={`relative group ${read ? '' : 'bg-secondary-container/10'} ${
-        isLast ? '' : 'border-b border-outline-variant/20'
+      className={`relative group ${read ? "" : "bg-secondary-container/10"} ${
+        isLast ? "" : "border-b border-outline-variant/20"
       }`}
     >
       <Link
@@ -175,7 +187,11 @@ export default function NotificationItem({
         className="flex items-start gap-3 px-5 py-4 hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-secondary -outline-offset-2"
       >
         <span className="relative shrink-0">
-          <Avatar username={actorUsername} avatarUrl={actorAvatarUrl} size="sm" />
+          <Avatar
+            username={actorUsername}
+            avatarUrl={actorAvatarUrl}
+            size="sm"
+          />
           {!read && (
             <span
               aria-hidden="true"
@@ -183,26 +199,28 @@ export default function NotificationItem({
             />
           )}
         </span>
-        <span className="flex-1">
+        <span className="flex-1 pr-16">
           <span
             className={`block font-body text-sm leading-snug ${
-              read ? 'text-on-surface-variant font-normal' : 'text-on-surface'
+              read ? "text-on-surface-variant font-normal" : "text-on-surface"
             }`}
           >
             {read ? (
               <>
                 {actorUsername} {leading} {subject}
-                {trailing ? ` ${trailing}` : ''}
+                {trailing ? ` ${trailing}` : ""}
               </>
             ) : (
               <>
-                <strong className="font-semibold">{actorUsername}</strong> {leading}{' '}
-                <strong className="font-semibold">{subject}</strong>
-                {trailing ? ` ${trailing}` : ''}
+                <strong className="font-semibold">{actorUsername}</strong>{" "}
+                {leading} <strong className="font-semibold">{subject}</strong>
+                {trailing ? ` ${trailing}` : ""}
               </>
             )}
           </span>
-          <span className="block font-ui text-[11px] text-on-surface-variant mt-1">{relativeTime}</span>
+          <span className="block font-ui text-[11px] text-on-surface-variant mt-1">
+            {relativeTime}
+          </span>
           {thumbnailUrl && <NotificationThumbnail src={thumbnailUrl} />}
         </span>
       </Link>
@@ -219,7 +237,10 @@ export default function NotificationItem({
           }
           className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <Icon name={read ? 'mark_email_unread' : 'mark_email_read'} className="text-base" />
+          <Icon
+            name={read ? "mark_email_unread" : "mark_email_read"}
+            className="text-base"
+          />
         </button>
         <button
           type="button"
