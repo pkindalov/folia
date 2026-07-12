@@ -18,10 +18,13 @@ type KeyboardShortcutsHintProps = {
   // it — otherwise "R" would open the reaction picker underneath, and one
   // Escape press would then close both overlays at once.
   onOpenChange?: (isOpen: boolean) => void;
+  // Autoplay's Space shortcut only does anything once there's more than one
+  // photo to play through — no point advertising it otherwise.
+  showAutoplayShortcut?: boolean;
 };
 
 /** Desktop-only info affordance explaining the viewer's keyboard shortcuts. */
-export default function KeyboardShortcutsHint({ onOpenChange }: KeyboardShortcutsHintProps) {
+export default function KeyboardShortcutsHint({ onOpenChange, showAutoplayShortcut = false }: KeyboardShortcutsHintProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -86,6 +89,12 @@ export default function KeyboardShortcutsHint({ onOpenChange }: KeyboardShortcut
                 Pick a reaction — Like, Love, Haha, Wow, Sad, Angry
               </span>
             </li>
+            {showAutoplayShortcut && (
+              <li className="flex items-center gap-2">
+                <KeyBadge>Space</KeyBadge>
+                <span className="font-body text-sm text-on-surface">Play or pause the slideshow</span>
+              </li>
+            )}
           </ul>
         </div>
       )}

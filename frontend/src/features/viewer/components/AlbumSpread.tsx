@@ -17,6 +17,8 @@ type AlbumSpreadProps = {
   // stays true then so the two don't both react to the same keystroke.
   isKeyboardNavDisabled?: boolean;
   viewerUsername?: string;
+  isAutoPlaying?: boolean;
+  onAutoPlayingChange?: (isAutoPlaying: boolean) => void;
 };
 
 type FlipState = {
@@ -28,6 +30,11 @@ type FlipState = {
 // not to make navigation feel sluggish. Passed to the leaf's animation-duration
 // inline so the CSS keyframes and the JS cleanup timer can never drift apart.
 const FLIP_DURATION_MS = 550;
+
+// How long each photo stays on screen during autoplay before turning to the
+// next one. Drives both the timer and the progress bar's animation-duration,
+// so the two can never drift apart.
+const AUTOPLAY_INTERVAL_MS = 5000;
 
 const FlipLeaf = ({ direction, photoUrl }: FlipState) => (
   <div
@@ -65,11 +72,14 @@ export default function AlbumSpread({
   isReactionPending,
   isKeyboardNavDisabled = false,
   viewerUsername,
+  isAutoPlaying = false,
+  onAutoPlayingChange,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
   const previousPhoto = currentIndex > 0 ? pages[currentIndex - 1] : undefined;
   const hasNextPhoto = hasPhotos && currentIndex < pages.length - 1;
+  const canAutoPlay = pages.length > 1;
   const [isShortcutsHintOpen, setIsShortcutsHintOpen] = useState(false);
 
   const [flip, setFlip] = useState<FlipState | null>(null);
@@ -86,26 +96,61 @@ export default function AlbumSpread({
     flipTimeoutRef.current = setTimeout(() => setFlip(null), FLIP_DURATION_MS);
   };
 
+  // A manual move — the viewer taking the wheel is exactly what autoplay
+  // should yield to, so it stops rather than fighting them on the next tick.
+  const stopAutoPlay = useCallback(() => {
+    if (isAutoPlaying) onAutoPlayingChange?.(false);
+  }, [isAutoPlaying, onAutoPlayingChange]);
+
   const goToNext = useCallback(() => {
     if (!hasNextPhoto) return;
+    stopAutoPlay();
     triggerFlip('next', currentPhoto);
     onNavigate(currentIndex + 1);
-  }, [hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
+  }, [hasNextPhoto, currentPhoto, currentIndex, onNavigate, stopAutoPlay]);
   const goToPrevious = useCallback(() => {
     if (!previousPhoto) return;
+    stopAutoPlay();
     triggerFlip('prev', previousPhoto);
     onNavigate(currentIndex - 1);
-  }, [previousPhoto, currentIndex, onNavigate]);
+  }, [previousPhoto, currentIndex, onNavigate, stopAutoPlay]);
 
   useEffect(() => {
     if (isKeyboardNavDisabled) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') goToPrevious();
       if (event.key === 'ArrowRight') goToNext();
+      if (event.key === ' ' && canAutoPlay) {
+        // Space already activates whatever button/link currently has focus
+        // (e.g. the play/pause button itself) — only hijack it when nothing
+        // interactive is focused, so a press doesn't toggle autoplay twice.
+        const focused = document.activeElement;
+        const hasNativeSpaceHandling =
+          focused instanceof HTMLElement && ['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT'].includes(focused.tagName);
+        if (!hasNativeSpaceHandling) {
+          event.preventDefault();
+          onAutoPlayingChange?.(!isAutoPlaying);
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isKeyboardNavDisabled, goToPrevious, goToNext]);
+  }, [isKeyboardNavDisabled, goToPrevious, goToNext, canAutoPlay, isAutoPlaying, onAutoPlayingChange]);
+
+  // The actual slideshow timer — advances on its own without going through
+  // goToNext (which would immediately stop autoplay again). Loops back to
+  // the first photo after the last one rather than just stopping there.
+  useEffect(() => {
+    if (!isAutoPlaying || !canAutoPlay || isKeyboardNavDisabled) return;
+    const timer = setTimeout(() => {
+      triggerFlip('next', currentPhoto);
+      onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- triggerFlip is
+    // stable in behavior across renders; including it would just restart the
+    // timer on every render for no benefit.
+  }, [isAutoPlaying, canAutoPlay, isKeyboardNavDisabled, hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
 
   return (
     <div className="relative">
@@ -145,6 +190,18 @@ export default function AlbumSpread({
           {hasPhotos ? (
             <div className="bg-white p-3.5 stuck-photo max-w-sm w-full">
               <div className="relative">
+                {isAutoPlaying && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute top-0 left-0 right-0 h-1 bg-black/15 overflow-hidden z-10"
+                  >
+                    <div
+                      key={currentIndex}
+                      className="autoplay-progress-bar h-full bg-secondary"
+                      style={{ animationDuration: `${AUTOPLAY_INTERVAL_MS}ms` }}
+                    />
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={onOpenLightbox}
@@ -204,7 +261,9 @@ export default function AlbumSpread({
                       Photo {currentIndex + 1} of {pages.length}
                     </span>
                   )}
-                  {!isKeyboardNavDisabled && <KeyboardShortcutsHint onOpenChange={setIsShortcutsHintOpen} />}
+                  {!isKeyboardNavDisabled && (
+                    <KeyboardShortcutsHint onOpenChange={setIsShortcutsHintOpen} showAutoplayShortcut={canAutoPlay} />
+                  )}
                 </div>
               </div>
             </div>

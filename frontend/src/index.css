@@ -127,6 +127,25 @@ body {
   background-repeat: repeat-x;
 }
 
+/* Fills over the autoplay interval, restarted each photo via a `key` change
+   on the element (same restart trick as .flip-leaf above). */
+.autoplay-progress-bar {
+  transform-origin: left;
+  transform: scaleX(0);
+  animation-name: autoplay-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes autoplay-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;

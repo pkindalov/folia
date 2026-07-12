@@ -1,5 +1,5 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -668,5 +668,125 @@ describe('ViewerPage', () => {
 
     await screen.findByRole('button', { name: 'Love this album' });
     expect(screen.getByRole('button', { name: 'See who loved this album (0)' })).toBeDisabled();
+  });
+
+  describe('autoplay slideshow', () => {
+    beforeEach(() => {
+      // shouldAdvanceTime keeps the fake clock ticking close to real time on
+      // its own, so Testing Library's findBy/waitFor polling (which relies
+      // on real timer callbacks) keeps working — advanceTimersByTimeAsync
+      // below is still what actually skips the 5s autoplay wait instantly.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test('the play button only appears when the album has more than one photo', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      expect(screen.queryByRole('button', { name: /play slideshow/i })).not.toBeInTheDocument();
+    });
+
+    test('advances photos on a timer once played, and stops on manual navigation', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2, PAGE_3] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+      expect(screen.getByRole('button', { name: 'Pause slideshow' })).toBeInTheDocument();
+
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(screen.getByAltText('photo2.jpg')).toBeInTheDocument();
+
+      // Manual navigation takes over — the slideshow should stop, not fight it.
+      await user.click(screen.getByRole('button', { name: 'Next photo' }));
+      expect(screen.getByAltText('photo3.jpg')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+
+      await act(() => vi.advanceTimersByTimeAsync(6000));
+      expect(screen.getByAltText('photo3.jpg')).toBeInTheDocument();
+    });
+
+    test('loops back to the first photo after the last one', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderWithProviders(<ViewerPage />, { route: '/book/a1?photo=p2', path: '/book/:id' });
+
+      await screen.findByAltText('photo2.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(screen.getByAltText('photo1.jpg')).toBeInTheDocument();
+    });
+
+    test('opening the lightbox stops autoplay', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
+      await screen.findByRole('dialog', { name: /photo viewer/i });
+
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+    });
+
+    test('the space bar toggles autoplay when nothing else is focused', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.keyboard(' ');
+      expect(screen.getByRole('button', { name: 'Pause slideshow' })).toBeInTheDocument();
+
+      await user.keyboard(' ');
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+    });
+
+    test('the space bar does not toggle autoplay when a button already has focus', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      screen.getByRole('button', { name: 'Next photo' }).focus();
+      await user.keyboard(' ');
+
+      // The focused button's own native activation should be the only thing
+      // that happened — not also a duplicate autoplay toggle.
+      expect(screen.queryByRole('button', { name: 'Pause slideshow' })).not.toBeInTheDocument();
+    });
   });
 });

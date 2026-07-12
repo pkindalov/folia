@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
@@ -53,8 +53,29 @@ export default function ViewerPage() {
   const selectedIndex = pages.findIndex((page) => page._id === photoId);
   const currentIndex = selectedIndex !== -1 ? selectedIndex : 0;
   const currentPhoto = pages[currentIndex];
+  // Stable across re-renders — AlbumSpread's autoplay timer depends on this
+  // identity to know when to restart, so a fresh function every render
+  // (from an inline arrow here) would reset that timer on any unrelated
+  // re-render of this page, and autoplay would never actually get 5
+  // uninterrupted seconds to fire.
+  const navigateToIndex = useCallback(
+    (index: number) => setPhotoId(pagesData?.[index]?._id ?? null),
+    // pagesData (not the `pages` fallback above) — react-query keeps this
+    // reference stable across renders as long as the data hasn't actually
+    // changed, where `pagesData ?? []` would mint a new array every render
+    // whenever there's no data yet.
+    [pagesData]
+  );
 
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
+
+  // Owned here (not inside AlbumSpread) so the header's play/pause button and
+  // the spread's own auto-advance timer always agree on state. AlbumSpread
+  // is still the one actually running the timer and flipping pages — it
+  // calls this back to false the moment the viewer stops being a passive
+  // slideshow (manual navigation, the lightbox opening, the tab going
+  // background).
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const openLightbox = () => {
@@ -63,6 +84,10 @@ export default function ViewerPage() {
     // an ordinary refetch that leaves the same photo in place.
     setPhotoId(currentPhoto._id);
     setIsLightboxOpen(true);
+    // A page auto-flipping underneath the lightbox would be jarring — full
+    // stop, not just a pause, so the header button honestly reflects that
+    // the slideshow is off until the viewer explicitly restarts it.
+    setIsAutoPlaying(false);
   };
   // If the photo the lightbox is showing disappears from the list while it's
   // open (e.g. deleted from another tab), close it instead of silently
@@ -71,6 +96,17 @@ export default function ViewerPage() {
   useEffect(() => {
     if (isLightboxOpen && selectedIndex === -1) setIsLightboxOpen(false);
   }, [isLightboxOpen, selectedIndex]);
+
+  // Stop rather than silently keep advancing in a background tab — without
+  // this, coming back could land many photos further along than expected.
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    const handleVisibilityChange = () => {
+      if (document.hidden) setIsAutoPlaying(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAutoPlaying]);
 
   return (
     <AppShell>
@@ -107,6 +143,17 @@ export default function ViewerPage() {
                   isPending={setAlbumReaction.isPending}
                 />
               )}
+              {pages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsAutoPlaying((playing) => !playing)}
+                  aria-label={isAutoPlaying ? 'Pause slideshow' : 'Play slideshow'}
+                  title={isAutoPlaying ? 'Pause slideshow (Space)' : 'Play slideshow (Space)'}
+                  className="shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                >
+                  <Icon name={isAutoPlaying ? 'pause' : 'play_arrow'} />
+                </button>
+              )}
               <Link
                 to="/flipbooks"
                 aria-label="Close volume"
@@ -131,12 +178,14 @@ export default function ViewerPage() {
               album={album}
               pages={pages}
               currentIndex={currentIndex}
-              onNavigate={(index) => setPhotoId(pages[index]?._id ?? null)}
+              onNavigate={navigateToIndex}
               onOpenLightbox={openLightbox}
               onReact={handleReact}
               isReactionPending={setReaction.isPending}
               isKeyboardNavDisabled={isLightboxOpen}
               viewerUsername={me?.username}
+              isAutoPlaying={isAutoPlaying}
+              onAutoPlayingChange={setIsAutoPlaying}
             />
           )}
         </div>
@@ -147,7 +196,7 @@ export default function ViewerPage() {
           photos={pages}
           index={currentIndex}
           onClose={() => setIsLightboxOpen(false)}
-          onNavigate={(nextIndex) => setPhotoId(pages[nextIndex]?._id ?? null)}
+          onNavigate={navigateToIndex}
           onReact={handleReact}
           isReactionPending={setReaction.isPending}
           viewerUsername={me?.username}
