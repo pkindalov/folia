@@ -238,6 +238,54 @@ describe('ViewerPage', () => {
     expect(within(dialog).getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
   });
 
+  test('pressing "r" while the shortcuts hint is open does not also open the reaction picker underneath', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: 'Keyboard shortcuts' }));
+    expect(screen.getByRole('dialog', { name: 'Shortcuts for this volume' })).toBeInTheDocument();
+
+    await user.keyboard('r');
+    expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
+
+    // A single Escape should only close the (only) open overlay, the hint.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Shortcuts for this volume' })).not.toBeInTheDocument();
+  });
+
+  test('if the picker is already open, opening the shortcuts hint on top of it suspends the picker\'s own Escape too', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: /react to this photo/i }));
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    // Focus + keyboard activation (rather than user.click(), which also
+    // fires a pointerdown that would close the picker via useOutsideClick
+    // before this even matters) — the path a screen reader's browse mode
+    // can take, bypassing the picker's own DOM focus trap.
+    screen.getByRole('button', { name: 'Keyboard shortcuts' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('dialog', { name: 'Shortcuts for this volume' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    // Both overlays are now open at once — Escape must close only the
+    // topmost (the hint), leaving the picker open underneath it.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Shortcuts for this volume' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+  });
+
   test('shows the previously viewed photo on the facing page, and lets you tap back to it', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },

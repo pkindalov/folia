@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
 import ReactionControl from '../../../components/ReactionControl';
+import KeyboardShortcutsHint from '../../../components/KeyboardShortcutsHint';
 import type { Album, Page, ReactionType } from '../../flipbooks';
 
 type AlbumSpreadProps = {
@@ -69,6 +70,7 @@ export default function AlbumSpread({
   const currentPhoto = pages[currentIndex];
   const previousPhoto = currentIndex > 0 ? pages[currentIndex - 1] : undefined;
   const hasNextPhoto = hasPhotos && currentIndex < pages.length - 1;
+  const [isShortcutsHintOpen, setIsShortcutsHintOpen] = useState(false);
 
   const [flip, setFlip] = useState<FlipState | null>(null);
   const [flipSeq, setFlipSeq] = useState(0);
@@ -160,22 +162,25 @@ export default function AlbumSpread({
                   "{currentPhoto.caption}"
                 </p>
               )}
-              <ReactionControl
-                pageId={currentPhoto._id}
-                reactions={currentPhoto.reactions}
-                onReact={(type) => onReact(currentPhoto._id, type)}
-                isPending={isReactionPending}
-                variant="light"
-                isKeyboardShortcutsDisabled={isKeyboardNavDisabled}
-                viewerUsername={viewerUsername}
-              />
+              <div className="flex items-center gap-2">
+                <ReactionControl
+                  pageId={currentPhoto._id}
+                  reactions={currentPhoto.reactions}
+                  onReact={(type) => onReact(currentPhoto._id, type)}
+                  isPending={isReactionPending}
+                  variant="light"
+                  isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen}
+                  viewerUsername={viewerUsername}
+                />
+                {!isKeyboardNavDisabled && <KeyboardShortcutsHint onOpenChange={setIsShortcutsHintOpen} />}
+              </div>
               {pages.length > 1 && (
                 <div className="flex items-center gap-6">
                   <button
                     onClick={goToPrevious}
                     disabled={currentIndex === 0}
                     aria-label="Previous photo"
-                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <Icon name="chevron_left" />
                   </button>
@@ -186,7 +191,7 @@ export default function AlbumSpread({
                     onClick={goToNext}
                     disabled={currentIndex === pages.length - 1}
                     aria-label="Next photo"
-                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <Icon name="chevron_right" />
                   </button>

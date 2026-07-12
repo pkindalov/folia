@@ -77,11 +77,12 @@ export default function ReactionControl({
   const close = useCallback(() => setIsOpen(false), []);
   useFocusTrap(panelRef, isOpen);
   useOutsideClick(outsideClickRefs, close, isOpen);
-  // Deactivated while the reactors modal is open on top of it: both listen
-  // on document, and Escape's stopPropagation() only blocks propagation to
-  // ancestors, not a sibling listener on the same node — without this, one
-  // Escape press would close both instead of just the topmost modal.
-  useEscapeKey(isOpen && !isReactorsModalOpen, close);
+  // Deactivated while the reactors modal — or another topmost surface like
+  // KeyboardShortcutsHint — is open on top of it: both listen on document,
+  // and Escape's stopPropagation() only blocks propagation to ancestors, not
+  // a sibling listener on the same node — without this, one Escape press
+  // would close both instead of just the topmost one.
+  useEscapeKey(isOpen && !isReactorsModalOpen && !isKeyboardShortcutsDisabled, close);
 
   const handleSelect = useCallback(
     (type: ReactionType) => {
@@ -177,8 +178,10 @@ export default function ReactionControl({
           title={topReactionTypes
             .map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`)
             .join(' · ')}
-          className={`flex items-center gap-1 rounded-full transition-colors ${
-            isLight ? 'hover:text-secondary' : 'hover:text-white'
+          className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
+            isLight
+              ? 'bg-surface-container-lowest border border-outline-variant/50 shadow-md text-on-surface-variant hover:border-secondary hover:text-secondary'
+              : 'text-white/70 hover:text-white'
           }`}
         >
           {topReactionTypes.map((type) => (
