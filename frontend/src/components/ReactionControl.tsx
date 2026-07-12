@@ -19,6 +19,8 @@ type ReactionControlProps = {
   // the keyboard — this instance keeps rendering underneath it, so without
   // this it would also react to the same "r" / number-key presses.
   isKeyboardShortcutsDisabled?: boolean;
+  /** The signed-in viewer's own username, passed through to the "who reacted" list so it can offer a remove button on their own row. */
+  viewerUsername?: string;
 };
 
 const REACTION_SHORTCUT_KEYS: Record<ReactionType, string> = {
@@ -49,6 +51,7 @@ export default function ReactionControl({
   isPending,
   variant,
   isKeyboardShortcutsDisabled = false,
+  viewerUsername,
 }: ReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
@@ -112,6 +115,13 @@ export default function ReactionControl({
   }, [isKeyboardShortcutsDisabled, isPending, isReactorsModalOpen, isOpen, handleSelect]);
 
   const { viewerReaction, counts, total, reactors } = reactions;
+
+  // Removing is just re-sending the viewer's current type — the server
+  // treats picking the same reaction twice as a toggle-off, same as
+  // re-clicking it in the picker above.
+  const removeMyReaction = () => {
+    if (viewerReaction) onReact(viewerReaction);
+  };
   const isLight = variant === 'light';
 
   const topReactionTypes = REACTION_TYPES.filter((type) => counts[type] > 0)
@@ -223,6 +233,8 @@ export default function ReactionControl({
         onClose={() => setIsReactorsModalOpen(false)}
         heading="People who reacted"
         reactors={reactors}
+        viewerUsername={viewerUsername}
+        onRemoveMyReaction={viewerReaction ? removeMyReaction : undefined}
       />
     </div>
   );

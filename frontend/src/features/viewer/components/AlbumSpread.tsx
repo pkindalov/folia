@@ -15,6 +15,7 @@ type AlbumSpreadProps = {
   // The lightbox has its own arrow-key navigation while it's open — this
   // stays true then so the two don't both react to the same keystroke.
   isKeyboardNavDisabled?: boolean;
+  viewerUsername?: string;
 };
 
 type FlipState = {
@@ -62,6 +63,7 @@ export default function AlbumSpread({
   onReact,
   isReactionPending,
   isKeyboardNavDisabled = false,
+  viewerUsername,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -165,6 +167,7 @@ export default function AlbumSpread({
                 isPending={isReactionPending}
                 variant="light"
                 isKeyboardShortcutsDisabled={isKeyboardNavDisabled}
+                viewerUsername={viewerUsername}
               />
               {pages.length > 1 && (
                 <div className="flex items-center gap-6">

@@ -16,10 +16,20 @@ type ReactorsModalProps = {
   heading: string;
   /** Capped server-side at 50 (per photo or per album), so there's no pagination here. */
   reactors: Reactor[];
+  /** The signed-in viewer's own username — lets their row offer a remove button. Omit where removal isn't wired up. */
+  viewerUsername?: string;
+  onRemoveMyReaction?: () => void;
 };
 
 /** Everyone who's reacted — to a photo or an album — each linking to their profile. */
-export default function ReactorsModal({ isOpen, onClose, heading, reactors }: ReactorsModalProps) {
+export default function ReactorsModal({
+  isOpen,
+  onClose,
+  heading,
+  reactors,
+  viewerUsername,
+  onRemoveMyReaction,
+}: ReactorsModalProps) {
   // A unique id per instance — ReactorsModal can be mounted more than once at
   // once (a photo's ReactionControl and the album-level modal both live on
   // ViewerPage), so a shared static id would leave aria-labelledby pointing
@@ -61,18 +71,33 @@ export default function ReactorsModal({ isOpen, onClose, heading, reactors }: Re
             </>
           );
 
+          const isMine = onRemoveMyReaction !== undefined && reactor.username === viewerUsername;
+
           return (
-            <li key={`${reactor.username}-${index}`}>
-              {reactor.username === DELETED_USER_LABEL ? (
-                <div className="flex items-center gap-2 px-2 py-2 font-ui text-on-surface-variant">{rowContent}</div>
-              ) : (
-                <Link
-                  to={`/users/${encodeURIComponent(reactor.username)}`}
-                  onClick={onClose}
-                  className="flex items-center gap-2 px-2 py-2 rounded-paper font-ui text-on-surface hover:bg-surface-container-low hover:text-secondary transition-colors"
+            <li key={`${reactor.username}-${index}`} className="flex items-center gap-1">
+              <div className="flex-1 min-w-0">
+                {reactor.username === DELETED_USER_LABEL ? (
+                  <div className="flex items-center gap-2 px-2 py-2 font-ui text-on-surface-variant">{rowContent}</div>
+                ) : (
+                  <Link
+                    to={`/users/${encodeURIComponent(reactor.username)}`}
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-2 py-2 rounded-paper font-ui text-on-surface hover:bg-surface-container-low hover:text-secondary transition-colors"
+                  >
+                    {rowContent}
+                  </Link>
+                )}
+              </div>
+              {isMine && (
+                <button
+                  type="button"
+                  onClick={onRemoveMyReaction}
+                  aria-label="Remove your reaction"
+                  title="Remove your reaction"
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
                 >
-                  {rowContent}
-                </Link>
+                  <Icon name="delete" className="text-lg" />
+                </button>
               )}
             </li>
           );

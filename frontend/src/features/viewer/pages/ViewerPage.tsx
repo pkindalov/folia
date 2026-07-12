@@ -7,6 +7,7 @@ import AlbumLoveButton from '../../../components/AlbumLoveButton';
 import ReactorsModal from '../../../components/ReactorsModal';
 import { toast } from '../../../lib/toast';
 import AlbumSpread from '../components/AlbumSpread';
+import { useMe } from '../../auth';
 import {
   useAlbum,
   usePages,
@@ -19,6 +20,7 @@ export default function ViewerPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const deepLinkedPhotoId = searchParams.get('photo');
+  const { data: me } = useMe();
   const { data: album, isLoading, isError, error } = useAlbum(id);
   const { data: pagesData } = usePages(id);
   const pages = pagesData ?? [];
@@ -134,6 +136,7 @@ export default function ViewerPage() {
               onReact={handleReact}
               isReactionPending={setReaction.isPending}
               isKeyboardNavDisabled={isLightboxOpen}
+              viewerUsername={me?.username}
             />
           )}
         </div>
@@ -147,6 +150,7 @@ export default function ViewerPage() {
           onNavigate={(nextIndex) => setPhotoId(pages[nextIndex]?._id ?? null)}
           onReact={handleReact}
           isReactionPending={setReaction.isPending}
+          viewerUsername={me?.username}
         />
       )}
 
@@ -156,6 +160,8 @@ export default function ViewerPage() {
           onClose={() => setIsReactorsModalOpen(false)}
           heading="People who loved this album"
           reactors={album.reactions.reactors.map((username) => ({ username, type: 'love' as const }))}
+          viewerUsername={me?.username}
+          onRemoveMyReaction={album.reactions.viewerReacted ? handleToggleAlbumLove : undefined}
         />
       )}
     </AppShell>

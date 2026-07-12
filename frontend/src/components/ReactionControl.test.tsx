@@ -140,6 +140,41 @@ describe('ReactionControl', () => {
     expect(screen.getByRole('link', { name: 'sam' })).toHaveAttribute('href', '/users/sam');
   });
 
+  test('the "who reacted" list lets the viewer remove their own reaction, by re-sending the same type', async () => {
+    const onReact = vi.fn();
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, love: 1, like: 1 },
+      total: 2,
+      viewerReaction: 'love',
+      reactors: [
+        { username: 'pan', type: 'love' },
+        { username: 'maria', type: 'like' },
+      ],
+    };
+    const user = userEvent.setup();
+    renderControl({ reactions, onReact, viewerUsername: 'pan' });
+
+    await user.click(screen.getByRole('button', { name: 'See who reacted (2)' }));
+    await user.click(screen.getByRole('button', { name: 'Remove your reaction' }));
+
+    expect(onReact).toHaveBeenCalledWith('love');
+  });
+
+  test('the "who reacted" list has no remove button when the viewer has not reacted', async () => {
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, like: 1 },
+      total: 1,
+      viewerReaction: null,
+      reactors: [{ username: 'maria', type: 'like' }],
+    };
+    const user = userEvent.setup();
+    renderControl({ reactions, viewerUsername: 'pan' });
+
+    await user.click(screen.getByRole('button', { name: 'See who reacted (1)' }));
+
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+  });
+
   test('disables the trigger and shows a spinner while a request is in flight', () => {
     renderControl({ isPending: true });
     expect(screen.getByRole('button', { name: /react to this photo/i })).toBeDisabled();

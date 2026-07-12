@@ -551,6 +551,37 @@ describe('ViewerPage', () => {
     expect(screen.getByRole('link', { name: 'sam' })).toHaveAttribute('href', '/users/sam');
   });
 
+  test('lets the viewer remove their own album love from the reactor list', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': {
+        body: {
+          album: {
+            ...ALBUM.album,
+            reactions: { total: 2, viewerReacted: true, reactors: ['pan', 'maria'] },
+          },
+        },
+      },
+      'PUT /api/albums/a1/reaction': { body: { reactions: { total: 1, viewerReacted: false, reactors: ['maria'] } } },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: 'See who loved this album (2)' }));
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remove your reaction' }));
+
+    await waitFor(() => {
+      const reactionCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([u, o]) => String(u).includes('/api/albums/a1/reaction') && o?.method === 'PUT');
+      expect(reactionCall).toBeDefined();
+    });
+    expect(await screen.findByRole('button', { name: 'Love this album' })).toBeInTheDocument();
+  });
+
   test('the reactor list reflects a reaction toggled while the modal was closed', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },

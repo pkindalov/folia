@@ -21,6 +21,7 @@ type PhotoLightboxProps = {
   onNavigate: (index: number) => void;
   onReact?: (pageId: string, type: ReactionType) => void;
   isReactionPending?: boolean;
+  viewerUsername?: string;
 };
 
 export default function PhotoLightbox({
@@ -30,6 +31,7 @@ export default function PhotoLightbox({
   onNavigate,
   onReact,
   isReactionPending = false,
+  viewerUsername,
 }: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrevious = index > 0;
@@ -106,6 +108,7 @@ export default function PhotoLightbox({
               onReact={(type) => onReact(photo._id, type)}
               isPending={isReactionPending}
               variant="dark"
+              viewerUsername={viewerUsername}
             />
           )}
         </div>

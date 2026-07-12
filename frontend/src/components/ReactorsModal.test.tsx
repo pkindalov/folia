@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import ReactorsModal from './ReactorsModal';
@@ -86,5 +86,37 @@ describe('ReactorsModal', () => {
 
     expect(screen.getByText('Deleted user')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Deleted user' })).not.toBeInTheDocument();
+  });
+
+  test('shows a remove button only on the viewer\'s own row', () => {
+    renderModal({ viewerUsername: 'sam', onRemoveMyReaction: vi.fn() });
+
+    expect(screen.getAllByRole('button', { name: 'Remove your reaction' })).toHaveLength(1);
+    const samRow = screen.getByRole('link', { name: 'sam' }).closest('li') as HTMLElement;
+    expect(within(samRow).getByRole('button', { name: 'Remove your reaction' })).toBeInTheDocument();
+    const mariaRow = screen.getByRole('link', { name: 'maria' }).closest('li') as HTMLElement;
+    expect(within(mariaRow).queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+  });
+
+  test('clicking the remove button calls onRemoveMyReaction, not the profile link', async () => {
+    const onRemoveMyReaction = vi.fn();
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderModal({ viewerUsername: 'sam', onRemoveMyReaction, onClose });
+
+    await user.click(screen.getByRole('button', { name: 'Remove your reaction' }));
+
+    expect(onRemoveMyReaction).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test('shows no remove button when removal is not wired up, even for the viewer\'s own row', () => {
+    renderModal({ viewerUsername: 'sam' }); // no onRemoveMyReaction
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+  });
+
+  test('shows no remove button when no row matches the viewer\'s username', () => {
+    renderModal({ onRemoveMyReaction: vi.fn() }); // viewerUsername left unset
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
   });
 });
