@@ -137,3 +137,71 @@ body {
   transform: perspective(1000px) rotateY(-5deg);
   transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
 }
+
+/* Decorative leaf that sweeps over the spine when the flipbook turns a page.
+   Two backface-hidden faces carry the same photo — the front covers the page
+   being left, the back (pre-rotated 180deg) lands on the page being turned
+   to, so the sweep reads as one physical sheet turning rather than a swap. */
+.flip-leaf {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.flip-leaf-forward {
+  transform-origin: left center;
+  animation-name: flip-page-forward;
+}
+
+.flip-leaf-backward {
+  transform-origin: right center;
+  animation-name: flip-page-backward;
+}
+
+.flip-leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.flip-leaf-face-back {
+  transform: rotateY(180deg);
+}
+
+@keyframes flip-page-forward {
+  0% {
+    transform: rotateY(0deg);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  50% {
+    box-shadow: -16px 0 28px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    transform: rotateY(-180deg);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes flip-page-backward {
+  0% {
+    transform: rotateY(0deg);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  50% {
+    box-shadow: 16px 0 28px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    transform: rotateY(180deg);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-leaf {
+    animation: none !important;
+    display: none;
+  }
+}

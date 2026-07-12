@@ -178,6 +178,28 @@ describe('ViewerPage', () => {
     expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
   });
 
+  test('shows the previously viewed photo on the facing page, and lets you tap back to it', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+    expect(screen.queryByRole('button', { name: /go back to/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /next photo/i }));
+    await screen.findByAltText('photo2.jpg');
+    const goBack = screen.getByRole('button', { name: /go back to photo1\.jpg/i });
+    expect(within(goBack).getByAltText('photo1.jpg')).toBeInTheDocument();
+
+    await user.click(goBack);
+    expect(await screen.findByText('Photo 1 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /previous photo/i })).toBeDisabled();
+  });
+
   test('shows the photo\'s caption when it has one', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
