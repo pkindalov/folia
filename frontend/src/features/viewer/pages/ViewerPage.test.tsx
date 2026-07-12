@@ -172,9 +172,26 @@ describe('ViewerPage', () => {
     await user.click(screen.getByRole('button', { name: /next photo/i }));
     expect(await screen.findByAltText('photo2.jpg')).toBeInTheDocument();
     expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /next photo/i })).toBeDisabled();
+    // On the last photo, the forward arrow becomes a way back to the start
+    // instead of going dead.
+    expect(screen.getByRole('button', { name: /back to first photo/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /previous photo/i }));
+    expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
+  });
+
+  test('the forward arrow wraps back to the first photo from the last one', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ViewerPage />, { route: '/book/a1?photo=p2', path: '/book/:id' });
+
+    await screen.findByAltText('photo2.jpg');
+    await user.click(screen.getByRole('button', { name: /back to first photo/i }));
+
     expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
   });
 

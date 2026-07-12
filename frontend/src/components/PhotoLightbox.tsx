@@ -50,11 +50,13 @@ export default function PhotoLightbox({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
       if (event.key === 'ArrowLeft' && hasPrevious) onNavigate(index - 1);
-      if (event.key === 'ArrowRight' && hasNext) onNavigate(index + 1);
+      // On the last photo this wraps back to the first — mirrors the arrow
+      // button below, which does the same instead of just going dead there.
+      if (event.key === 'ArrowRight' && photos.length > 1) onNavigate(hasNext ? index + 1 : 0);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [index, hasPrevious, hasNext, onClose, onNavigate]);
+  }, [index, hasPrevious, hasNext, photos.length, onClose, onNavigate]);
 
   if (!photo) return null;
 
@@ -137,12 +139,12 @@ export default function PhotoLightbox({
         {photos.length > 1 && (
           <button
             type="button"
-            onClick={() => onNavigate(index + 1)}
-            disabled={!hasNext}
-            aria-label="Next photo"
-            className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
+            onClick={() => onNavigate(hasNext ? index + 1 : 0)}
+            aria-label={hasNext ? 'Next photo' : 'Back to first photo'}
+            title={hasNext ? undefined : 'Back to first photo'}
+            className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
           >
-            <Icon name="chevron_right" className="text-2xl" />
+            <Icon name={hasNext ? 'chevron_right' : 'replay'} className="text-2xl" />
           </button>
         )}
       </div>

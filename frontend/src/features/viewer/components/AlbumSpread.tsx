@@ -108,11 +108,13 @@ export default function AlbumSpread({
     if (isAutoPlaying) onAutoPlayingChange?.(false);
   }, [isAutoPlaying, onAutoPlayingChange]);
 
+  // On the last photo this wraps back to the first rather than doing nothing
+  // — the button and keyboard shortcut that just paged forward are the most
+  // natural place to offer "start over" from, instead of a dead end.
   const goToNext = useCallback(() => {
-    if (!hasNextPhoto) return;
     stopAutoPlay();
     triggerFlip('next', currentPhoto);
-    onNavigate(currentIndex + 1);
+    onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
   }, [hasNextPhoto, currentPhoto, currentIndex, onNavigate, stopAutoPlay]);
   const goToPrevious = useCallback(() => {
     if (!previousPhoto) return;
@@ -244,11 +246,11 @@ export default function AlbumSpread({
                     </button>
                     <button
                       onClick={goToNext}
-                      disabled={currentIndex === pages.length - 1}
-                      aria-label="Next photo"
-                      className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-0 disabled:pointer-events-none"
+                      aria-label={hasNextPhoto ? 'Next photo' : 'Back to first photo'}
+                      title={hasNextPhoto ? undefined : 'Back to first photo'}
+                      className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                     >
-                      <Icon name="chevron_right" />
+                      <Icon name={hasNextPhoto ? 'chevron_right' : 'replay'} />
                     </button>
                   </>
                 )}
