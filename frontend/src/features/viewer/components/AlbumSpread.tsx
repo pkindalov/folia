@@ -20,10 +20,9 @@ type AlbumSpreadProps = {
   isAutoPlaying?: boolean;
   onAutoPlayingChange?: (isAutoPlaying: boolean) => void;
   // Called instead of looping back to the first photo when autoplay reaches
-  // the last one while the lightbox is open (isKeyboardNavDisabled) — looping
-  // silently behind a zoomed-in photo would be confusing, so the viewer stops
-  // and closes the lightbox instead.
-  onAutoPlayEndInLightbox?: () => void;
+  // the last one, so the caller can stop the slideshow (and close the
+  // lightbox, if it happens to be open) rather than it wrapping around.
+  onAutoPlayEnd?: () => void;
 };
 
 type FlipState = {
@@ -80,7 +79,7 @@ export default function AlbumSpread({
   viewerUsername,
   isAutoPlaying = false,
   onAutoPlayingChange,
-  onAutoPlayEndInLightbox,
+  onAutoPlayEnd,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -145,37 +144,27 @@ export default function AlbumSpread({
   }, [isKeyboardNavDisabled, goToPrevious, goToNext, canAutoPlay, isAutoPlaying, onAutoPlayingChange]);
 
   // The actual slideshow timer — advances on its own without going through
-  // goToNext (which would immediately stop autoplay again). Loops back to
-  // the first photo after the last one rather than just stopping there.
-  // Deliberately keeps running while the lightbox is open (isKeyboardNavDisabled
-  // only gates the keydown listener above) so zooming into a photo doesn't
-  // interrupt the slideshow — except at the very end: looping back to the
-  // first photo behind a zoomed-in view would be jarring, so that case stops
-  // autoplay and closes the lightbox instead of wrapping around.
+  // goToNext (which would immediately stop autoplay again). Stops rather than
+  // looping back to the first photo once it reaches the last one — zoomed in
+  // or not, wrapping around silently would be more surprising than the
+  // slideshow just ending. Deliberately keeps running while the lightbox is
+  // open (isKeyboardNavDisabled only gates the keydown listener above) so
+  // zooming into a photo doesn't interrupt the slideshow before that point.
   useEffect(() => {
     if (!isAutoPlaying || !canAutoPlay) return;
     const timer = setTimeout(() => {
-      if (!hasNextPhoto && isKeyboardNavDisabled) {
-        onAutoPlayEndInLightbox?.();
+      if (!hasNextPhoto) {
+        onAutoPlayEnd?.();
         return;
       }
       triggerFlip('next', currentPhoto);
-      onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
+      onNavigate(currentIndex + 1);
     }, AUTOPLAY_INTERVAL_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- triggerFlip is
     // stable in behavior across renders; including it would just restart the
     // timer on every render for no benefit.
-  }, [
-    isAutoPlaying,
-    canAutoPlay,
-    hasNextPhoto,
-    currentPhoto,
-    currentIndex,
-    onNavigate,
-    isKeyboardNavDisabled,
-    onAutoPlayEndInLightbox,
-  ]);
+  }, [isAutoPlaying, canAutoPlay, hasNextPhoto, currentPhoto, currentIndex, onNavigate, onAutoPlayEnd]);
 
   return (
     <div className="relative">

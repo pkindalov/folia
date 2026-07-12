@@ -722,7 +722,7 @@ describe('ViewerPage', () => {
       expect(screen.getByAltText('photo3.jpg')).toBeInTheDocument();
     });
 
-    test('loops back to the first photo after the last one', async () => {
+    test('stops instead of looping back to the first photo after the last one', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
         'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
@@ -735,7 +735,8 @@ describe('ViewerPage', () => {
       await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
 
       await act(() => vi.advanceTimersByTimeAsync(5000));
-      expect(screen.getByAltText('photo1.jpg')).toBeInTheDocument();
+      expect(screen.getByAltText('photo2.jpg')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
     });
 
     test('opening the lightbox keeps autoplay running behind it', async () => {
