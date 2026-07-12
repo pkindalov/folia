@@ -186,6 +186,49 @@ describe('ReactionControl', () => {
     expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
   });
 
+  test('pressing "r" opens the picker, and pressing it again closes it', async () => {
+    const user = userEvent.setup();
+    renderControl();
+
+    await user.keyboard('r');
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    await user.keyboard('r');
+    expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
+  });
+
+  test('once the picker is open, each reaction\'s number key picks it', async () => {
+    const onReact = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ onReact });
+
+    await user.keyboard('r');
+    await user.keyboard('2');
+
+    expect(onReact).toHaveBeenCalledWith('love');
+    expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
+  });
+
+  test('number keys do nothing before the picker has been opened', async () => {
+    const onReact = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ onReact });
+
+    await user.keyboard('2');
+
+    expect(onReact).not.toHaveBeenCalled();
+  });
+
+  test('ignores "r" and number-key shortcuts while another surface owns the keyboard', async () => {
+    const onReact = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ onReact, isKeyboardShortcutsDisabled: true });
+
+    await user.keyboard('r');
+    expect(screen.queryByRole('group', { name: /choose a reaction/i })).not.toBeInTheDocument();
+    expect(onReact).not.toHaveBeenCalled();
+  });
+
   test('closes the picker when the underlying photo changes (e.g. keyboard navigation in the lightbox)', async () => {
     const user = userEvent.setup();
     const { rerender } = renderControl({ pageId: 'p1', variant: 'dark' });

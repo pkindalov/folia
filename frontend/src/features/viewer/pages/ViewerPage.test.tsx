@@ -218,6 +218,26 @@ describe('ViewerPage', () => {
     expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument();
   });
 
+  test('pressing "r" only opens the reaction picker inside the lightbox, not the one behind it', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+
+    await user.keyboard('r');
+
+    // Exactly one picker should open — the lightbox's own. If the page
+    // underneath also reacted to "r", this would find two.
+    expect(screen.getAllByRole('group', { name: /choose a reaction/i })).toHaveLength(1);
+    expect(within(dialog).getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+  });
+
   test('shows the previously viewed photo on the facing page, and lets you tap back to it', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },

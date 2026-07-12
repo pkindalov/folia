@@ -164,6 +164,7 @@ export default function AlbumSpread({
                 onReact={(type) => onReact(currentPhoto._id, type)}
                 isPending={isReactionPending}
                 variant="light"
+                isKeyboardShortcutsDisabled={isKeyboardNavDisabled}
               />
               {pages.length > 1 && (
                 <div className="flex items-center gap-6">

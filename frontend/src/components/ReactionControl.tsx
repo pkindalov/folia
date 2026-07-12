@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
 import useFocusTrap from '../hooks/useFocusTrap';
 import useOutsideClick from '../hooks/useOutsideClick';
@@ -15,6 +15,19 @@ type ReactionControlProps = {
   isPending: boolean;
   /** light = paper surface (ViewerPage), dark = photo overlay (PhotoLightbox). */
   variant: 'light' | 'dark';
+  // True while some other, topmost surface (e.g. the lightbox) already owns
+  // the keyboard — this instance keeps rendering underneath it, so without
+  // this it would also react to the same "r" / number-key presses.
+  isKeyboardShortcutsDisabled?: boolean;
+};
+
+const REACTION_SHORTCUT_KEYS: Record<ReactionType, string> = {
+  like: '1',
+  love: '2',
+  haha: '3',
+  wow: '4',
+  sad: '5',
+  angry: '6',
 };
 
 const REACTION_LABEL: Record<ReactionType, string> = {
@@ -29,7 +42,14 @@ const REACTION_LABEL: Record<ReactionType, string> = {
 const MAX_SUMMARY_ICONS = 3;
 
 /** Facebook-style reaction trigger + picker popover, for a single page/photo. */
-export default function ReactionControl({ pageId, reactions, onReact, isPending, variant }: ReactionControlProps) {
+export default function ReactionControl({
+  pageId,
+  reactions,
+  onReact,
+  isPending,
+  variant,
+  isKeyboardShortcutsDisabled = false,
+}: ReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -60,10 +80,36 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
   // Escape press would close both instead of just the topmost modal.
   useEscapeKey(isOpen && !isReactorsModalOpen, close);
 
-  const handleSelect = (type: ReactionType) => {
-    onReact(type);
-    close();
-  };
+  const handleSelect = useCallback(
+    (type: ReactionType) => {
+      onReact(type);
+      close();
+    },
+    [onReact, close]
+  );
+
+  // "R" toggles the picker open/closed, same as clicking the trigger; once
+  // it's open, each reaction's number key (see REACTION_SHORTCUT_KEYS) picks
+  // it immediately, for a fast keyboard-only react.
+  useEffect(() => {
+    if (isKeyboardShortcutsDisabled || isPending || isReactorsModalOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        setIsOpen((open) => !open);
+        return;
+      }
+      if (!isOpen) return;
+      const shortcutType = REACTION_TYPES.find((type) => REACTION_SHORTCUT_KEYS[type] === event.key);
+      if (shortcutType) {
+        event.preventDefault();
+        handleSelect(shortcutType);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isKeyboardShortcutsDisabled, isPending, isReactorsModalOpen, isOpen, handleSelect]);
 
   const { viewerReaction, counts, total, reactors } = reactions;
   const isLight = variant === 'light';
@@ -87,6 +133,7 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={triggerAriaLabel}
+        title={isKeyboardShortcutsDisabled ? undefined : `${triggerAriaLabel} (R)`}
         className={`flex items-center gap-1.5 rounded-full px-4 py-2 font-ui text-ui-label uppercase transition-colors disabled:opacity-60 disabled:pointer-events-none ${
           isLight
             ? `bg-surface-container-lowest border shadow-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
@@ -156,7 +203,11 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
               onClick={() => handleSelect(type)}
               aria-label={REACTION_LABEL[type]}
               aria-pressed={viewerReaction === type}
-              title={REACTION_LABEL[type]}
+              title={
+                isKeyboardShortcutsDisabled
+                  ? REACTION_LABEL[type]
+                  : `${REACTION_LABEL[type]} (${REACTION_SHORTCUT_KEYS[type]})`
+              }
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-secondary ${
                 viewerReaction === type ? (isLight ? 'bg-surface-container-low scale-110' : 'bg-white/20 scale-110') : ''
               } ${REACTION_TEXT_COLOR[type]}`}
