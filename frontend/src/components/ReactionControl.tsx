@@ -54,7 +54,11 @@ export default function ReactionControl({ pageId, reactions, onReact, isPending,
   const close = useCallback(() => setIsOpen(false), []);
   useFocusTrap(panelRef, isOpen);
   useOutsideClick(outsideClickRefs, close, isOpen);
-  useEscapeKey(isOpen, close);
+  // Deactivated while the reactors modal is open on top of it: both listen
+  // on document, and Escape's stopPropagation() only blocks propagation to
+  // ancestors, not a sibling listener on the same node — without this, one
+  // Escape press would close both instead of just the topmost modal.
+  useEscapeKey(isOpen && !isReactorsModalOpen, close);
 
   const handleSelect = (type: ReactionType) => {
     onReact(type);

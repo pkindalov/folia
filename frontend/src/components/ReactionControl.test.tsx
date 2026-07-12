@@ -159,6 +159,33 @@ describe('ReactionControl', () => {
     expect(onReact).not.toHaveBeenCalled();
   });
 
+  test('Escape closes only the reactors modal when it is open on top of the picker, leaving the picker open', async () => {
+    // Activates the reactors button by keyboard (focus + Enter) rather than
+    // user.click(), which also fires a pointerdown and would close the
+    // picker via useOutsideClick before Escape is ever pressed — this test
+    // targets the keyboard/screen-reader path where that doesn't happen and
+    // both overlays end up open at once.
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, love: 1 },
+      total: 1,
+      viewerReaction: null,
+      reactors: [{ username: 'maria', type: 'love' }],
+    };
+    const user = userEvent.setup();
+    renderControl({ reactions });
+
+    await user.click(screen.getByRole('button', { name: /react to this photo/i }));
+    screen.getByRole('button', { name: 'See who reacted (1)' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('link', { name: 'maria' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /choose a reaction/i })).toBeInTheDocument();
+  });
+
   test('closes the picker when the underlying photo changes (e.g. keyboard navigation in the lightbox)', async () => {
     const user = userEvent.setup();
     const { rerender } = renderControl({ pageId: 'p1', variant: 'dark' });
