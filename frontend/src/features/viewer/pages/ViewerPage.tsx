@@ -84,10 +84,9 @@ export default function ViewerPage() {
     // an ordinary refetch that leaves the same photo in place.
     setPhotoId(currentPhoto._id);
     setIsLightboxOpen(true);
-    // A page auto-flipping underneath the lightbox would be jarring — full
-    // stop, not just a pause, so the header button honestly reflects that
-    // the slideshow is off until the viewer explicitly restarts it.
-    setIsAutoPlaying(false);
+    // Autoplay is left as-is: if it was running, AlbumSpread's timer keeps
+    // advancing photos behind the zoomed-in view; if it was already
+    // paused/stopped, zooming in stays a no-op.
   };
   // If the photo the lightbox is showing disappears from the list while it's
   // open (e.g. deleted from another tab), close it instead of silently

@@ -711,8 +711,10 @@ describe('ViewerPage', () => {
       await act(() => vi.advanceTimersByTimeAsync(5000));
       expect(screen.getByAltText('photo2.jpg')).toBeInTheDocument();
 
-      // Manual navigation takes over — the slideshow should stop, not fight it.
-      await user.click(screen.getByRole('button', { name: 'Next photo' }));
+      // Manual navigation takes over — the slideshow should stop, not fight
+      // it. The overlay nav buttons are hidden during autoplay, so navigate
+      // with the arrow key instead.
+      await user.keyboard('{ArrowRight}');
       expect(screen.getByAltText('photo3.jpg')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
 
@@ -736,7 +738,7 @@ describe('ViewerPage', () => {
       expect(screen.getByAltText('photo1.jpg')).toBeInTheDocument();
     });
 
-    test('opening the lightbox stops autoplay', async () => {
+    test('opening the lightbox keeps autoplay running behind it', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
         'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
@@ -749,9 +751,49 @@ describe('ViewerPage', () => {
       await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
 
       await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+
+      expect(screen.getByRole('button', { name: 'Pause slideshow' })).toBeInTheDocument();
+
+      // The timer keeps advancing the current photo behind the lightbox.
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+    });
+
+    test('opening the lightbox while paused stays paused', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
       await screen.findByRole('dialog', { name: /photo viewer/i });
 
       expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+    });
+
+    test('hides the overlay nav buttons while autoplay runs, and restores them when paused', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2, PAGE_3] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      expect(screen.getByRole('button', { name: 'Next photo' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+      expect(screen.queryByRole('button', { name: 'Previous photo' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next photo' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Pause slideshow' }));
+      expect(screen.getByRole('button', { name: 'Next photo' })).toBeInTheDocument();
     });
 
     test('the space bar toggles autoplay when nothing else is focused', async () => {

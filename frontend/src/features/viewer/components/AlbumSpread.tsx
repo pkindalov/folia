@@ -140,8 +140,11 @@ export default function AlbumSpread({
   // The actual slideshow timer — advances on its own without going through
   // goToNext (which would immediately stop autoplay again). Loops back to
   // the first photo after the last one rather than just stopping there.
+  // Deliberately keeps running while the lightbox is open (isKeyboardNavDisabled
+  // only gates the keydown listener above) so zooming into a photo doesn't
+  // interrupt the slideshow.
   useEffect(() => {
-    if (!isAutoPlaying || !canAutoPlay || isKeyboardNavDisabled) return;
+    if (!isAutoPlaying || !canAutoPlay) return;
     const timer = setTimeout(() => {
       triggerFlip('next', currentPhoto);
       onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
@@ -150,7 +153,7 @@ export default function AlbumSpread({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- triggerFlip is
     // stable in behavior across renders; including it would just restart the
     // timer on every render for no benefit.
-  }, [isAutoPlaying, canAutoPlay, isKeyboardNavDisabled, hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
+  }, [isAutoPlaying, canAutoPlay, hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
 
   return (
     <div className="relative">
@@ -215,7 +218,10 @@ export default function AlbumSpread({
                     className="w-full aspect-square object-cover"
                   />
                 </button>
-                {pages.length > 1 && (
+                {/* Hidden during autoplay so the slideshow reads as a clean,
+                    distraction-free view — they reappear the moment autoplay
+                    pauses or stops. */}
+                {pages.length > 1 && !isAutoPlaying && (
                   <>
                     <button
                       onClick={goToPrevious}
