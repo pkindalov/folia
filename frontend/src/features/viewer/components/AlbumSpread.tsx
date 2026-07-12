@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
 import ReactionControl from '../../../components/ReactionControl';
@@ -12,6 +12,9 @@ type AlbumSpreadProps = {
   onOpenLightbox: () => void;
   onReact: (pageId: string, type: ReactionType) => void;
   isReactionPending: boolean;
+  // The lightbox has its own arrow-key navigation while it's open — this
+  // stays true then so the two don't both react to the same keystroke.
+  isKeyboardNavDisabled?: boolean;
 };
 
 type FlipState = {
@@ -58,10 +61,12 @@ export default function AlbumSpread({
   onOpenLightbox,
   onReact,
   isReactionPending,
+  isKeyboardNavDisabled = false,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
   const previousPhoto = currentIndex > 0 ? pages[currentIndex - 1] : undefined;
+  const hasNextPhoto = hasPhotos && currentIndex < pages.length - 1;
 
   const [flip, setFlip] = useState<FlipState | null>(null);
   const [flipSeq, setFlipSeq] = useState(0);
@@ -77,15 +82,26 @@ export default function AlbumSpread({
     flipTimeoutRef.current = setTimeout(() => setFlip(null), FLIP_DURATION_MS);
   };
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
+    if (!hasNextPhoto) return;
     triggerFlip('next', currentPhoto);
     onNavigate(currentIndex + 1);
-  };
-  const goToPrevious = () => {
+  }, [hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
+  const goToPrevious = useCallback(() => {
     if (!previousPhoto) return;
     triggerFlip('prev', previousPhoto);
     onNavigate(currentIndex - 1);
-  };
+  }, [previousPhoto, currentIndex, onNavigate]);
+
+  useEffect(() => {
+    if (isKeyboardNavDisabled) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') goToPrevious();
+      if (event.key === 'ArrowRight') goToNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isKeyboardNavDisabled, goToPrevious, goToNext]);
 
   return (
     <div className="relative">

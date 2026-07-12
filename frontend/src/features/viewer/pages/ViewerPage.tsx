@@ -133,6 +133,7 @@ export default function ViewerPage() {
               onOpenLightbox={openLightbox}
               onReact={handleReact}
               isReactionPending={setReaction.isPending}
+              isKeyboardNavDisabled={isLightboxOpen}
             />
           )}
         </div>

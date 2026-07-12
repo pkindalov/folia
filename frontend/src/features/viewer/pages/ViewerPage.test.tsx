@@ -178,6 +178,46 @@ describe('ViewerPage', () => {
     expect(await screen.findByAltText('photo1.jpg')).toBeInTheDocument();
   });
 
+  test('navigates between photos with the left and right arrow keys', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+
+    await user.keyboard('{ArrowRight}');
+    expect(await screen.findByText('Photo 2 of 2')).toBeInTheDocument();
+
+    await user.keyboard('{ArrowLeft}');
+    expect(await screen.findByText('Photo 1 of 2')).toBeInTheDocument();
+  });
+
+  test('ignores arrow keys for page navigation while the lightbox is open', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+    const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+
+    // The lightbox already handles this same keystroke — if the page behind
+    // it reacted too, the album would silently skip ahead by two photos.
+    await user.keyboard('{ArrowRight}');
+    expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument();
+  });
+
   test('shows the previously viewed photo on the facing page, and lets you tap back to it', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
