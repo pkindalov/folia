@@ -66,4 +66,24 @@ describe('PhotoLightbox', () => {
 
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
+
+  test('shows the autoplay countdown bar only while autoplay is on', () => {
+    const { rerender } = renderLightbox({ isAutoPlaying: false, autoPlayIntervalMs: 5000 });
+    expect(document.querySelector('.autoplay-progress-bar')).not.toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <PhotoLightbox
+          photos={[PHOTO]}
+          index={0}
+          onClose={vi.fn()}
+          onNavigate={vi.fn()}
+          onReact={vi.fn()}
+          isAutoPlaying
+          autoPlayIntervalMs={5000}
+        />
+      </MemoryRouter>
+    );
+    expect(document.querySelector('.autoplay-progress-bar')).toBeInTheDocument();
+  });
 });

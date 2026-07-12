@@ -33,8 +33,9 @@ const FLIP_DURATION_MS = 550;
 
 // How long each photo stays on screen during autoplay before turning to the
 // next one. Drives both the timer and the progress bar's animation-duration,
-// so the two can never drift apart.
-const AUTOPLAY_INTERVAL_MS = 5000;
+// so the two can never drift apart. Exported so PhotoLightbox can show the
+// same countdown while autoplay continues behind the zoomed-in view.
+export const AUTOPLAY_INTERVAL_MS = 5000;
 
 const FlipLeaf = ({ direction, photoUrl }: FlipState) => (
   <div

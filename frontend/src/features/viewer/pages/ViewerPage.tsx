@@ -6,7 +6,7 @@ import PhotoLightbox from '../../../components/PhotoLightbox';
 import AlbumLoveButton from '../../../components/AlbumLoveButton';
 import ReactorsModal from '../../../components/ReactorsModal';
 import { toast } from '../../../lib/toast';
-import AlbumSpread from '../components/AlbumSpread';
+import AlbumSpread, { AUTOPLAY_INTERVAL_MS } from '../components/AlbumSpread';
 import { useMe } from '../../auth';
 import {
   useAlbum,
@@ -199,6 +199,8 @@ export default function ViewerPage() {
           onReact={handleReact}
           isReactionPending={setReaction.isPending}
           viewerUsername={me?.username}
+          isAutoPlaying={isAutoPlaying}
+          autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}
         />
       )}
 

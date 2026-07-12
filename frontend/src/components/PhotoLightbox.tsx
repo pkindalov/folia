@@ -22,6 +22,11 @@ type PhotoLightboxProps = {
   onReact?: (pageId: string, type: ReactionType) => void;
   isReactionPending?: boolean;
   viewerUsername?: string;
+  // When the album viewer's slideshow keeps running behind the zoomed-in
+  // photo, these mirror AlbumSpread's own progress bar so the countdown to
+  // the next photo stays visible here too.
+  isAutoPlaying?: boolean;
+  autoPlayIntervalMs?: number;
 };
 
 export default function PhotoLightbox({
@@ -32,6 +37,8 @@ export default function PhotoLightbox({
   onReact,
   isReactionPending = false,
   viewerUsername,
+  isAutoPlaying = false,
+  autoPlayIntervalMs,
 }: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrevious = index > 0;
@@ -86,11 +93,25 @@ export default function PhotoLightbox({
         )}
 
         <div className="flex flex-col items-center gap-4 max-w-[80vw]">
-          <img
-            src={photo.url}
-            alt={photo.filename || 'Photo'}
-            className="max-w-full max-h-[75vh] object-contain rounded-paper"
-          />
+          <div className="relative max-w-full">
+            {isAutoPlaying && autoPlayIntervalMs !== undefined && (
+              <div
+                aria-hidden="true"
+                className="absolute top-0 left-0 right-0 h-1 bg-white/15 overflow-hidden rounded-t-paper z-10"
+              >
+                <div
+                  key={index}
+                  className="autoplay-progress-bar h-full bg-secondary"
+                  style={{ animationDuration: `${autoPlayIntervalMs}ms` }}
+                />
+              </div>
+            )}
+            <img
+              src={photo.url}
+              alt={photo.filename || 'Photo'}
+              className="max-w-full max-h-[75vh] object-contain rounded-paper"
+            />
+          </div>
           {photo.caption && (
             <p className="font-body italic text-white/80 text-center max-w-xl">
               &ldquo;{photo.caption}&rdquo;
