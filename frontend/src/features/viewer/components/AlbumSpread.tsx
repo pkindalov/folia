@@ -19,6 +19,11 @@ type AlbumSpreadProps = {
   viewerUsername?: string;
   isAutoPlaying?: boolean;
   onAutoPlayingChange?: (isAutoPlaying: boolean) => void;
+  // Called instead of looping back to the first photo when autoplay reaches
+  // the last one while the lightbox is open (isKeyboardNavDisabled) — looping
+  // silently behind a zoomed-in photo would be confusing, so the viewer stops
+  // and closes the lightbox instead.
+  onAutoPlayEndInLightbox?: () => void;
 };
 
 type FlipState = {
@@ -75,6 +80,7 @@ export default function AlbumSpread({
   viewerUsername,
   isAutoPlaying = false,
   onAutoPlayingChange,
+  onAutoPlayEndInLightbox,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -143,10 +149,16 @@ export default function AlbumSpread({
   // the first photo after the last one rather than just stopping there.
   // Deliberately keeps running while the lightbox is open (isKeyboardNavDisabled
   // only gates the keydown listener above) so zooming into a photo doesn't
-  // interrupt the slideshow.
+  // interrupt the slideshow — except at the very end: looping back to the
+  // first photo behind a zoomed-in view would be jarring, so that case stops
+  // autoplay and closes the lightbox instead of wrapping around.
   useEffect(() => {
     if (!isAutoPlaying || !canAutoPlay) return;
     const timer = setTimeout(() => {
+      if (!hasNextPhoto && isKeyboardNavDisabled) {
+        onAutoPlayEndInLightbox?.();
+        return;
+      }
       triggerFlip('next', currentPhoto);
       onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
     }, AUTOPLAY_INTERVAL_MS);
@@ -154,7 +166,16 @@ export default function AlbumSpread({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- triggerFlip is
     // stable in behavior across renders; including it would just restart the
     // timer on every render for no benefit.
-  }, [isAutoPlaying, canAutoPlay, hasNextPhoto, currentPhoto, currentIndex, onNavigate]);
+  }, [
+    isAutoPlaying,
+    canAutoPlay,
+    hasNextPhoto,
+    currentPhoto,
+    currentIndex,
+    onNavigate,
+    isKeyboardNavDisabled,
+    onAutoPlayEndInLightbox,
+  ]);
 
   return (
     <div className="relative">

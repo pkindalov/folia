@@ -760,6 +760,29 @@ describe('ViewerPage', () => {
       expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
     });
 
+    test('reaching the last photo while zoomed in stops autoplay and closes the lightbox, instead of looping', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderWithProviders(<ViewerPage />, { route: '/book/a1?photo=p2', path: '/book/:id' });
+
+      await screen.findByAltText('photo2.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      await user.click(screen.getByRole('button', { name: /view photo2\.jpg full size/i }));
+      await screen.findByRole('dialog', { name: /photo viewer/i });
+
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+
+      expect(screen.queryByRole('dialog', { name: /photo viewer/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+      // Stayed on the last photo rather than looping back to the first.
+      expect(screen.getByAltText('photo2.jpg')).toBeInTheDocument();
+    });
+
     test('opening the lightbox while paused stays paused', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },

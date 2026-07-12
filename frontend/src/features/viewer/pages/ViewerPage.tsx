@@ -96,6 +96,17 @@ export default function ViewerPage() {
     if (isLightboxOpen && selectedIndex === -1) setIsLightboxOpen(false);
   }, [isLightboxOpen, selectedIndex]);
 
+  // Autoplay reaching the last photo while the viewer is zoomed in — looping
+  // back to the first photo behind a lightbox the viewer is still looking at
+  // would be jarring, so this ends the slideshow and backs out of the zoom
+  // instead. Stable identity, same reasoning as navigateToIndex above: it's
+  // in AlbumSpread's timer's dependency array, so a fresh function every
+  // render would restart that timer for no reason.
+  const endAutoPlayInLightbox = useCallback(() => {
+    setIsAutoPlaying(false);
+    setIsLightboxOpen(false);
+  }, []);
+
   // Stop rather than silently keep advancing in a background tab — without
   // this, coming back could land many photos further along than expected.
   useEffect(() => {
@@ -185,6 +196,7 @@ export default function ViewerPage() {
               viewerUsername={me?.username}
               isAutoPlaying={isAutoPlaying}
               onAutoPlayingChange={setIsAutoPlaying}
+              onAutoPlayEndInLightbox={endAutoPlayInLightbox}
             />
           )}
         </div>
