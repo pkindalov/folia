@@ -33,7 +33,7 @@ const renderControl = (props: Partial<ComponentProps<typeof ReactionControl>> = 
 describe('ReactionControl', () => {
   test('shows a neutral "React" trigger and no summary when there are no reactions', () => {
     renderControl();
-    expect(screen.getByRole('button', { name: /react to this photo/i })).toHaveTextContent('React');
+    expect(screen.getByRole('button', { name: 'React to this photo' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/reactions?$/i)).not.toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe('ReactionControl', () => {
     expect(onReact).toHaveBeenCalledWith('love');
   });
 
-  test('shows the reaction name on the trigger when the viewer has reacted', () => {
+  test('reflects the viewer\'s reaction in the trigger\'s accessible name', () => {
     const reactions: ReactionSummary = {
       counts: { ...NO_REACTIONS.counts, haha: 1 },
       total: 1,
@@ -86,7 +86,9 @@ describe('ReactionControl', () => {
       reactors: [{ username: 'pan', type: 'haha' }],
     };
     renderControl({ reactions });
-    expect(screen.getByRole('button', { name: /you reacted: haha/i })).toHaveTextContent('Haha');
+    expect(
+      screen.getByRole('button', { name: 'You reacted: Haha. Tap to change or remove.' })
+    ).toBeInTheDocument();
   });
 
   test('shows the total reaction count when there are reactions', () => {

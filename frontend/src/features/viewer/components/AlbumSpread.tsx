@@ -42,12 +42,12 @@ const FlipLeaf = ({ direction, photoUrl }: FlipState) => (
       style={{ animationDuration: `${FLIP_DURATION_MS}ms` }}
     >
       <div className="flip-leaf-face flex items-center justify-center p-8 md:p-12">
-        <div className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full">
+        <div className="bg-white p-3.5 stuck-photo max-w-sm w-full">
           <img src={photoUrl} alt="" className="w-full aspect-square object-cover" />
         </div>
       </div>
       <div className="flip-leaf-face flip-leaf-face-back flex items-center justify-center p-8 md:p-12">
-        <div className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full">
+        <div className="bg-white p-3.5 stuck-photo max-w-sm w-full">
           <img src={photoUrl} alt="" className="w-full aspect-square object-cover" />
         </div>
       </div>
@@ -143,26 +143,52 @@ export default function AlbumSpread({
         <div className="relative p-8 md:p-12 flex items-center justify-center">
           <div className="absolute inset-y-0 left-0 w-3 bg-linear-to-r from-black/10 to-transparent hidden md:block" />
           {hasPhotos ? (
-            <div className="flex flex-col items-center gap-6 w-full">
-              <button
-                type="button"
-                onClick={onOpenLightbox}
-                aria-label={`View ${currentPhoto.filename || 'this photo'} full size`}
-                className="bg-white p-3 pb-4 stuck-photo max-w-sm w-full cursor-zoom-in"
-              >
-                <img
-                  key={currentPhoto._id}
-                  src={currentPhoto.url}
-                  alt={currentPhoto.filename}
-                  className="w-full aspect-square object-cover"
-                />
-              </button>
+            <div className="bg-white p-3.5 stuck-photo max-w-sm w-full">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={onOpenLightbox}
+                  aria-label={`View ${currentPhoto.filename || 'this photo'} full size`}
+                  className="block w-full cursor-zoom-in"
+                >
+                  <img
+                    key={currentPhoto._id}
+                    src={currentPhoto.url}
+                    alt={currentPhoto.filename}
+                    className="w-full aspect-square object-cover"
+                  />
+                </button>
+                {pages.length > 1 && (
+                  <>
+                    <button
+                      onClick={goToPrevious}
+                      disabled={currentIndex === 0}
+                      aria-label="Previous photo"
+                      className="absolute top-1/2 left-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-0 disabled:pointer-events-none"
+                    >
+                      <Icon name="chevron_left" />
+                    </button>
+                    <button
+                      onClick={goToNext}
+                      disabled={currentIndex === pages.length - 1}
+                      aria-label="Next photo"
+                      className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-0 disabled:pointer-events-none"
+                    >
+                      <Icon name="chevron_right" />
+                    </button>
+                  </>
+                )}
+              </div>
+
               {currentPhoto.caption && (
-                <p className="max-w-sm mx-auto font-body italic text-on-surface-variant text-center">
+                <p className="pt-3 font-body italic text-on-surface-variant text-center text-sm">
                   "{currentPhoto.caption}"
                 </p>
               )}
-              <div className="flex items-center gap-2">
+
+              <div className="photo-tear mt-3" aria-hidden="true" />
+
+              <div className="flex items-center justify-between py-2">
                 <ReactionControl
                   pageId={currentPhoto._id}
                   reactions={currentPhoto.reactions}
@@ -172,31 +198,15 @@ export default function AlbumSpread({
                   isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen}
                   viewerUsername={viewerUsername}
                 />
-                {!isKeyboardNavDisabled && <KeyboardShortcutsHint onOpenChange={setIsShortcutsHintOpen} />}
-              </div>
-              {pages.length > 1 && (
-                <div className="flex items-center gap-6">
-                  <button
-                    onClick={goToPrevious}
-                    disabled={currentIndex === 0}
-                    aria-label="Previous photo"
-                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <Icon name="chevron_left" />
-                  </button>
-                  <span className="font-body italic text-on-surface-variant text-sm">
-                    Photo {currentIndex + 1} of {pages.length}
-                  </span>
-                  <button
-                    onClick={goToNext}
-                    disabled={currentIndex === pages.length - 1}
-                    aria-label="Next photo"
-                    className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <Icon name="chevron_right" />
-                  </button>
+                <div className="flex items-center gap-2">
+                  {pages.length > 1 && (
+                    <span className="font-body italic text-on-surface-variant text-xs">
+                      Photo {currentIndex + 1} of {pages.length}
+                    </span>
+                  )}
+                  {!isKeyboardNavDisabled && <KeyboardShortcutsHint onOpenChange={setIsShortcutsHintOpen} />}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="text-center flex flex-col items-center gap-4 text-on-surface-variant">

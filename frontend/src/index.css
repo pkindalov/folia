@@ -116,6 +116,17 @@ body {
   transform: rotate(-15deg);
 }
 
+/* A perforated seam between a photo and its caption, like the back of a
+   real print — punches the page's own background color through the white
+   mat so it reads as a physical card, not a UI divider line. */
+.photo-tear {
+  height: 10px;
+  background-image: radial-gradient(circle, var(--color-surface) 2px, transparent 2.1px);
+  background-size: 10px 10px;
+  background-position: center;
+  background-repeat: repeat-x;
+}
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;

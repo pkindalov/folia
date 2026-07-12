@@ -44,9 +44,9 @@ export default function KeyboardShortcutsHint({ onOpenChange }: KeyboardShortcut
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Keyboard shortcuts"
-        className="w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+        className="w-6 h-6 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1"
       >
-        <Icon name="info" className="text-lg" />
+        <Icon name="info" className="text-sm" />
       </button>
 
       {isOpen && (

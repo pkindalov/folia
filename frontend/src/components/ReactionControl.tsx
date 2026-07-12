@@ -129,13 +129,12 @@ export default function ReactionControl({
     .sort((a, b) => counts[b] - counts[a])
     .slice(0, MAX_SUMMARY_ICONS);
 
-  const triggerLabel = viewerReaction ? REACTION_LABEL[viewerReaction] : 'React';
   const triggerAriaLabel = viewerReaction
     ? `You reacted: ${REACTION_LABEL[viewerReaction]}. Tap to change or remove.`
     : 'React to this photo';
 
   return (
-    <div className="relative inline-flex items-center gap-2">
+    <div className="relative inline-flex items-center gap-1">
       <button
         ref={triggerRef}
         type="button"
@@ -145,28 +144,23 @@ export default function ReactionControl({
         aria-expanded={isOpen}
         aria-label={triggerAriaLabel}
         title={isKeyboardShortcutsDisabled ? undefined : `${triggerAriaLabel} (R)`}
-        className={`flex items-center gap-1.5 rounded-full px-4 py-2 font-ui text-ui-label uppercase transition-colors disabled:opacity-60 disabled:pointer-events-none ${
+        className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors disabled:opacity-60 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
           isLight
-            ? `bg-surface-container-lowest border shadow-md focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
-                viewerReaction
-                  ? `border-current ${REACTION_TEXT_COLOR[viewerReaction]}`
-                  : 'border-outline-variant/50 text-on-surface-variant hover:border-secondary hover:text-secondary'
+            ? `hover:bg-surface-container-low ${
+                viewerReaction ? REACTION_TEXT_COLOR[viewerReaction] : 'text-on-surface-variant hover:text-secondary'
               }`
-            : `bg-white/10 hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
-                viewerReaction ? REACTION_TEXT_COLOR[viewerReaction] : 'text-white/80'
-              }`
+            : `hover:bg-white/10 ${viewerReaction ? REACTION_TEXT_COLOR[viewerReaction] : 'text-white/80 hover:text-white'}`
         }`}
       >
         {isPending ? (
-          <Icon name="progress_activity" className="text-lg animate-spin" />
+          <Icon name="progress_activity" className="text-xl animate-spin" />
         ) : (
           <Icon
             name={viewerReaction ? REACTION_ICON[viewerReaction] : 'thumb_up'}
-            className="text-lg"
+            className="text-xl"
             filled={viewerReaction !== null}
           />
         )}
-        {triggerLabel}
       </button>
 
       {total > 0 && (
@@ -178,23 +172,13 @@ export default function ReactionControl({
           title={topReactionTypes
             .map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`)
             .join(' · ')}
-          className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
+          className={`rounded-full px-2 py-1.5 font-ui text-sm transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
             isLight
-              ? 'bg-surface-container-lowest border border-outline-variant/50 shadow-md text-on-surface-variant hover:border-secondary hover:text-secondary'
+              ? 'text-on-surface-variant hover:bg-surface-container-low hover:text-secondary'
               : 'text-white/70 hover:text-white'
           }`}
         >
-          {topReactionTypes.map((type) => (
-            <Icon
-              key={type}
-              name={REACTION_ICON[type]}
-              filled
-              className={`text-sm ${REACTION_TEXT_COLOR[type]}`}
-            />
-          ))}
-          <span className={`font-ui text-xs ${isLight ? 'text-on-surface-variant' : 'text-white/70'}`}>
-            {total}
-          </span>
+          {total}
         </button>
       )}
 

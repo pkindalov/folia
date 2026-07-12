@@ -499,7 +499,9 @@ describe('ViewerPage', () => {
       expect(JSON.parse(reactionCall![1]!.body as string)).toEqual({ type: 'love' });
     });
 
-    expect(await screen.findByRole('button', { name: /you reacted: love/i })).toHaveTextContent('Love');
+    expect(
+      await screen.findByRole('button', { name: 'You reacted: Love. Tap to change or remove.' })
+    ).toBeInTheDocument();
   });
 
   test('shows an error toast when saving a reaction fails', async () => {
