@@ -112,10 +112,11 @@ export default function AlbumSpread({
   // — the button and keyboard shortcut that just paged forward are the most
   // natural place to offer "start over" from, instead of a dead end.
   const goToNext = useCallback(() => {
+    if (!hasPhotos) return;
     stopAutoPlay();
     triggerFlip('next', currentPhoto);
     onNavigate(hasNextPhoto ? currentIndex + 1 : 0);
-  }, [hasNextPhoto, currentPhoto, currentIndex, onNavigate, stopAutoPlay]);
+  }, [hasPhotos, hasNextPhoto, currentPhoto, currentIndex, onNavigate, stopAutoPlay]);
   const goToPrevious = useCallback(() => {
     if (!previousPhoto) return;
     stopAutoPlay();

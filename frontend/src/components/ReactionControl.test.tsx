@@ -177,6 +177,24 @@ describe('ReactionControl', () => {
     expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
   });
 
+  test('the "who reacted" list has no remove button while a request is already in flight', async () => {
+    const onReact = vi.fn();
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, love: 1 },
+      total: 1,
+      viewerReaction: 'love',
+      reactors: [{ username: 'pan', type: 'love' }],
+    };
+    const user = userEvent.setup();
+    renderControl({ reactions, onReact, viewerUsername: 'pan', isPending: true });
+
+    // The trigger is disabled while pending, so open the modal directly via the count button.
+    await user.click(screen.getByRole('button', { name: 'See who reacted (1)' }));
+
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+    expect(onReact).not.toHaveBeenCalled();
+  });
+
   test('disables the trigger and shows a spinner while a request is in flight', () => {
     renderControl({ isPending: true });
     expect(screen.getByRole('button', { name: /react to this photo/i })).toBeDisabled();

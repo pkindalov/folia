@@ -112,6 +112,19 @@ describe('ViewerPage', () => {
     expect(screen.getByText('0 pages')).toBeInTheDocument();
   });
 
+  test('pressing the right arrow key on an empty volume does not crash', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+    await screen.findByText('This volume has no pages yet.');
+
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByText('This volume has no pages yet.')).toBeInTheDocument();
+  });
+
   test('close button returns to the gallery', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
@@ -618,6 +631,49 @@ describe('ViewerPage', () => {
     expect(screen.getByRole('link', { name: 'sam' })).toHaveAttribute('href', '/users/sam');
   });
 
+  test('does not offer removing the album love reaction while a reaction request is already in flight', async () => {
+    let resolvePut!: (response: Response) => void;
+    const pendingPut = new Promise<Response>((resolve) => {
+      resolvePut = resolve;
+    });
+    vi.mocked(fetch).mockImplementation((url, options) => {
+      const method = options?.method ?? 'GET';
+      if (method === 'PUT' && String(url).includes('/api/albums/a1/reaction')) return pendingPut;
+      if (method === 'GET' && String(url).includes('/api/users/me')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ME) } as Response);
+      }
+      if (method === 'GET' && String(url).includes('/api/albums/a1')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              album: {
+                ...ALBUM.album,
+                reactions: { total: 2, viewerReacted: true, reactors: ['pan', 'maria'] },
+              },
+            }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: 'Not found' }) } as Response);
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'You loved this album — tap to remove' })
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'See who loved this album (2)' }));
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+
+    resolvePut({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ reactions: { total: 1, viewerReacted: false, reactors: ['maria'] } }),
+    } as Response);
+  });
+
   test('lets the viewer remove their own album love from the reactor list', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },
@@ -775,6 +831,30 @@ describe('ViewerPage', () => {
 
       // The timer keeps advancing the current photo behind the lightbox.
       await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+    });
+
+    test('manually paging inside the lightbox stops autoplay, instead of the timer fighting the viewer', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2, PAGE_3] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+
+      await user.click(within(dialog).getByRole('button', { name: 'Next photo' }));
+      expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+
+      // The stopped timer should not still be waiting to advance the photo.
+      await act(() => vi.advanceTimersByTimeAsync(6000));
       expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
     });
 

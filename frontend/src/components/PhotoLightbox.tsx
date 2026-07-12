@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Icon from './Icon';
 import ReactionControl from './ReactionControl';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -27,6 +27,11 @@ type PhotoLightboxProps = {
   // the next photo stays visible here too.
   isAutoPlaying?: boolean;
   autoPlayIntervalMs?: number;
+  // Manually paging through the lightbox's own arrows/keys should stop
+  // autoplay rather than have the background timer fight the viewer on the
+  // next tick — mirrors AlbumSpread's own prev/next buttons, which do the
+  // same.
+  onAutoPlayingChange?: (isAutoPlaying: boolean) => void;
 };
 
 export default function PhotoLightbox({
@@ -39,6 +44,7 @@ export default function PhotoLightbox({
   viewerUsername,
   isAutoPlaying = false,
   autoPlayIntervalMs,
+  onAutoPlayingChange,
 }: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrevious = index > 0;
@@ -46,17 +52,26 @@ export default function PhotoLightbox({
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, photo !== undefined);
 
+  // A manual move — same reasoning as AlbumSpread's own prev/next buttons.
+  const navigate = useCallback(
+    (newIndex: number) => {
+      if (isAutoPlaying) onAutoPlayingChange?.(false);
+      onNavigate(newIndex);
+    },
+    [isAutoPlaying, onAutoPlayingChange, onNavigate]
+  );
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
-      if (event.key === 'ArrowLeft' && hasPrevious) onNavigate(index - 1);
+      if (event.key === 'ArrowLeft' && hasPrevious) navigate(index - 1);
       // On the last photo this wraps back to the first — mirrors the arrow
       // button below, which does the same instead of just going dead there.
-      if (event.key === 'ArrowRight' && photos.length > 1) onNavigate(hasNext ? index + 1 : 0);
+      if (event.key === 'ArrowRight' && photos.length > 1) navigate(hasNext ? index + 1 : 0);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [index, hasPrevious, hasNext, photos.length, onClose, onNavigate]);
+  }, [index, hasPrevious, hasNext, photos.length, onClose, navigate]);
 
   if (!photo) return null;
 
@@ -85,7 +100,7 @@ export default function PhotoLightbox({
         {photos.length > 1 && (
           <button
             type="button"
-            onClick={() => onNavigate(index - 1)}
+            onClick={() => navigate(index - 1)}
             disabled={!hasPrevious}
             aria-label="Previous photo"
             className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
@@ -139,7 +154,7 @@ export default function PhotoLightbox({
         {photos.length > 1 && (
           <button
             type="button"
-            onClick={() => onNavigate(hasNext ? index + 1 : 0)}
+            onClick={() => navigate(hasNext ? index + 1 : 0)}
             aria-label={hasNext ? 'Next photo' : 'Back to first photo'}
             title={hasNext ? undefined : 'Back to first photo'}
             className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"

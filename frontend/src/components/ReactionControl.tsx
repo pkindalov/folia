@@ -221,7 +221,7 @@ export default function ReactionControl({
         heading="People who reacted"
         reactors={reactors}
         viewerUsername={viewerUsername}
-        onRemoveMyReaction={viewerReaction ? removeMyReaction : undefined}
+        onRemoveMyReaction={viewerReaction && !isPending ? removeMyReaction : undefined}
       />
     </div>
   );

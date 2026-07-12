@@ -212,6 +212,7 @@ export default function ViewerPage() {
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}
           autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}
+          onAutoPlayingChange={setIsAutoPlaying}
         />
       )}
 
@@ -222,7 +223,9 @@ export default function ViewerPage() {
           heading="People who loved this album"
           reactors={album.reactions.reactors.map((username) => ({ username, type: 'love' as const }))}
           viewerUsername={me?.username}
-          onRemoveMyReaction={album.reactions.viewerReacted ? handleToggleAlbumLove : undefined}
+          onRemoveMyReaction={
+            album.reactions.viewerReacted && !setAlbumReaction.isPending ? handleToggleAlbumLove : undefined
+          }
         />
       )}
     </AppShell>
