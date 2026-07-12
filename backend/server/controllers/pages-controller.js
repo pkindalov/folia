@@ -49,9 +49,11 @@ function zeroFilledCounts() {
 // Caps how many reactors are resolved and shipped per page — the "who
 // reacted" list is a convenience popover, not a full audit log, so a page
 // with hundreds of reactions doesn't balloon every pages-list response.
-// Applied per page (via $slice inside the $group below), not as one global
-// limit across the batch — a global limit would let one heavily-reacted
-// page starve every other page's reactors list of its own fair share.
+// Applied per page (via $topN inside the $group below, which caps as it
+// accumulates instead of collecting every reaction and slicing after), not
+// as one global limit across the batch — a global limit would let one
+// heavily-reacted page starve every other page's reactors list of its own
+// fair share.
 const MAX_REACTORS_PER_PAGE = 50;
 
 // Batched reaction summary for a page of Page documents — three queries
@@ -73,9 +75,18 @@ function resolveReactionSummaries(pages, viewerId) {
     Reaction.find({ page: { $in: pageIds }, user: viewerId }, 'page type'),
     Reaction.aggregate([
       { $match: { page: { $in: pageIds } } },
-      { $sort: { createdAt: -1 } },
-      { $group: { _id: '$page', reactors: { $push: { user: '$user', type: '$type' } } } },
-      { $project: { reactors: { $slice: ['$reactors', MAX_REACTORS_PER_PAGE] } } },
+      {
+        $group: {
+          _id: '$page',
+          reactors: {
+            $topN: {
+              n: MAX_REACTORS_PER_PAGE,
+              sortBy: { createdAt: -1 },
+              output: { user: '$user', type: '$type' },
+            },
+          },
+        },
+      },
     ]),
   ]).then(([grouped, viewerReactions, reactorGroups]) => {
     const viewerReactionByPageId = new Map(

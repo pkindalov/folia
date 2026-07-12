@@ -358,8 +358,8 @@ describe('notifications-controller', () => {
         },
       ]);
       jest
-        .spyOn(Circle, 'findById')
-        .mockResolvedValue({ isOwnerOrMember: () => true });
+        .spyOn(Circle, 'find')
+        .mockResolvedValue([{ _id: 'circle-1', isOwnerOrMember: () => true }]);
       jest.spyOn(Page, 'aggregate').mockResolvedValue([{ _id: ALBUM_ID, filename: 'cover.jpg' }]);
       jest.spyOn(storage, 'photoUrl').mockReturnValue('https://signed.example/cover.jpg');
       const res = mockRes();
@@ -393,8 +393,8 @@ describe('notifications-controller', () => {
         },
       ]);
       jest
-        .spyOn(Circle, 'findById')
-        .mockResolvedValue({ isOwnerOrMember: () => false });
+        .spyOn(Circle, 'find')
+        .mockResolvedValue([{ _id: 'circle-1', isOwnerOrMember: () => false }]);
       jest.spyOn(Page, 'find').mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
       const res = mockRes();
 

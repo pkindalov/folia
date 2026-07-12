@@ -416,12 +416,13 @@ module.exports = {
 
     // req.album is a snapshot from requireReadableAlbum's earlier load — a
     // concurrent delete could have removed it (and cascade-deleted its
-    // AlbumReaction rows) in the meantime. Without this re-check, both the
-    // create and toggle-off branches below would happily write a fresh,
-    // permanently orphaned AlbumReaction row for an album that's already
-    // gone, and the create branch would fire a notification pointing at
-    // nothing. Mirrors pages-controller.js's setReaction, which gets the
-    // same guarantee for free via its Page.findOne re-lookup.
+    // AlbumReaction rows) in the meantime. This re-check narrows that
+    // window but isn't atomic with the writes below, so a delete landing
+    // between here and AlbumReaction.create/deleteOne could still leave a
+    // fresh, orphaned AlbumReaction row (and, on the create branch, a
+    // notification pointing at nothing) — acceptable at this app's scale,
+    // same as the other unguarded races in this file. pages-controller.js's
+    // setReaction narrows the same window via its Page.findOne re-lookup.
     Album.exists({ _id: album._id })
       .then((stillExists) => {
         if (!stillExists) return res.status(404).json({ error: 'Album not found' });

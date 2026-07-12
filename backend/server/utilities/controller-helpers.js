@@ -25,13 +25,37 @@ function resolveUsernames(userIds) {
 // circle was deleted) is treated as "no access" rather than throwing.
 // Intentionally reachable only via direct link — no listing endpoint
 // surfaces these albums to other users, by design.
-function canAccessSharedAlbum(album, user) {
+//
+// `circleById`, if given, is used instead of a fresh Circle.findById — lets
+// a caller checking many albums at once (see fetchCirclesForAlbums) pass in
+// a single pre-fetched batch instead of one query per album.
+function canAccessSharedAlbum(album, user, circleById) {
   if (!album.sharedWithCircle) return Promise.resolve(true);
+
+  if (circleById) {
+    const circle = circleById.get(album.sharedWithCircle.toString());
+    return Promise.resolve(circle ? circle.isOwnerOrMember(user._id) : false);
+  }
 
   return Circle.findById(album.sharedWithCircle).then((circle) => {
     if (!circle) return false;
     return circle.isOwnerOrMember(user._id);
   });
+}
+
+// Pre-fetches every distinct circle referenced by a list of albums in a
+// single query, for callers that run checkAlbumReadAccess across many
+// albums at once (e.g. resolving notification thumbnails) and would
+// otherwise issue one Circle.findById per shared album.
+function fetchCirclesForAlbums(albums) {
+  const circleIds = [
+    ...new Set(albums.filter((album) => album.sharedWithCircle).map((album) => album.sharedWithCircle.toString())),
+  ];
+  if (circleIds.length === 0) return Promise.resolve(new Map());
+
+  return Circle.find({ _id: { $in: circleIds } }).then(
+    (circles) => new Map(circles.map((circle) => [circle._id.toString(), circle]))
+  );
 }
 
 // Shared by every controller that gates a mutation behind ownership of an
@@ -48,14 +72,14 @@ function isOwnerOrAdmin(resource, user) {
 // the circle it's restricted to), or a { status, error } response
 // descriptor when they may not. Shared between the albums and pages
 // controllers so "who can read an album" can't drift between the two.
-function checkAlbumReadAccess(album, user) {
+function checkAlbumReadAccess(album, user, circleById) {
   if (isOwnerOrAdmin(album, user)) return Promise.resolve(null);
 
   if (album.visibility === 'private') {
     return Promise.resolve({ status: 403, error: 'This album is private' });
   }
   if (album.visibility === 'shared') {
-    return canAccessSharedAlbum(album, user).then((allowed) =>
+    return canAccessSharedAlbum(album, user, circleById).then((allowed) =>
       allowed ? null : { status: 403, error: 'This album is shared with a specific circle' }
     );
   }
@@ -101,6 +125,7 @@ module.exports = {
   DELETED_USER_LABEL,
 
   canAccessSharedAlbum,
+  fetchCirclesForAlbums,
   isOwnerOrAdmin,
   checkAlbumReadAccess,
   circleRecipientIds,

@@ -1,8 +1,11 @@
 const User = require('../../server/data/User');
+const Circle = require('../../server/data/Circle');
 const {
   parsePage,
   circleRecipientIds,
   resolveUsernames,
+  checkAlbumReadAccess,
+  fetchCirclesForAlbums,
 } = require('../../server/utilities/controller-helpers');
 
 describe('circleRecipientIds', () => {
@@ -118,5 +121,54 @@ describe('resolveUsernames', () => {
     const usernames = await resolveUsernames([{ toString: () => USER_A }]);
 
     expect(usernames).toEqual(['pan']);
+  });
+});
+
+describe('fetchCirclesForAlbums', () => {
+  const USER_ID = '507f1f77bcf86cd799439011';
+  const CIRCLE_A = '507f1f77bcf86cd799439aaa';
+  const CIRCLE_B = '507f1f77bcf86cd799439bbb';
+
+  test('returns an empty map without querying when no album references a circle', async () => {
+    const find = jest.spyOn(Circle, 'find');
+
+    const circleById = await fetchCirclesForAlbums([{ visibility: 'public' }, { visibility: 'private' }]);
+
+    expect(circleById.size).toBe(0);
+    expect(find).not.toHaveBeenCalled();
+  });
+
+  test('queries Circle.find once with every distinct circle id, however many albums reference it', async () => {
+    const find = jest
+      .spyOn(Circle, 'find')
+      .mockResolvedValue([{ _id: CIRCLE_A, isOwnerOrMember: () => true }]);
+
+    const circleById = await fetchCirclesForAlbums([
+      { visibility: 'shared', sharedWithCircle: CIRCLE_A },
+      { visibility: 'shared', sharedWithCircle: CIRCLE_A },
+      { visibility: 'public' },
+    ]);
+
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(find.mock.calls[0][0]).toEqual({ _id: { $in: [CIRCLE_A] } });
+    expect(circleById.get(CIRCLE_A)).toBeDefined();
+  });
+
+  test('checkAlbumReadAccess, given a pre-fetched map, resolves access without any further Circle query', async () => {
+    const find = jest.spyOn(Circle, 'find');
+    const user = { _id: USER_ID, roles: [] };
+    const memberAlbum = { owner: 'someone-else', visibility: 'shared', sharedWithCircle: CIRCLE_A };
+    const strangerAlbum = { owner: 'someone-else', visibility: 'shared', sharedWithCircle: CIRCLE_B };
+    const circleById = new Map([
+      [CIRCLE_A, { isOwnerOrMember: () => true }],
+      [CIRCLE_B, { isOwnerOrMember: () => false }],
+    ]);
+
+    const memberResult = await checkAlbumReadAccess(memberAlbum, user, circleById);
+    const strangerResult = await checkAlbumReadAccess(strangerAlbum, user, circleById);
+
+    expect(memberResult).toBeNull();
+    expect(strangerResult).toEqual({ status: 403, error: 'This album is shared with a specific circle' });
+    expect(find).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ const Album = require('../data/Album');
 const Page = require('../data/Page');
 const storage = require('../utilities/storage');
 const { resolveCoverImages } = require('../utilities/album-cover-image');
-const { parsePage, checkAlbumReadAccess } = require('../utilities/controller-helpers');
+const { parsePage, checkAlbumReadAccess, fetchCirclesForAlbums } = require('../utilities/controller-helpers');
 
 const NOTIFICATIONS_PAGE_SIZE = 20;
 
@@ -76,8 +76,11 @@ function resolveThumbnailUrls(notifications, user) {
     albumIds.length > 0 ? Album.find({ _id: { $in: albumIds } }) : Promise.resolve([]),
     pageIds.length > 0 ? Page.find({ _id: { $in: pageIds } }, 'album filename') : Promise.resolve([]),
   ]).then(([albums, pages]) =>
-    Promise.all(albums.map((album) => checkAlbumReadAccess(album, user).then((denied) => [album, denied]))).then(
-      (albumAccessResults) => {
+    fetchCirclesForAlbums(albums)
+      .then((circleById) =>
+        Promise.all(albums.map((album) => checkAlbumReadAccess(album, user, circleById).then((denied) => [album, denied])))
+      )
+      .then((albumAccessResults) => {
         const accessibleAlbums = albumAccessResults
           .filter(([, denied]) => denied === null)
           .map(([album]) => album);
@@ -108,8 +111,7 @@ function resolveThumbnailUrls(notifications, user) {
             })
           );
         });
-      }
-    )
+      })
   );
 }
 
