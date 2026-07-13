@@ -103,6 +103,12 @@ beforeEach(() => {
   jest.spyOn(Reaction, 'find').mockResolvedValue([]);
   jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(User, 'find').mockResolvedValue([]);
+  // upload() re-checks the album still exists right before writing Page
+  // rows, to close the window where a concurrent album delete could have
+  // removed it after requireOwnedAlbum's earlier load — stubbed to "still
+  // there" by default so tests that don't care about that race can't
+  // accidentally hit the real Mongoose model.
+  jest.spyOn(Album, 'exists').mockResolvedValue(true);
 });
 
 describe('pages-controller', () => {
@@ -329,6 +335,20 @@ describe('pages-controller', () => {
       controller.upload({ album: fakeAlbum(), files: [] }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    test('404 and cleans up the just-written files when the album was deleted concurrently', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'exists').mockResolvedValue(false);
+      const countDocuments = jest.spyOn(Page, 'countDocuments');
+      const res = mockRes();
+      const files = [{ filename: 'abc.jpg', mimetype: 'image/jpeg', size: 1024 }];
+      controller.upload({ album, files }, res);
+      await flush();
+      expect(fs.rm).toHaveBeenCalledTimes(1);
+      expect(countDocuments).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Album not found' });
     });
 
     test('400 and cleans up the just-written files when the album cap would be exceeded', async () => {

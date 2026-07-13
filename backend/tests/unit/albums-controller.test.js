@@ -1419,6 +1419,26 @@ describe('albums-controller', () => {
       expect(storage.removeAlbumDir).not.toHaveBeenCalled();
     });
 
+    test('500 and leaves the album/pages untouched when removing the upload folder fails', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      const findOneAndDelete = jest.spyOn(Album, 'findOneAndDelete');
+      const deleteMany = jest.spyOn(Page, 'deleteMany');
+      storage.removeAlbumDir.mockImplementationOnce(() => {
+        throw new Error('EBUSY: resource busy or locked');
+      });
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Failed to delete album' });
+      // Nothing in the DB was touched — a failed disk removal must leave
+      // the album fully intact so the delete is safely retryable, instead
+      // of deleting the DB rows first and risking an unrecoverable orphan.
+      expect(findOneAndDelete).not.toHaveBeenCalled();
+      expect(deleteMany).not.toHaveBeenCalled();
+    });
+
     test('deletes the album, its pages, and its upload folder', async () => {
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
@@ -1493,7 +1513,10 @@ describe('albums-controller', () => {
       expect(res.status).not.toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
       expect(deleteMany).not.toHaveBeenCalled();
-      expect(storage.removeAlbumDir).not.toHaveBeenCalled();
+      // removeAlbumDir runs before the atomic findOneAndDelete, so the
+      // loser still calls it too — harmless, since it's a no-op force-remove
+      // of a folder the winner may have already deleted.
+      expect(storage.removeAlbumDir).toHaveBeenCalled();
       expect(Notification.create).not.toHaveBeenCalled();
     });
 

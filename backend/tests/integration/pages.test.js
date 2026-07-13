@@ -169,6 +169,7 @@ describe('album pages routes (integration)', () => {
       authAs(OWNER_ID);
       const album = fakeAlbum();
       jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'exists').mockResolvedValue(true);
       jest.spyOn(Page, 'countDocuments').mockResolvedValue(0);
       jest.spyOn(Page, 'insertMany').mockImplementation((docs) =>
         Promise.resolve(

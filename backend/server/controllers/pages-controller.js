@@ -209,59 +209,76 @@ module.exports = {
       return res.status(400).json({ error: 'No photos were uploaded' });
     }
 
-    // Not atomic with the insert below — two concurrent uploads to the same
-    // album could both pass this check and land slightly over the cap.
-    // Acceptable at this app's single-user scale; not worth locking for.
-    Page.countDocuments({ album: album._id })
-      .then((existingCount) => {
-        if (existingCount + files.length > settings.maxPhotosPerAlbum) {
+    // req.album is a snapshot from requireOwnedAlbum's earlier load, taken
+    // before multer wrote these files to disk — a concurrent album delete
+    // could have removed the album (and its folder) in between, in which
+    // case multer's destination callback would have silently recreated that
+    // just-cleaned-up folder to write into. Re-checking here, right before
+    // the Page rows are created, closes most of that window and stops a
+    // dangling Page from being inserted against an album that's already
+    // gone. Not atomic with the insert below — same as the other unguarded
+    // races in this file (see setReaction) — but narrows it from "the
+    // entire upload request" down to a single query.
+    Album.exists({ _id: album._id })
+      .then((stillExists) => {
+        if (!stillExists) {
           removeFiles(album.owner, album._id, files.map((f) => f.filename));
-          return res.status(400).json({
-            error: `An album can have at most ${settings.maxPhotosPerAlbum} photos`,
-          });
+          return res.status(404).json({ error: 'Album not found' });
         }
 
-        return Page.insertMany(
-          files.map((file) => ({
-            album: album._id,
-            filename: file.filename,
-            mimeType: file.mimetype,
-            size: file.size,
-          }))
-        )
-          .then((pages) =>
-            syncPageCount(album).then((pageCount) =>
-              // Freshly inserted pages can't have any reactions yet, but
-              // resolving the summary the same way list()/setReaction() do
-              // (rather than hand-rolling a zero-filled shape here) keeps
-              // this response's page objects identical in shape everywhere
-              // the frontend's pageSchema is used.
-              resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
-                // One notification per upload request, not per photo — a
-                // batch of 10 photos is one "new photos added" event. The
-                // first uploaded photo rides along as a representative
-                // thumbnail/deep-link target for that one notification.
-                notifyAlbumEvent({
-                  type: 'album_photos_added',
-                  album,
-                  actorUser: req.user,
-                  page: pages[0],
-                });
-                res.status(201).json({
-                  pages: pages.map((page) => ({
-                    ...page.toJSON(),
-                    url: storage.photoUrl(album.owner, album._id, page.filename),
-                    reactions: summaryByPageId.get(page._id.toString()),
-                  })),
-                  pageCount,
-                });
-              })
-            )
-          )
-          .catch((err) => {
+        // Not atomic with the insert below — two concurrent uploads to the same
+        // album could both pass this check and land slightly over the cap.
+        // Acceptable at this app's single-user scale; not worth locking for.
+        return Page.countDocuments({ album: album._id }).then((existingCount) => {
+          if (existingCount + files.length > settings.maxPhotosPerAlbum) {
             removeFiles(album.owner, album._id, files.map((f) => f.filename));
-            throw err;
-          });
+            return res.status(400).json({
+              error: `An album can have at most ${settings.maxPhotosPerAlbum} photos`,
+            });
+          }
+
+          return Page.insertMany(
+            files.map((file) => ({
+              album: album._id,
+              filename: file.filename,
+              mimeType: file.mimetype,
+              size: file.size,
+            }))
+          )
+            .then((pages) =>
+              syncPageCount(album).then((pageCount) =>
+                // Freshly inserted pages can't have any reactions yet, but
+                // resolving the summary the same way list()/setReaction() do
+                // (rather than hand-rolling a zero-filled shape here) keeps
+                // this response's page objects identical in shape everywhere
+                // the frontend's pageSchema is used.
+                resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
+                  // One notification per upload request, not per photo — a
+                  // batch of 10 photos is one "new photos added" event. The
+                  // first uploaded photo rides along as a representative
+                  // thumbnail/deep-link target for that one notification.
+                  notifyAlbumEvent({
+                    type: 'album_photos_added',
+                    album,
+                    actorUser: req.user,
+                    page: pages[0],
+                  });
+                  res.status(201).json({
+                    pages: pages.map((page) => ({
+                      ...page.toJSON(),
+                      url: storage.photoUrl(album.owner, album._id, page.filename),
+                      reactions: summaryByPageId.get(page._id.toString()),
+                    })),
+                    pageCount,
+                  });
+                })
+              )
+            )
+            .catch((err) => {
+              removeFiles(album.owner, album._id, files.map((f) => f.filename));
+              throw err;
+            });
+        });
       })
       .catch((err) => respondToAlbumWriteError(res, err, 'Failed to save photos'));
   },

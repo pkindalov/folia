@@ -11,7 +11,8 @@
     "dev": "nodemon index.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "set-admin-password": "node scripts/set-admin-password.js"
+    "set-admin-password": "node scripts/set-admin-password.js",
+    "find-orphaned-uploads": "node scripts/find-orphaned-uploads.js"
   },
   "author": "Panayot",
   "license": "MIT",

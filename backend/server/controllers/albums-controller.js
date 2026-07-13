@@ -462,6 +462,19 @@ module.exports = {
           return res.status(403).json({ error: 'You do not own this album' });
         }
 
+        // Disk first, DB second: if removeAlbumDir throws (a locked file, a
+        // permission hiccup, the process restarting mid-request), the album
+        // and its pages are left completely untouched, so the delete is
+        // safely retryable. Deleting the DB rows first would risk the
+        // opposite — a disk failure after the DB is already clean leaves an
+        // orphaned folder with nothing left in Mongo to ever retry against.
+        try {
+          storage.removeAlbumDir(album.owner, album._id);
+        } catch (err) {
+          console.error(`Failed to remove upload directory for album ${album._id}`, err);
+          return res.status(500).json({ error: 'Failed to delete album' });
+        }
+
         // Atomic find-and-delete, not album.deleteOne(): two concurrent
         // delete requests for the same album could both pass the checks
         // above before either removes it, and Model#deleteOne() doesn't
@@ -479,12 +492,14 @@ module.exports = {
             .then(() => Reaction.deleteMany({ album: deletedAlbum._id }))
             .then(() => AlbumReaction.deleteMany({ album: deletedAlbum._id }))
             .then(() => {
-            storage.removeAlbumDir(deletedAlbum.owner, deletedAlbum._id);
-            notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
-            res.json({ deleted: true });
-          });
+              notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
+              res.json({ deleted: true });
+            });
         });
       })
-      .catch(() => res.status(500).json({ error: 'Failed to delete album' }));
+      .catch((err) => {
+        console.error('Failed to delete album', err);
+        res.status(500).json({ error: 'Failed to delete album' });
+      });
   },
 };
