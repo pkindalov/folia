@@ -2,7 +2,20 @@
 
 A digital platform for creating and sharing tactile, heritage-inspired digital flipbooks.
 
-> Work in progress — backend is up, frontend not started yet. See `DESIGN.md` for the design system and `design/` for HTML mockups.
+> Work in progress. See `DESIGN.md` for the design system and `design/` for HTML mockups.
+
+## Screenshots
+
+*Sample data — the albums and photos below are placeholders seeded for these screenshots, not real user content.*
+
+| | |
+|---|---|
+| ![Landing page](docs/screenshots/landing.png) | ![Sign in](docs/screenshots/login.png) |
+| Landing page | Sign in |
+| ![My Flipbooks (gallery)](docs/screenshots/gallery.png) | ![Explore / Community Table](docs/screenshots/explore.png) |
+| My Flipbooks | Explore |
+| ![Album editor](docs/screenshots/editor.png) | ![Flipbook viewer](docs/screenshots/viewer.png) |
+| Album editor | Flipbook viewer |
 
 ## Project structure
 
