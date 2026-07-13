@@ -49,6 +49,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <span className="font-body text-sm text-on-surface-variant">{user.username}</span>
             <Avatar username={user.username} avatarUrl={user.avatarUrl} size="sm" />
           </Link>
+          <Link
+            to="/settings"
+            className="text-on-surface-variant hover:text-secondary transition-colors"
+            aria-label="Settings"
+          >
+            <Icon name="settings" className="text-xl" />
+          </Link>
           <NotificationBellContainer variant="mobile" />
           <button
             onClick={logout}
@@ -96,6 +103,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
               Signed in as <strong>{user.username}</strong> ({user.email})
               {user.roles.includes('Admin') && ' — Admin'}
             </p>
+          </Link>
+          <Link
+            to="/settings"
+            className="flex items-center gap-4 px-4 py-3 font-body text-sm tracking-wide uppercase text-on-surface-variant hover:bg-surface-container-low rounded-paper transition-colors"
+          >
+            <Icon name="settings" className="text-lg" />
+            Settings
           </Link>
           <button
             onClick={logout}

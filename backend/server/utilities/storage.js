@@ -10,12 +10,18 @@ const settings = require('../config/settings')[env];
 const albumDir = (ownerId, albumId) =>
   path.resolve(settings.uploadsDir, String(ownerId), String(albumId));
 
+// The owner's folder itself, one level up from albumDir — every one of
+// their albums lives under this, so removing it covers all of them in one
+// shot (used when deleting a user entirely, not for a single album).
+const userDir = (ownerId) => path.resolve(settings.uploadsDir, String(ownerId));
+
 // Avatars live in <uploadsDir>/avatars/<userId>/ — kept outside the album
 // directory tree so avatar files are never touched by album/page cleanup.
 const avatarDir = (userId) => path.resolve(settings.uploadsDir, 'avatars', String(userId));
 
 module.exports = {
   albumDir,
+  userDir,
   avatarDir,
 
   // Resolves a single photo's path inside its album's folder (filename is
@@ -40,6 +46,14 @@ module.exports = {
     fs.rmSync(albumDir(ownerId, albumId), { recursive: true, force: true });
   },
 
+  // Removes every album this owner has, in one shot — only meant for
+  // deleting the owner entirely (see user-deletion.js), never for a single
+  // album, which must go through removeAlbumDir instead so it doesn't take
+  // the owner's other albums with it.
+  removeUserDir: (ownerId) => {
+    fs.rmSync(userDir(ownerId), { recursive: true, force: true });
+  },
+
   // Resolves a single avatar's path inside its owner's folder (filename is
   // always server-generated — see config/avatar-upload.js — so this stays safe).
   avatarPath: (userId, filename) => path.join(avatarDir(userId), filename),
@@ -53,5 +67,9 @@ module.exports = {
     const dir = avatarDir(userId);
     fs.mkdirSync(dir, { recursive: true });
     return dir;
+  },
+
+  removeAvatarDir: (userId) => {
+    fs.rmSync(avatarDir(userId), { recursive: true, force: true });
   },
 };

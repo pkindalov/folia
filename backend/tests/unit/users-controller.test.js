@@ -1,5 +1,6 @@
 const fs = require('fs');
 const User = require('../../server/data/User');
+const userDeletion = require('../../server/utilities/user-deletion');
 const controller = require('../../server/controllers/users-controller');
 
 const flush = () => new Promise(setImmediate);
@@ -627,6 +628,43 @@ describe('users-controller', () => {
       controller.removeAvatar({ user }, res);
       await flush();
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('deleteMe', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('cascade-deletes the account and reports success', async () => {
+      const user = { _id: 'id1', username: 'pan', roles: ['User'] };
+      const deleteUser = jest
+        .spyOn(userDeletion, 'deleteUser')
+        .mockResolvedValue({ deletedUser: { _id: 'id1', username: 'pan' }, deletedAlbumCount: 2, deletedCircleCount: 0 });
+      const res = mockRes();
+      controller.deleteMe({ user }, res);
+      await flush();
+      expect(deleteUser).toHaveBeenCalledWith('id1');
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
+
+    test('403s without deleting anything for an Admin account', async () => {
+      const user = { _id: 'id1', username: 'root', roles: ['Admin'] };
+      const deleteUser = jest.spyOn(userDeletion, 'deleteUser');
+      const res = mockRes();
+      controller.deleteMe({ user }, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    test('returns 500 when the cascade delete fails', async () => {
+      const user = { _id: 'id1', username: 'pan', roles: ['User'] };
+      jest.spyOn(userDeletion, 'deleteUser').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.deleteMe({ user }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Failed to delete account' });
     });
   });
 });

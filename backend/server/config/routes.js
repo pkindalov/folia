@@ -46,6 +46,7 @@ module.exports = (app) => {
   // Users (protected)
   app.get('/api/users/me', auth.isAuthenticated, controllers.users.me);
   app.put('/api/users/me', auth.isAuthenticated, controllers.users.updateMe);
+  app.delete('/api/users/me', auth.isAuthenticated, controllers.users.deleteMe);
   app.post(
     '/api/users/me/avatar',
     auth.isAuthenticated,

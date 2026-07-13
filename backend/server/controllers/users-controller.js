@@ -4,6 +4,7 @@ const encryption = require('../utilities/encryption');
 const errorHandler = require('../utilities/error-handler');
 const auth = require('../config/auth');
 const storage = require('../utilities/storage');
+const userDeletion = require('../utilities/user-deletion');
 const { isNonEmptyString } = require('../utilities/controller-helpers');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -225,5 +226,24 @@ module.exports = {
         res.json({ user: withAvatarUrl(saved) });
       })
       .catch(() => res.status(500).json({ error: 'Failed to remove avatar' }));
+  },
+
+  // Permanently deletes the requester's own account: their volumes, circles
+  // they own, their reactions elsewhere, their notification inbox, and
+  // their upload + avatar folders on disk — see user-deletion.js for the
+  // full cascade. Refuses on an Admin account for the same reason
+  // scripts/delete-user.js does: losing the only admin is a much worse
+  // failure mode than this being slightly less self-service.
+  deleteMe: (req, res) => {
+    if (req.user.roles?.includes('Admin')) {
+      return res.status(403).json({ error: 'An Admin account cannot be self-deleted' });
+    }
+
+    userDeletion.deleteUser(req.user._id)
+      .then(() => res.json({ deleted: true }))
+      .catch((err) => {
+        console.error(`Failed to delete account for user ${req.user._id}`, err);
+        res.status(500).json({ error: 'Failed to delete account' });
+      });
   },
 };

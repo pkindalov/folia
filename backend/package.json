@@ -12,7 +12,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "set-admin-password": "node scripts/set-admin-password.js",
-    "find-orphaned-uploads": "node scripts/find-orphaned-uploads.js"
+    "find-orphaned-uploads": "node scripts/find-orphaned-uploads.js",
+    "delete-user": "node scripts/delete-user.js"
   },
   "author": "Panayot",
   "license": "MIT",

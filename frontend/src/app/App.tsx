@@ -12,6 +12,7 @@ const CirclesPage = lazy(() => import('../features/circles/pages/CirclesPage'));
 const CircleDetailPage = lazy(() => import('../features/circles/pages/CircleDetailPage'));
 const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage'));
 const PublicProfilePage = lazy(() => import('../features/profile/pages/PublicProfilePage'));
+const SettingsPage = lazy(() => import('../features/settings/pages/SettingsPage'));
 
 function Root() {
   // Signed-in users land in their library; visitors see the landing page
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/circles" element={<CirclesPage />} />
           <Route path="/circles/:id" element={<CircleDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/users/:username" element={<PublicProfilePage />} />
           <Route path="/book/:id" element={<ViewerPage />} />
         </Route>

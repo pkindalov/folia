@@ -260,4 +260,73 @@ describe('profile routes (integration)', () => {
       await waitFor(() => !fs.existsSync(path.join(avatarFolder, 'existing.jpg')));
     });
   });
+
+  describe('DELETE /api/users/me', () => {
+    let Album;
+    let Circle;
+    let Page;
+    let Reaction;
+    let AlbumReaction;
+    let Notification;
+
+    beforeAll(() => {
+      Album = require('../../server/data/Album');
+      Circle = require('../../server/data/Circle');
+      Page = require('../../server/data/Page');
+      Reaction = require('../../server/data/Reaction');
+      AlbumReaction = require('../../server/data/AlbumReaction');
+      Notification = require('../../server/data/Notification');
+    });
+
+    beforeEach(() => {
+      jest.spyOn(Album, 'find').mockResolvedValue([]);
+      jest.spyOn(Circle, 'find').mockResolvedValue([]);
+      jest.spyOn(Album, 'updateMany').mockResolvedValue({});
+      jest.spyOn(Circle, 'updateMany').mockResolvedValue({});
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(Circle, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(User, 'deleteOne').mockResolvedValue({});
+    });
+
+    test('401 without a token', async () => {
+      const res = await request(app).delete('/api/users/me');
+      expect(res.status).toBe(401);
+    });
+
+    test('403 for an Admin account, without deleting anything', async () => {
+      authAs(fakeUser({ roles: ['Admin'] }));
+      const deleteOne = jest.spyOn(User, 'deleteOne');
+      const res = await request(app).delete('/api/users/me').set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
+      expect(deleteOne).not.toHaveBeenCalled();
+    });
+
+    test('200 deletes the account and removes its upload + avatar folders from disk', async () => {
+      const userFolder = path.join(tmpRoot, OWNER_ID);
+      const avatarFolder = path.join(tmpRoot, 'avatars', OWNER_ID);
+      fs.mkdirSync(path.join(userFolder, 'some-album-id'), { recursive: true });
+      fs.writeFileSync(path.join(userFolder, 'some-album-id', 'photo.jpg'), 'fake');
+      fs.mkdirSync(avatarFolder, { recursive: true });
+      fs.writeFileSync(path.join(avatarFolder, 'existing.jpg'), 'fake');
+
+      authAs(fakeUser({ avatarFilename: 'existing.jpg' }));
+      const res = await request(app).delete('/api/users/me').set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ deleted: true });
+      expect(fs.existsSync(userFolder)).toBe(false);
+      expect(fs.existsSync(avatarFolder)).toBe(false);
+    });
+
+    test('500 when a cascade step fails', async () => {
+      authAs(fakeUser());
+      jest.spyOn(Album, 'deleteMany').mockRejectedValue(new Error('db down'));
+      const res = await request(app).delete('/api/users/me').set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(500);
+    });
+  });
 });
