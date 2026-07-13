@@ -76,6 +76,11 @@ export default function ViewerPage() {
   // slideshow (manual navigation, the lightbox opening, the tab going
   // background).
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  // When the current countdown last (re)started — reported by AlbumSpread,
+  // which owns the actual timer. PhotoLightbox mounts fresh every time the
+  // viewer zooms in, so without this its own countdown bar would restart at
+  // 0% instead of showing how much of the interval has really elapsed.
+  const [autoPlayStartedAt, setAutoPlayStartedAt] = useState<number | undefined>(undefined);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const openLightbox = () => {
@@ -196,6 +201,7 @@ export default function ViewerPage() {
               isAutoPlaying={isAutoPlaying}
               onAutoPlayingChange={setIsAutoPlaying}
               onAutoPlayEnd={endAutoPlay}
+              onAutoPlayTick={setAutoPlayStartedAt}
             />
           )}
         </div>
@@ -212,6 +218,7 @@ export default function ViewerPage() {
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}
           autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}
+          autoPlayStartedAt={autoPlayStartedAt}
           onAutoPlayingChange={setIsAutoPlaying}
         />
       )}

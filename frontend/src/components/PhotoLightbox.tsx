@@ -27,6 +27,13 @@ type PhotoLightboxProps = {
   // the next photo stays visible here too.
   isAutoPlaying?: boolean;
   autoPlayIntervalMs?: number;
+  // When the current countdown last (re)started (Date.now(), from
+  // AlbumSpread's own timer). This component mounts fresh every time the
+  // viewer zooms in, so without this its countdown bar would always restart
+  // its animation at 0% instead of resuming from how much of the interval
+  // has actually already elapsed — visibly out of step with the timer that's
+  // really driving the next page turn.
+  autoPlayStartedAt?: number;
   // Manually paging through the lightbox's own arrows/keys should stop
   // autoplay rather than have the background timer fight the viewer on the
   // next tick — mirrors AlbumSpread's own prev/next buttons, which do the
@@ -44,6 +51,7 @@ export default function PhotoLightbox({
   viewerUsername,
   isAutoPlaying = false,
   autoPlayIntervalMs,
+  autoPlayStartedAt,
   onAutoPlayingChange,
 }: PhotoLightboxProps) {
   const photo = photos[index];
@@ -125,7 +133,16 @@ export default function PhotoLightbox({
                 <div
                   key={index}
                   className="autoplay-progress-bar h-full bg-secondary"
-                  style={{ animationDuration: `${autoPlayIntervalMs}ms` }}
+                  style={{
+                    animationDuration: `${autoPlayIntervalMs}ms`,
+                    // A negative delay seeks the animation forward by that
+                    // much, so the bar picks up already caught up to the
+                    // real timer instead of restarting at 0% on every mount.
+                    animationDelay:
+                      autoPlayStartedAt !== undefined
+                        ? `-${Math.min(Date.now() - autoPlayStartedAt, autoPlayIntervalMs)}ms`
+                        : undefined,
+                  }}
                 />
               </div>
             )}

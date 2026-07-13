@@ -24,6 +24,12 @@ type AlbumSpreadProps = {
   // the last one, so the caller can stop the slideshow (and close the
   // lightbox, if it happens to be open) rather than it wrapping around.
   onAutoPlayEnd?: () => void;
+  // Fired with Date.now() every time a fresh countdown begins (autoplay
+  // starting, or advancing to a new photo while it's already running) — lets
+  // PhotoLightbox, which mounts fresh each time the viewer zooms in, show its
+  // own countdown bar already caught up to the real elapsed time instead of
+  // restarting at 0%.
+  onAutoPlayTick?: (startedAt: number) => void;
 };
 
 type FlipState = {
@@ -81,6 +87,7 @@ export default function AlbumSpread({
   isAutoPlaying = false,
   onAutoPlayingChange,
   onAutoPlayEnd,
+  onAutoPlayTick,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -163,6 +170,7 @@ export default function AlbumSpread({
   // zooming into a photo doesn't interrupt the slideshow before that point.
   useEffect(() => {
     if (!isAutoPlaying || !canAutoPlay) return;
+    onAutoPlayTick?.(Date.now());
     const timer = setTimeout(() => {
       if (!hasNextPhoto) {
         onAutoPlayEnd?.();
@@ -175,7 +183,7 @@ export default function AlbumSpread({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- triggerFlip is
     // stable in behavior across renders; including it would just restart the
     // timer on every render for no benefit.
-  }, [isAutoPlaying, canAutoPlay, hasNextPhoto, currentPhoto, currentIndex, onNavigate, onAutoPlayEnd]);
+  }, [isAutoPlaying, canAutoPlay, hasNextPhoto, currentPhoto, currentIndex, onNavigate, onAutoPlayEnd, onAutoPlayTick]);
 
   return (
     <div className="relative">

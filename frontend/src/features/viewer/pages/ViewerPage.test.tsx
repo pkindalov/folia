@@ -878,6 +878,31 @@ describe('ViewerPage', () => {
       expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
     });
 
+    test('the lightbox countdown bar picks up already caught up to the real timer, instead of restarting at 0%', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      // Let most of the 5s interval elapse behind the grid before zooming in.
+      await act(() => vi.advanceTimersByTimeAsync(3000));
+
+      await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+
+      // If the bar restarted at 0% (no animation-delay at all), this would
+      // be NaN, which is not < 0 — the assertion below would fail on the bug.
+      const bar = dialog.querySelector('.autoplay-progress-bar') as HTMLElement | null;
+      expect(bar).not.toBeNull();
+      expect(Number.parseFloat(bar!.style.animationDelay)).toBeLessThan(0);
+    });
+
     test('manually paging inside the lightbox stops autoplay, instead of the timer fighting the viewer', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
