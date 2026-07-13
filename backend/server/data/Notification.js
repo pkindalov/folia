@@ -102,8 +102,9 @@ const notificationSchema = new mongoose.Schema(
     },
     // Required for page_reaction (which page was reacted to). Also set,
     // optionally, on album_photos_added as a representative photo from the
-    // uploaded batch — used to show a thumbnail and deep-link to that photo,
-    // not required there since a notification predating this feature (or
+    // uploaded batch. Used by notifications-controller.js to show a
+    // thumbnail and deep-link to that photo for both types; not required on
+    // album_photos_added since a notification predating this feature (or
     // one whose batch somehow yielded no pages) simply has none.
     page: {
       type: mongoose.Schema.Types.ObjectId,

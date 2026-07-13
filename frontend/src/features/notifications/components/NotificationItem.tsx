@@ -138,9 +138,10 @@ const MESSAGE_PARTS_BY_TYPE: Record<
 // Where clicking the row navigates. Most album_* types link straight to the
 // album itself; album_deleted is the one exception — there's no album left
 // to view, so it falls back to /circles like the circle_* types.
-// album_photos_added deep-links to the specific uploaded photo when one is
-// recorded (?photo=<pageId>, read by ViewerPage) — a legacy notification
-// with no recorded page just opens the album like the other album_* types.
+// album_photos_added and page_reaction deep-link to the specific photo when
+// one is recorded (?photo=<pageId>, read by ViewerPage) — a legacy
+// notification with no recorded page just opens the album like the other
+// album_* types.
 // Record over NotificationItemData['type'] rather than a switch, for the
 // same exhaustiveness reason as MESSAGE_PARTS_BY_TYPE above.
 const LINK_TO_BY_TYPE: Record<
@@ -161,7 +162,10 @@ const LINK_TO_BY_TYPE: Record<
   album_photo_removed: ({ album }) => (album ? `/book/${album}` : "/circles"),
   album_photo_caption_updated: ({ album }) =>
     album ? `/book/${album}` : "/circles",
-  page_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  page_reaction: ({ album, page }) => {
+    if (!album) return "/circles";
+    return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
+  },
   album_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
 };
 

@@ -10,11 +10,11 @@ const { parsePage, checkAlbumReadAccess, fetchCirclesForAlbums } = require('../u
 const NOTIFICATIONS_PAGE_SIZE = 20;
 
 // album_shared/album_updated show the album's current cover image;
-// album_photos_added shows the specific uploaded photo it references
-// instead (see album-notifications.js's notifyAlbumEvent) — every other
-// type has no thumbnail at all.
+// album_photos_added and page_reaction show the specific photo they
+// reference instead (see album-notifications.js) — every other type has
+// no thumbnail at all.
 const COVER_THUMBNAIL_TYPES = ['album_shared', 'album_updated'];
-const PAGE_THUMBNAIL_TYPE = 'album_photos_added';
+const PAGE_THUMBNAIL_TYPES = ['album_photos_added', 'page_reaction'];
 
 // Batches actor-avatar resolution for a page of notifications into a single
 // User lookup (mirrors albums-controller.js's resolveCoverImages) instead of
@@ -64,7 +64,7 @@ function resolveThumbnailUrls(notifications, user) {
     (notification) => COVER_THUMBNAIL_TYPES.includes(notification.type) && notification.album
   );
   const pageNotifications = notifications.filter(
-    (notification) => notification.type === PAGE_THUMBNAIL_TYPE && notification.page && notification.album
+    (notification) => PAGE_THUMBNAIL_TYPES.includes(notification.type) && notification.page && notification.album
   );
 
   const albumIds = [
@@ -95,7 +95,7 @@ function resolveThumbnailUrls(notifications, user) {
                 return [notification._id.toString(), thumbnailUrl];
               }
 
-              if (notification.type === PAGE_THUMBNAIL_TYPE && notification.page && notification.album) {
+              if (PAGE_THUMBNAIL_TYPES.includes(notification.type) && notification.page && notification.album) {
                 const album = albumById.get(notification.album.toString());
                 const page = pageById.get(notification.page.toString());
                 // Guard against a page that (somehow) belongs to a different

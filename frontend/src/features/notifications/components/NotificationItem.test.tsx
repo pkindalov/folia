@@ -79,4 +79,10 @@ describe('NotificationItem', () => {
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a2');
   });
+
+  test('links a page_reaction notification to the reacted-to photo', () => {
+    renderItem(reactionNotification);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a1?photo=p1');
+  });
 });

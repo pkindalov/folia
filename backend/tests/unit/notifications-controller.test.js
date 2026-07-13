@@ -234,6 +234,36 @@ describe('notifications-controller', () => {
       );
     });
 
+    test('resolves thumbnailUrl to the reacted-to photo for page_reaction notifications', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({ type: 'page_reaction', album: ALBUM_ID, page: PAGE_ID, reactionType: 'like' }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      const pageFind = jest
+        .spyOn(Page, 'find')
+        .mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      const photoUrl = jest
+        .spyOn(storage, 'photoUrl')
+        .mockReturnValue('https://signed.example/photo.jpg');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(pageFind).toHaveBeenCalledWith({ _id: { $in: [PAGE_ID] } }, 'album filename');
+      expect(photoUrl).toHaveBeenCalledWith(OWNER_ID, ALBUM_ID, 'photo.jpg');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ thumbnailUrl: 'https://signed.example/photo.jpg' }),
+          ],
+        })
+      );
+    });
+
     test('falls back to null thumbnailUrl when the referenced album no longer exists', async () => {
       jest
         .spyOn(Notification, 'find')

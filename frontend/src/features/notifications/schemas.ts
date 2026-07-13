@@ -41,8 +41,9 @@ export const notificationSchema = z
     reactionType: z.enum(REACTION_NOTIFICATION_TYPES).optional(),
     // Signed, time-limited thumbnail URL — the album's cover image for
     // album_shared/album_updated, the referenced photo for
-    // album_photos_added, resolved fresh on every response. Null for every
-    // other type, or when the underlying album/photo no longer exists.
+    // album_photos_added/page_reaction, resolved fresh on every response.
+    // Null for every other type, or when the underlying album/photo no
+    // longer exists.
     thumbnailUrl: z.string().nullable(),
     read: z.boolean(),
     createdAt: z.string(),
