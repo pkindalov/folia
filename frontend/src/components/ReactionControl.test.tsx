@@ -325,4 +325,24 @@ describe('ReactionControl', () => {
 
     expect(screen.queryByRole('link', { name: 'maria' })).not.toBeInTheDocument();
   });
+
+  test('reports its reactors modal open/closed state, so a caller can suspend its own keyboard nav', async () => {
+    const reactions: ReactionSummary = {
+      counts: { ...NO_REACTIONS.counts, love: 1 },
+      total: 1,
+      viewerReaction: null,
+      reactors: [{ username: 'maria', type: 'love' }],
+    };
+    const onReactorsModalOpenChange = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ reactions, onReactorsModalOpenChange });
+
+    expect(onReactorsModalOpenChange).toHaveBeenCalledWith(false);
+
+    await user.click(screen.getByRole('button', { name: 'See who reacted (1)' }));
+    expect(onReactorsModalOpenChange).toHaveBeenLastCalledWith(true);
+
+    await user.keyboard('{Escape}');
+    expect(onReactorsModalOpenChange).toHaveBeenLastCalledWith(false);
+  });
 });

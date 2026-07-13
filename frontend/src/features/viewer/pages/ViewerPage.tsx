@@ -191,7 +191,7 @@ export default function ViewerPage() {
               onOpenLightbox={openLightbox}
               onReact={handleReact}
               isReactionPending={setReaction.isPending}
-              isKeyboardNavDisabled={isLightboxOpen}
+              isKeyboardNavDisabled={isLightboxOpen || isReactorsModalOpen}
               viewerUsername={me?.username}
               isAutoPlaying={isAutoPlaying}
               onAutoPlayingChange={setIsAutoPlaying}

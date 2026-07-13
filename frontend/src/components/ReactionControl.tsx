@@ -21,6 +21,10 @@ type ReactionControlProps = {
   isKeyboardShortcutsDisabled?: boolean;
   /** The signed-in viewer's own username, passed through to the "who reacted" list so it can offer a remove button on their own row. */
   viewerUsername?: string;
+  // Lets a caller (e.g. AlbumSpread, PhotoLightbox) suspend its own arrow-key
+  // / space-bar navigation while this instance's reactors modal is open on
+  // top of it — same reasoning as KeyboardShortcutsHint's onOpenChange.
+  onReactorsModalOpenChange?: (isOpen: boolean) => void;
 };
 
 const REACTION_SHORTCUT_KEYS: Record<ReactionType, string> = {
@@ -52,9 +56,11 @@ export default function ReactionControl({
   variant,
   isKeyboardShortcutsDisabled = false,
   viewerUsername,
+  onReactorsModalOpenChange,
 }: ReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
+  useEffect(() => onReactorsModalOpenChange?.(isReactorsModalOpen), [isReactorsModalOpen, onReactorsModalOpenChange]);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const outsideClickRefs = useMemo(() => [panelRef, triggerRef], []);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import ReactionControl from './ReactionControl';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -51,6 +51,11 @@ export default function PhotoLightbox({
   const hasNext = index < photos.length - 1;
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, photo !== undefined);
+  // While the photo's own "who reacted" list is open on top, arrow keys
+  // should page through it (or do nothing), not also flip the photo
+  // underneath — which would silently close the modal via ReactionControl's
+  // own pageId-tracked reset.
+  const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
 
   // A manual move — same reasoning as AlbumSpread's own prev/next buttons.
   const navigate = useCallback(
@@ -62,6 +67,7 @@ export default function PhotoLightbox({
   );
 
   useEffect(() => {
+    if (isReactorsModalOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
       if (event.key === 'ArrowLeft' && hasPrevious) navigate(index - 1);
@@ -71,7 +77,7 @@ export default function PhotoLightbox({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [index, hasPrevious, hasNext, photos.length, onClose, navigate]);
+  }, [index, hasPrevious, hasNext, photos.length, onClose, navigate, isReactorsModalOpen]);
 
   if (!photo) return null;
 
@@ -146,6 +152,7 @@ export default function PhotoLightbox({
               onReact={(type) => onReact(photo._id, type)}
               isPending={isReactionPending}
               variant="dark"
+              onReactorsModalOpenChange={setIsReactorsModalOpen}
               viewerUsername={viewerUsername}
             />
           )}

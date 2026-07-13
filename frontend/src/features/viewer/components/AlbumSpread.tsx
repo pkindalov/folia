@@ -13,8 +13,9 @@ type AlbumSpreadProps = {
   onOpenLightbox: () => void;
   onReact: (pageId: string, type: ReactionType) => void;
   isReactionPending: boolean;
-  // The lightbox has its own arrow-key navigation while it's open — this
-  // stays true then so the two don't both react to the same keystroke.
+  // True while some other surface already owns the keyboard: the lightbox
+  // has its own arrow-key navigation while it's open, and the album-level
+  // reactors modal shouldn't be paged out from under the viewer either.
   isKeyboardNavDisabled?: boolean;
   viewerUsername?: string;
   isAutoPlaying?: boolean;
@@ -87,6 +88,13 @@ export default function AlbumSpread({
   const hasNextPhoto = hasPhotos && currentIndex < pages.length - 1;
   const canAutoPlay = pages.length > 1;
   const [isShortcutsHintOpen, setIsShortcutsHintOpen] = useState(false);
+  const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
+  // Any overlay dialog rendered on top of the spread (the shortcuts hint or
+  // the "who reacted" list) needs to own the keyboard while it's open —
+  // otherwise arrow/space presses meant for it also flip the page or toggle
+  // autoplay underneath, and navigating resets the modal's own pageId-tracked
+  // state, closing it out from under the viewer.
+  const isOverlayOpen = isShortcutsHintOpen || isReactorsModalOpen;
 
   const [flip, setFlip] = useState<FlipState | null>(null);
   const [flipSeq, setFlipSeq] = useState(0);
@@ -125,7 +133,7 @@ export default function AlbumSpread({
   }, [previousPhoto, currentIndex, onNavigate, stopAutoPlay]);
 
   useEffect(() => {
-    if (isKeyboardNavDisabled) return;
+    if (isKeyboardNavDisabled || isOverlayOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') goToPrevious();
       if (event.key === 'ArrowRight') goToNext();
@@ -144,7 +152,7 @@ export default function AlbumSpread({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isKeyboardNavDisabled, goToPrevious, goToNext, canAutoPlay, isAutoPlaying, onAutoPlayingChange]);
+  }, [isKeyboardNavDisabled, isOverlayOpen, goToPrevious, goToNext, canAutoPlay, isAutoPlaying, onAutoPlayingChange]);
 
   // The actual slideshow timer — advances on its own without going through
   // goToNext (which would immediately stop autoplay again). Stops rather than
@@ -273,6 +281,7 @@ export default function AlbumSpread({
                   isPending={isReactionPending}
                   variant="light"
                   isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen}
+                  onReactorsModalOpenChange={setIsReactorsModalOpen}
                   viewerUsername={viewerUsername}
                 />
                 <div className="flex items-center gap-2">

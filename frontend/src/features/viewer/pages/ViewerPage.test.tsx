@@ -288,6 +288,50 @@ describe('ViewerPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Shortcuts for this volume' })).not.toBeInTheDocument();
   });
 
+  test('ignores arrow keys for page navigation while the shortcuts hint is open', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': { body: ALBUM },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+    await user.click(await screen.findByRole('button', { name: 'Keyboard shortcuts' }));
+    expect(screen.getByRole('dialog', { name: 'Shortcuts for this volume' })).toBeInTheDocument();
+
+    // The hint traps focus and expects to own the keyboard while open — an
+    // arrow key here shouldn't also flip the page underneath it.
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByAltText('photo1.jpg')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Shortcuts for this volume' })).toBeInTheDocument();
+  });
+
+  test('ignores arrow keys for page navigation while the album-level reactors modal is open', async () => {
+    mockApi({
+      'GET /api/users/me': { body: ME },
+      'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+      'GET /api/albums/a1': {
+        body: {
+          album: { ...ALBUM.album, reactions: { total: 1, viewerReacted: true, reactors: ['maria'] } },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderViewer();
+
+    await screen.findByAltText('photo1.jpg');
+    await user.click(await screen.findByRole('button', { name: 'See who loved this album (1)' }));
+    expect(screen.getByRole('dialog', { name: 'People who loved this album' })).toBeInTheDocument();
+
+    // Navigating the page underneath would reset AlbumSpread's own state and
+    // silently close this modal out from under the viewer.
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByAltText('photo1.jpg')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'People who loved this album' })).toBeInTheDocument();
+  });
+
   test('if the picker is already open, opening the shortcuts hint on top of it suspends the picker\'s own Escape too', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },

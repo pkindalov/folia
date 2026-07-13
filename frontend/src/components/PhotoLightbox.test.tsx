@@ -67,6 +67,25 @@ describe('PhotoLightbox', () => {
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
+  test('ArrowRight does not navigate while the reactors modal is open on top', async () => {
+    const onNavigate = vi.fn();
+    const user = userEvent.setup();
+    renderLightbox({
+      photos: [PHOTO, { ...PHOTO, _id: 'p2', url: '/photo2.jpg' }],
+      onNavigate,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'See who reacted (1)' }));
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+
+    // Navigating here would reset ReactionControl's pageId-tracked state and
+    // silently close the modal out from under the viewer.
+    await user.keyboard('{ArrowRight}');
+
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'maria' })).toBeInTheDocument();
+  });
+
   test('shows the autoplay countdown bar only while autoplay is on', () => {
     const { rerender } = renderLightbox({ isAutoPlaying: false, autoPlayIntervalMs: 5000 });
     expect(document.querySelector('.autoplay-progress-bar')).not.toBeInTheDocument();

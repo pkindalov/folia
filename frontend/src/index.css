@@ -234,4 +234,9 @@ body {
     animation: none !important;
     display: none;
   }
+
+  .autoplay-progress-bar {
+    animation: none !important;
+    display: none;
+  }
 }
