@@ -809,10 +809,11 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
 
-      expect(await screen.findByText('Lovely!')).toBeInTheDocument();
-      expect(screen.getByText('maria')).toBeInTheDocument();
+      expect(await within(dialog).findByText('Lovely!')).toBeInTheDocument();
+      expect(within(dialog).getByText('maria')).toBeInTheDocument();
     });
 
     test('does not show a delete button on someone else\'s comment for a regular viewer', async () => {
@@ -826,10 +827,11 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
-      await screen.findByText('Lovely!');
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
+      await within(dialog).findByText('Lovely!');
 
-      expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+      expect(within(dialog).queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
     });
 
     test('shows a delete button on any comment for an Admin who does not own the album', async () => {
@@ -843,10 +845,11 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
-      await screen.findByText('Lovely!');
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
+      await within(dialog).findByText('Lovely!');
 
-      expect(screen.getByRole('button', { name: 'Delete this comment' })).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Delete this comment' })).toBeInTheDocument();
     });
 
     test('posting a comment sends it to the server, shows a pending state, and clears the composer once it succeeds', async () => {
@@ -871,10 +874,11 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
-      await screen.findByText('No comments yet.');
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (0)' }));
+      await within(dialog).findByText('No comments yet.');
 
-      const textarea = screen.getByPlaceholderText('Add a comment…');
+      const textarea = within(dialog).getByPlaceholderText('Add a comment…');
       await user.type(textarea, 'Nice!{Enter}');
 
       const postCall = vi
@@ -884,7 +888,7 @@ describe('ViewerPage', () => {
       expect(JSON.parse(postCall![1]!.body as string)).toEqual({ text: 'Nice!' });
 
       // Still in flight — the typed text must not be lost yet.
-      expect(screen.getByRole('button', { name: 'Post comment' })).toBeDisabled();
+      expect(within(dialog).getByRole('button', { name: 'Post comment' })).toBeDisabled();
       expect(textarea).toHaveValue('Nice!');
 
       resolvePost({
@@ -909,12 +913,16 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
-      await screen.findByText('No comments yet.');
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (0)' }));
+      await within(dialog).findByText('No comments yet.');
 
-      const textarea = screen.getByPlaceholderText('Add a comment…');
+      const textarea = within(dialog).getByPlaceholderText('Add a comment…');
       await user.type(textarea, 'Nice!{Enter}');
 
+      // The server's actual error text surfaces via the page-level toast,
+      // not inside the dialog — CommentControl's own banner (checked in the
+      // "does not leak" test below) always shows a static message instead.
       expect(await screen.findByText('Could not save comment')).toBeInTheDocument();
       expect(textarea).toHaveValue('Nice!');
     });
@@ -932,25 +940,25 @@ describe('ViewerPage', () => {
       renderViewer();
 
       await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
-      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
-      await screen.findByText('No comments yet.');
-      await user.type(screen.getByPlaceholderText('Add a comment…'), 'Nice!{Enter}');
+      const dialog = await screen.findByRole('dialog', { name: 'Photo viewer' });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (0)' }));
+      await within(dialog).findByText('No comments yet.');
+      await user.type(within(dialog).getByPlaceholderText('Add a comment…'), 'Nice!{Enter}');
       // Both the toast and CommentControl's own banner use role="alert" —
       // this test only cares about the latter (the one that could leak
       // across photos), so match on its exact text instead.
-      expect(await screen.findByText("Couldn't post your comment. Try again.")).toBeInTheDocument();
+      expect(await within(dialog).findByText("Couldn't post your comment. Try again.")).toBeInTheDocument();
 
       // Close this panel (mirrors what the Previous/Next guard now forces
       // the viewer to do before navigating) and move to the next photo.
-      await user.click(screen.getByRole('button', { name: 'Collapse comments' }));
-      const dialog = screen.getByRole('dialog', { name: 'Photo viewer' });
+      await user.click(within(dialog).getByRole('button', { name: 'Collapse comments' }));
       await user.click(within(dialog).getByRole('button', { name: 'Next photo' }));
       await within(dialog).findByAltText('photo2.jpg');
 
-      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
-      await screen.findByText('No comments yet.');
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (0)' }));
+      await within(dialog).findByText('No comments yet.');
 
-      expect(screen.queryByText("Couldn't post your comment. Try again.")).not.toBeInTheDocument();
+      expect(within(dialog).queryByText("Couldn't post your comment. Try again.")).not.toBeInTheDocument();
     });
   });
 

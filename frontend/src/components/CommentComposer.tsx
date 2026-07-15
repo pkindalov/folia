@@ -6,13 +6,16 @@ type CommentComposerProps = {
   onSubmit: (text: string) => void;
   isPending: boolean;
   hasError: boolean;
+  /** Mirrors CommentControl's variant — light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). */
+  variant?: 'light' | 'dark';
 };
 
 const REMAINING_CHARACTERS_WARNING_THRESHOLD = 100;
 const REMAINING_CHARACTERS_CRITICAL_THRESHOLD = 20;
 
 /** Textarea + submit button for adding a comment, pinned at the bottom of CommentControl's panel. */
-export default function CommentComposer({ onSubmit, isPending, hasError }: CommentComposerProps) {
+export default function CommentComposer({ onSubmit, isPending, hasError, variant = 'dark' }: CommentComposerProps) {
+  const isLight = variant === 'light';
   const [draftText, setDraftText] = useState('');
 
   // The textarea stays disabled for the whole in-flight window (see below),
@@ -48,7 +51,9 @@ export default function CommentComposer({ onSubmit, isPending, hasError }: Comme
       ? 'text-error'
       : remainingCharacters <= REMAINING_CHARACTERS_CRITICAL_THRESHOLD
         ? 'text-secondary-container'
-        : 'text-white/40';
+        : isLight
+          ? 'text-on-surface-variant'
+          : 'text-white/40';
 
   return (
     <div className="px-3 py-2">
@@ -62,14 +67,22 @@ export default function CommentComposer({ onSubmit, isPending, hasError }: Comme
           placeholder="Add a comment…"
           aria-label="Comment text"
           disabled={isPending}
-          className="flex-1 bg-white/10 rounded-panel px-3 py-2 font-body text-sm text-white placeholder-white/40 border border-transparent focus:outline-none focus-visible:border-secondary resize-none disabled:opacity-60"
+          className={`flex-1 rounded-panel px-3 py-2 font-body text-sm border border-transparent focus:outline-none focus-visible:border-secondary resize-none disabled:opacity-60 ${
+            isLight
+              ? 'bg-surface-container-low text-on-surface placeholder-on-surface-variant'
+              : 'bg-white/10 text-white placeholder-white/40'
+          }`}
         />
         <button
           type="button"
           onClick={submit}
           disabled={!canSubmit}
           aria-label="Post comment"
-          className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-40 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-secondary transition-colors"
+          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-secondary transition-colors ${
+            isLight
+              ? 'text-on-surface-variant hover:bg-surface-container-low hover:text-secondary'
+              : 'text-white/80 hover:bg-white/10 hover:text-white'
+          }`}
         >
           {isPending ? (
             <Icon name="progress_activity" className="text-xl animate-spin" />

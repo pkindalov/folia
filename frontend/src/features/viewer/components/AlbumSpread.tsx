@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../../components/Icon';
 import ReactionControl from '../../../components/ReactionControl';
+import CommentControl from '../../../components/CommentControl';
 import KeyboardShortcutsHint from '../../../components/KeyboardShortcutsHint';
-import type { Album, Page, ReactionType } from '../../flipbooks';
+import type { Album, Comment, Page, ReactionType } from '../../flipbooks';
 
 type AlbumSpreadProps = {
   album: Album;
@@ -30,6 +31,19 @@ type AlbumSpreadProps = {
   // own countdown bar already caught up to the real elapsed time instead of
   // restarting at 0%.
   onAutoPlayTick?: (startedAt: number) => void;
+  // Comments — same shared state ViewerPage feeds to PhotoLightbox, so the
+  // thread for the current photo reads the same whether it's opened from
+  // here or from the zoomed-in view.
+  comments?: Comment[];
+  isCommentsLoading?: boolean;
+  isCommentsError?: boolean;
+  onCommentsOpenChange?: (isOpen: boolean) => void;
+  onAddComment?: (pageId: string, text: string) => void;
+  isAddCommentPending?: boolean;
+  addCommentError?: boolean;
+  onDeleteComment?: (pageId: string, commentId: string) => void;
+  pendingDeleteCommentId?: string | null;
+  isAlbumOwner?: boolean;
 };
 
 type FlipState = {
@@ -88,6 +102,16 @@ export default function AlbumSpread({
   onAutoPlayingChange,
   onAutoPlayEnd,
   onAutoPlayTick,
+  comments,
+  isCommentsLoading = false,
+  isCommentsError = false,
+  onCommentsOpenChange,
+  onAddComment,
+  isAddCommentPending = false,
+  addCommentError = false,
+  onDeleteComment,
+  pendingDeleteCommentId = null,
+  isAlbumOwner = false,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -96,12 +120,23 @@ export default function AlbumSpread({
   const canAutoPlay = pages.length > 1;
   const [isShortcutsHintOpen, setIsShortcutsHintOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
-  // Any overlay dialog rendered on top of the spread (the shortcuts hint or
-  // the "who reacted" list) needs to own the keyboard while it's open —
-  // otherwise arrow/space presses meant for it also flip the page or toggle
-  // autoplay underneath, and navigating resets the modal's own pageId-tracked
-  // state, closing it out from under the viewer.
-  const isOverlayOpen = isShortcutsHintOpen || isReactorsModalOpen;
+  // Mirrors PhotoLightbox's own isCommentsPanelOpen — typing into the
+  // composer shouldn't have arrow keys flip the page or "r"/digit keys fire
+  // a reaction underneath it, same reasoning as there.
+  const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
+  const handleCommentsOpenChange = useCallback(
+    (isOpen: boolean) => {
+      setIsCommentsPanelOpen(isOpen);
+      onCommentsOpenChange?.(isOpen);
+    },
+    [onCommentsOpenChange]
+  );
+  // Any overlay dialog rendered on top of the spread (the shortcuts hint, the
+  // "who reacted" list, or an open comment thread) needs to own the keyboard
+  // while it's open — otherwise arrow/space presses meant for it also flip
+  // the page or toggle autoplay underneath, and navigating resets the
+  // overlay's own pageId-tracked state, closing it out from under the viewer.
+  const isOverlayOpen = isShortcutsHintOpen || isReactorsModalOpen || isCommentsPanelOpen;
 
   const [flip, setFlip] = useState<FlipState | null>(null);
   const [flipSeq, setFlipSeq] = useState(0);
@@ -255,7 +290,10 @@ export default function AlbumSpread({
                   <>
                     <button
                       onClick={goToPrevious}
-                      disabled={currentIndex === 0}
+                      // Also blocked while a comment draft is open, same
+                      // reasoning as PhotoLightbox's Previous/Next — paging
+                      // away would silently discard it.
+                      disabled={currentIndex === 0 || isCommentsPanelOpen}
                       aria-label="Previous photo"
                       className="absolute top-1/2 left-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-0 disabled:pointer-events-none"
                     >
@@ -263,9 +301,10 @@ export default function AlbumSpread({
                     </button>
                     <button
                       onClick={goToNext}
+                      disabled={isCommentsPanelOpen}
                       aria-label={hasNextPhoto ? 'Next photo' : 'Back to first photo'}
                       title={hasNextPhoto ? undefined : 'Back to first photo'}
-                      className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                      className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <Icon name={hasNextPhoto ? 'chevron_right' : 'replay'} />
                     </button>
@@ -282,16 +321,42 @@ export default function AlbumSpread({
               <div className="photo-tear mt-3" aria-hidden="true" />
 
               <div className="flex items-center justify-between py-2">
-                <ReactionControl
-                  pageId={currentPhoto._id}
-                  reactions={currentPhoto.reactions}
-                  onReact={(type) => onReact(currentPhoto._id, type)}
-                  isPending={isReactionPending}
-                  variant="light"
-                  isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen}
-                  onReactorsModalOpenChange={setIsReactorsModalOpen}
-                  viewerUsername={viewerUsername}
-                />
+                <div className="flex items-center gap-3">
+                  <ReactionControl
+                    pageId={currentPhoto._id}
+                    reactions={currentPhoto.reactions}
+                    onReact={(type) => onReact(currentPhoto._id, type)}
+                    isPending={isReactionPending}
+                    variant="light"
+                    // The comment composer is a plain textarea sitting right
+                    // next to this control — without this, ReactionControl's
+                    // global "r" / digit-key shortcuts would eat keystrokes
+                    // typed into it (and "r" followed by a digit 1-6 would
+                    // fire a real reaction mutation as a side effect of
+                    // typing a comment).
+                    isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen || isCommentsPanelOpen}
+                    onReactorsModalOpenChange={setIsReactorsModalOpen}
+                    viewerUsername={viewerUsername}
+                  />
+                  {onAddComment && onDeleteComment && (
+                    <CommentControl
+                      pageId={currentPhoto._id}
+                      commentCount={currentPhoto.commentCount}
+                      comments={comments}
+                      isLoading={isCommentsLoading}
+                      isError={isCommentsError}
+                      onOpenChange={handleCommentsOpenChange}
+                      onAddComment={(text) => onAddComment(currentPhoto._id, text)}
+                      isAddPending={isAddCommentPending}
+                      addError={addCommentError}
+                      onDeleteComment={(commentId) => onDeleteComment(currentPhoto._id, commentId)}
+                      pendingDeleteCommentId={pendingDeleteCommentId}
+                      variant="light"
+                      viewerUsername={viewerUsername}
+                      isAlbumOwner={isAlbumOwner}
+                    />
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {pages.length > 1 && (
                     <span className="font-body italic text-on-surface-variant text-xs">

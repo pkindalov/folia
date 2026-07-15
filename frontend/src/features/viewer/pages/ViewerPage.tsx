@@ -280,6 +280,16 @@ export default function ViewerPage() {
               onAutoPlayingChange={setIsAutoPlaying}
               onAutoPlayEnd={endAutoPlay}
               onAutoPlayTick={setAutoPlayStartedAt}
+              comments={comments}
+              isCommentsLoading={isCommentsLoading}
+              isCommentsError={isCommentsError}
+              onCommentsOpenChange={handleCommentsOpenChange}
+              onAddComment={handleAddComment}
+              isAddCommentPending={addComment.isPending}
+              addCommentError={addComment.isError}
+              onDeleteComment={handleDeleteComment}
+              pendingDeleteCommentId={pendingDeleteCommentId}
+              isAlbumOwner={isAlbumOwner}
             />
           )}
         </div>

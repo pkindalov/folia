@@ -25,6 +25,8 @@ type CommentControlProps = {
   pendingDeleteCommentId: string | null;
   viewerUsername?: string;
   isAlbumOwner: boolean;
+  /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
+  variant?: 'light' | 'dark';
 };
 
 function CommentRow({
@@ -33,12 +35,14 @@ function CommentRow({
   canDelete,
   isDeletePending,
   onDelete,
+  isLight,
 }: {
   comment: Comment;
   isOwnComment: boolean;
   canDelete: boolean;
   isDeletePending: boolean;
   onDelete: () => void;
+  isLight: boolean;
 }) {
   return (
     <li
@@ -51,14 +55,20 @@ function CommentRow({
       />
       <div className="flex-1 min-w-0">
         <div>
-          <span className="font-ui text-sm font-semibold text-white">
+          <span
+            className={`font-ui text-sm font-semibold ${isLight ? "text-on-surface" : "text-white"}`}
+          >
             {comment.username}
           </span>
-          <span className="font-ui text-xs text-white/50 ml-2">
+          <span
+            className={`font-ui text-xs ml-2 ${isLight ? "text-on-surface-variant" : "text-white/50"}`}
+          >
             {formatRelativeTime(comment.createdAt)}
           </span>
         </div>
-        <p className="font-body text-sm text-white/90 leading-snug wrap-break-word">
+        <p
+          className={`font-body text-sm leading-snug wrap-break-word ${isLight ? "text-on-surface" : "text-white/90"}`}
+        >
           {comment.text}
         </p>
       </div>
@@ -70,7 +80,11 @@ function CommentRow({
           aria-label={
             isOwnComment ? "Delete your comment" : "Delete this comment"
           }
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-error hover:bg-white/10 disabled:pointer-events-none transition-colors focus-visible:ring-2 focus-visible:ring-secondary"
+          className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:pointer-events-none transition-colors focus-visible:ring-2 focus-visible:ring-secondary ${
+            isLight
+              ? "text-on-surface-variant hover:text-error hover:bg-error-container"
+              : "text-white/40 hover:text-error hover:bg-white/10"
+          }`}
         >
           {isDeletePending ? (
             <Icon name="progress_activity" className="text-lg animate-spin" />
@@ -83,7 +97,7 @@ function CommentRow({
   );
 }
 
-/** Inline comment-count trigger + expandable thread panel, for a single page/photo, rendered inside PhotoLightbox. */
+/** Inline comment-count trigger + expandable thread panel, for a single page/photo — rendered in both PhotoLightbox and AlbumSpread. */
 export default function CommentControl({
   pageId,
   commentCount,
@@ -98,7 +112,9 @@ export default function CommentControl({
   pendingDeleteCommentId,
   viewerUsername,
   isAlbumOwner,
+  variant = 'dark',
 }: CommentControlProps) {
+  const isLight = variant === 'light';
   const [isOpen, setIsOpen] = useState(false);
   useEffect(() => onOpenChange?.(isOpen), [isOpen, onOpenChange]);
   const close = useCallback(() => setIsOpen(false), []);
@@ -136,10 +152,12 @@ export default function CommentControl({
 
   const panelId = useId();
 
+  const hintTextClass = isLight ? "text-on-surface-variant" : "text-white/60";
+
   const renderListContent = () => {
     if (isLoading && comments === undefined) {
       return (
-        <p className="font-body italic text-white/60 text-sm text-center py-6">
+        <p className={`font-body italic text-sm text-center py-6 ${hintTextClass}`}>
           Loading comments…
         </p>
       );
@@ -156,7 +174,7 @@ export default function CommentControl({
     }
     if (comments === undefined || comments.length === 0) {
       return (
-        <p className="font-body italic text-white/60 text-sm text-center py-6">
+        <p className={`font-body italic text-sm text-center py-6 ${hintTextClass}`}>
           No comments yet.
         </p>
       );
@@ -171,6 +189,7 @@ export default function CommentControl({
             canDelete={comment.username === viewerUsername || isAlbumOwner}
             isDeletePending={pendingDeleteCommentId === comment._id}
             onDelete={() => onDeleteComment(comment._id)}
+            isLight={isLight}
           />
         ))}
       </ul>
@@ -191,7 +210,11 @@ export default function CommentControl({
         aria-label={
           isOpen ? "Hide comments" : `View comments (${commentCount})`
         }
-        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-ui text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-ui text-sm transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none ${
+          isLight
+            ? "text-on-surface-variant hover:bg-surface-container-low hover:text-secondary"
+            : "text-white/80 hover:bg-white/10 hover:text-white"
+        }`}
       >
         <Icon name="mode_comment" filled={isOpen} className="text-xl" />
         {commentCount}
@@ -199,15 +222,19 @@ export default function CommentControl({
 
       {isOpen && (
         // Floats above the trigger (like ReactionControl's picker) instead
-        // of pushing the lightbox layout taller — it sits right next to the
-        // like button, so growing in flow would shove that row down every
-        // time the thread opens.
+        // of pushing the surrounding layout taller — it sits right next to
+        // the like button, so growing in flow would shove that row down
+        // every time the thread opens.
         <div
           id={panelId}
-          className="absolute bottom-full right-0 mb-2 w-80 max-w-[85vw] max-h-[70vh] bg-inverse-surface rounded-panel border border-white/10 flex flex-col overflow-hidden z-20"
+          className={`absolute bottom-full right-0 mb-2 w-80 max-w-[85vw] max-h-[70vh] rounded-panel border flex flex-col overflow-hidden z-20 ${
+            isLight
+              ? "bg-surface-container-lowest paper-depth border-outline-variant/40"
+              : "bg-inverse-surface border-white/10"
+          }`}
         >
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="font-ui text-xs uppercase tracking-wide text-white/50">
+            <span className={`font-ui text-xs uppercase tracking-wide ${isLight ? "text-on-surface-variant" : "text-white/50"}`}>
               Comments
             </span>
             <button
@@ -217,7 +244,11 @@ export default function CommentControl({
               // would detach that submission's own error callback.
               disabled={isAddPending}
               aria-label="Collapse comments"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary disabled:opacity-40 disabled:pointer-events-none"
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-secondary disabled:opacity-40 disabled:pointer-events-none ${
+                isLight
+                  ? "text-on-surface-variant hover:bg-surface-container-low hover:text-secondary"
+                  : "text-white/60 hover:bg-white/10 hover:text-white"
+              }`}
             >
               <Icon name="expand_less" className="text-xl" />
             </button>
@@ -236,11 +267,12 @@ export default function CommentControl({
             </p>
           )}
 
-          <div className="border-t border-white/10">
+          <div className={`border-t ${isLight ? "border-outline-variant/40" : "border-white/10"}`}>
             <CommentComposer
               onSubmit={onAddComment}
               isPending={isAddPending}
               hasError={addError}
+              variant={variant}
             />
           </div>
         </div>

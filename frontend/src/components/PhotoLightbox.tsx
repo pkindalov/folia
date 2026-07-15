@@ -236,6 +236,7 @@ export default function PhotoLightbox({
                   addError={addCommentError}
                   onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
                   pendingDeleteCommentId={pendingDeleteCommentId}
+                  variant="dark"
                   viewerUsername={viewerUsername}
                   isAlbumOwner={isAlbumOwner}
                 />
