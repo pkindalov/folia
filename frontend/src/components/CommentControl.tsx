@@ -178,7 +178,7 @@ export default function CommentControl({
   };
 
   return (
-    <div className="flex flex-col items-center gap-2 w-full">
+    <div className="relative inline-flex">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -198,9 +198,13 @@ export default function CommentControl({
       </button>
 
       {isOpen && (
+        // Floats above the trigger (like ReactionControl's picker) instead
+        // of pushing the lightbox layout taller — it sits right next to the
+        // like button, so growing in flow would shove that row down every
+        // time the thread opens.
         <div
           id={panelId}
-          className="w-full max-w-sm bg-white/10 rounded-panel border border-white/10 flex flex-col overflow-hidden"
+          className="absolute bottom-full right-0 mb-2 w-80 max-w-[85vw] max-h-[70vh] bg-inverse-surface rounded-panel border border-white/10 flex flex-col overflow-hidden z-20"
         >
           <div className="flex items-center justify-between px-3 py-2">
             <span className="font-ui text-xs uppercase tracking-wide text-white/50">

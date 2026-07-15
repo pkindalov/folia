@@ -163,7 +163,7 @@ export default function PhotoLightbox({
           </button>
         )}
 
-        <div className="flex flex-col items-center gap-4 max-w-[80vw] max-h-[85vh] overflow-y-auto">
+        <div className="flex flex-col items-center gap-4 max-w-[80vw]">
           <div className="relative max-w-full">
             {isAutoPlaying && autoPlayIntervalMs !== undefined && (
               <div
@@ -202,39 +202,45 @@ export default function PhotoLightbox({
               Photo {index + 1} of {photos.length}
             </span>
           )}
-          {onReact && photo.reactions && (
-            <ReactionControl
-              pageId={photo._id}
-              reactions={photo.reactions}
-              onReact={(type) => onReact(photo._id, type)}
-              isPending={isReactionPending}
-              variant="dark"
-              onReactorsModalOpenChange={setIsReactorsModalOpen}
-              // The comment composer is a plain textarea sitting right next
-              // to this control — without this, ReactionControl's global "r"
-              // / digit-key shortcuts would eat keystrokes typed into it (and
-              // "r" followed by a digit 1-6 would fire a real reaction
-              // mutation as a side effect of typing a comment).
-              isKeyboardShortcutsDisabled={isCommentsPanelOpen}
-              viewerUsername={viewerUsername}
-            />
-          )}
-          {onAddComment && onDeleteComment && photo.commentCount !== undefined && (
-            <CommentControl
-              pageId={photo._id}
-              commentCount={photo.commentCount}
-              comments={comments}
-              isLoading={isCommentsLoading}
-              isError={isCommentsError}
-              onOpenChange={handleCommentsOpenChange}
-              onAddComment={(text) => onAddComment(photo._id, text)}
-              isAddPending={isAddCommentPending}
-              addError={addCommentError}
-              onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
-              pendingDeleteCommentId={pendingDeleteCommentId}
-              viewerUsername={viewerUsername}
-              isAlbumOwner={isAlbumOwner}
-            />
+          {((onReact && photo.reactions) ||
+            (onAddComment && onDeleteComment && photo.commentCount !== undefined)) && (
+            <div className="flex items-center gap-3">
+              {onReact && photo.reactions && (
+                <ReactionControl
+                  pageId={photo._id}
+                  reactions={photo.reactions}
+                  onReact={(type) => onReact(photo._id, type)}
+                  isPending={isReactionPending}
+                  variant="dark"
+                  onReactorsModalOpenChange={setIsReactorsModalOpen}
+                  // The comment composer is a plain textarea sitting right
+                  // next to this control — without this, ReactionControl's
+                  // global "r" / digit-key shortcuts would eat keystrokes
+                  // typed into it (and "r" followed by a digit 1-6 would
+                  // fire a real reaction mutation as a side effect of typing
+                  // a comment).
+                  isKeyboardShortcutsDisabled={isCommentsPanelOpen}
+                  viewerUsername={viewerUsername}
+                />
+              )}
+              {onAddComment && onDeleteComment && photo.commentCount !== undefined && (
+                <CommentControl
+                  pageId={photo._id}
+                  commentCount={photo.commentCount}
+                  comments={comments}
+                  isLoading={isCommentsLoading}
+                  isError={isCommentsError}
+                  onOpenChange={handleCommentsOpenChange}
+                  onAddComment={(text) => onAddComment(photo._id, text)}
+                  isAddPending={isAddCommentPending}
+                  addError={addCommentError}
+                  onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
+                  pendingDeleteCommentId={pendingDeleteCommentId}
+                  viewerUsername={viewerUsername}
+                  isAlbumOwner={isAlbumOwner}
+                />
+              )}
+            </div>
           )}
         </div>
 
