@@ -3,6 +3,7 @@ const Album = require('../data/Album');
 const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const AlbumReaction = require('../data/AlbumReaction');
+const Comment = require('../data/Comment');
 const User = require('../data/User');
 const Circle = require('../data/Circle');
 const errorHandler = require('../utilities/error-handler');
@@ -491,6 +492,7 @@ module.exports = {
           return Page.deleteMany({ album: deletedAlbum._id })
             .then(() => Reaction.deleteMany({ album: deletedAlbum._id }))
             .then(() => AlbumReaction.deleteMany({ album: deletedAlbum._id }))
+            .then(() => Comment.deleteMany({ album: deletedAlbum._id }))
             .then(() => {
               notifyAlbumEvent({ type: 'album_deleted', album: deletedAlbum, actorUser: req.user });
               res.json({ deleted: true });

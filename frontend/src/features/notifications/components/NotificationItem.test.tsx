@@ -14,6 +14,7 @@ const reactionNotification: NotificationItemData = {
   album: 'a1',
   page: 'p1',
   reactionType: 'love',
+  commentText: null,
   thumbnailUrl: null,
   read: false,
   relativeTime: 'Just now',
@@ -29,6 +30,23 @@ const albumReactionNotification: NotificationItemData = {
   album: 'a2',
   page: null,
   reactionType: null,
+  commentText: null,
+  thumbnailUrl: null,
+  read: false,
+  relativeTime: 'Just now',
+};
+
+const commentNotification: NotificationItemData = {
+  _id: 'n3',
+  type: 'page_comment',
+  actorUsername: 'sam',
+  actorAvatarUrl: null,
+  circleName: null,
+  albumTitle: 'Summer Trip',
+  album: 'a3',
+  page: 'p3',
+  reactionType: null,
+  commentText: 'What a lovely photo, I really love the lighting here!',
   thumbnailUrl: null,
   read: false,
   relativeTime: 'Just now',
@@ -84,5 +102,20 @@ describe('NotificationItem', () => {
     renderItem(reactionNotification);
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a1?photo=p1');
+  });
+
+  test('renders a page_comment notification as "commented [icon] on a photo in AlbumTitle" with a preview', () => {
+    renderItem(commentNotification);
+
+    expect(screen.getByText(/commented/)).toBeInTheDocument();
+    expect(screen.getByText('mode_comment')).toBeInTheDocument();
+    expect(screen.getByText('Summer Trip')).toBeInTheDocument();
+    expect(screen.getByText(/What a lovely photo, I really love the l…/)).toBeInTheDocument();
+  });
+
+  test('links a page_comment notification to the commented-on photo', () => {
+    renderItem(commentNotification);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a3?photo=p3');
   });
 });

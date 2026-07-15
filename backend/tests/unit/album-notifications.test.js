@@ -4,6 +4,7 @@ const {
   notifyAlbumEvent,
   notifyPageReaction,
   notifyAlbumReaction,
+  notifyPageComment,
 } = require('../../server/utilities/album-notifications');
 
 const flush = () => new Promise(setImmediate);
@@ -234,6 +235,73 @@ describe('notifyPageReaction', () => {
         album: fakeAlbum(),
         reactionType: 'wow',
         reactorUser: actorUser,
+      })
+    ).not.toThrow();
+    await flush();
+
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe('notifyPageComment', () => {
+  test('notifies the album owner with the page, snapshot commentText and commenter username', async () => {
+    notifyPageComment({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'What a lovely photo!',
+      commenterUser: actorUser,
+    });
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: OWNER_ID,
+        type: 'page_comment',
+        actorUsername: 'pan',
+        actor: ACTOR_ID,
+        album: ALBUM_ID,
+        albumTitle: 'Summer Trip',
+        page: PAGE_ID,
+        commentText: 'What a lovely photo!',
+      })
+    );
+  });
+
+  test('does not notify when the commenter is the album owner (no self-notification)', async () => {
+    notifyPageComment({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'Nice!',
+      commenterUser: { _id: OWNER_ID, username: 'owner' },
+    });
+    await flush();
+
+    expect(Notification.create).not.toHaveBeenCalled();
+  });
+
+  test('prunes the recipient\'s notifications after creating one', async () => {
+    notifyPageComment({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'Nice!',
+      commenterUser: actorUser,
+    });
+    await flush();
+
+    expect(Notification.pruneExcessForRecipient).toHaveBeenCalledWith(OWNER_ID);
+  });
+
+  test('never throws when Notification.create fails — logs and swallows', async () => {
+    Notification.create.mockRejectedValue(new Error('db down'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      notifyPageComment({
+        page: fakePage(),
+        album: fakeAlbum(),
+        commentText: 'Nice!',
+        commenterUser: actorUser,
       })
     ).not.toThrow();
     await flush();

@@ -3,6 +3,7 @@ const Album = require('../data/Album');
 const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const AlbumReaction = require('../data/AlbumReaction');
+const Comment = require('../data/Comment');
 const Circle = require('../data/Circle');
 const Notification = require('../data/Notification');
 const storage = require('./storage');
@@ -31,14 +32,15 @@ function planUserDeletion(userId) {
 }
 
 // Deletes a user and everything that belongs to them: owned albums (and
-// their pages/reactions), owned circles (unsharing any album still pointing
-// at one first, then notifying members and clearing invite notifications —
-// same pattern, and same circle-notifications.js helpers, as
-// circles-controller.js's own remove()), their own reactions on other
-// people's content, their membership in other people's circles, their
-// notification inbox, and their upload + avatar folders on disk. A
-// notification where this user is merely the *actor* (a reaction/upload on
-// someone else's album) is deliberately left alone — same intentional
+// their pages/reactions/comments), owned circles (unsharing any album still
+// pointing at one first, then notifying members and clearing invite
+// notifications — same pattern, and same circle-notifications.js helpers,
+// as circles-controller.js's own remove()), their own reactions and
+// comments on other people's content, their membership in other people's
+// circles, their notification inbox, and their upload + avatar folders on
+// disk. A notification where this user is merely the *actor* (a
+// reaction/comment/upload on someone else's album) is deliberately left
+// alone — same intentional
 // graceful-degradation as any other deleted-actor notification (see
 // notifications-controller.js), not an oversight.
 //
@@ -63,6 +65,7 @@ function deleteUser(userId) {
       .then(() => Page.deleteMany({ album: { $in: albumIds } }))
       .then(() => Reaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => AlbumReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
+      .then(() => Comment.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => Album.deleteMany({ owner: userId }))
       .then(() => Circle.deleteMany({ owner: userId }))
       .then(() => {

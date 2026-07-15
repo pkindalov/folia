@@ -163,6 +163,45 @@ describe('Notification model', () => {
       expect(notification.reactionType).toBeUndefined();
     });
 
+    test('accepts a valid page_comment notification with no circle or circleName', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_comment',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+        album: '507f191e810c19729de860eb',
+        albumTitle: 'Summer Trip',
+        page: '507f191e810c19729de860ec',
+        commentText: 'What a lovely photo!',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.circle).toBeUndefined();
+      expect(notification.circleName).toBeUndefined();
+    });
+
+    test('requires page and commentText for a page_comment notification', () => {
+      const err = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'page_comment',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+      }).validateSync();
+      expect(err.errors.page).toBeDefined();
+      expect(err.errors.commentText).toBeDefined();
+    });
+
+    test('page and commentText are not required for non-page_comment types', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'album_shared',
+        circle: CIRCLE_ID,
+        circleName: 'The Sterling Family',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+      });
+      expect(notification.validateSync()).toBeUndefined();
+    });
+
     test('non-page_reaction types still require circle and circleName', () => {
       const err = new Notification({
         recipient: RECIPIENT_ID,

@@ -73,6 +73,31 @@ function AlbumLoveMessageIcon() {
   );
 }
 
+// Rendered inline for page_comment — the comment icon plus a truncated
+// preview of what was said, so the row reads as "commented [icon] "nice
+// shot!" on a photo in" rather than just "commented on a photo in" with no
+// hint of the content.
+const COMMENT_PREVIEW_MAX_LENGTH = 40;
+
+function CommentMessageIcon({ commentText }: { commentText: string | null }) {
+  const preview =
+    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
+      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
+      : commentText;
+
+  return (
+    <>
+      commented{" "}
+      <Icon
+        name="mode_comment"
+        filled
+        className="text-sm align-text-bottom text-secondary"
+      />
+      {preview ? ` "${preview}"` : ""} on a photo in
+    </>
+  );
+}
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
   (notification: NotificationItemData) => MessageParts
@@ -133,6 +158,11 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),
+  page_comment: ({ albumTitle, circleName, commentText }) => ({
+    leading: <CommentMessageIcon commentText={commentText} />,
+    subject: albumTitle ?? "an album",
+    trailing: circleName ? `shared with ${circleName}` : undefined,
+  }),
 };
 
 // Where clicking the row navigates. Most album_* types link straight to the
@@ -167,6 +197,10 @@ const LINK_TO_BY_TYPE: Record<
     return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
   },
   album_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
+  page_comment: ({ album, page }) => {
+    if (!album) return "/circles";
+    return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
+  },
 };
 
 // No fallback content on load failure (unlike Avatar, which always has an

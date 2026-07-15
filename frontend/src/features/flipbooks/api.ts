@@ -10,9 +10,13 @@ import {
   setCoverResponseSchema,
   setPageReactionResponseSchema,
   setAlbumReactionResponseSchema,
+  commentsResponseSchema,
+  addCommentResponseSchema,
+  deleteCommentResponseSchema,
   type Album,
   type AlbumFormInput,
   type AlbumReactionSummary,
+  type Comment,
   type Page,
   type PaginatedAlbums,
   type PaginatedPublicAlbums,
@@ -127,4 +131,32 @@ export async function setPageReaction(
 export async function setAlbumReaction(albumId: string): Promise<AlbumReactionSummary> {
   const data = await api(`/api/albums/${albumId}/reaction`, { method: 'PUT' });
   return setAlbumReactionResponseSchema.parse(data).reactions;
+}
+
+export async function listComments(albumId: string, pageId: string): Promise<Comment[]> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments`);
+  return commentsResponseSchema.parse(data).comments;
+}
+
+export async function addComment(
+  albumId: string,
+  pageId: string,
+  text: string
+): Promise<{ comment: Comment; commentCount: number }> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+  return addCommentResponseSchema.parse(data);
+}
+
+export async function deleteComment(
+  albumId: string,
+  pageId: string,
+  commentId: string
+): Promise<{ commentCount: number }> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments/${commentId}`, {
+    method: 'DELETE',
+  });
+  return deleteCommentResponseSchema.parse(data);
 }

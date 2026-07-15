@@ -1,0 +1,211 @@
+import type { ComponentProps } from 'react';
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import CommentControl from './CommentControl';
+import type { Comment } from '../features/flipbooks';
+
+const COMMENT: Comment = {
+  _id: 'c1',
+  page: 'p1',
+  user: 'u1',
+  username: 'maria',
+  avatarUrl: null,
+  text: 'Lovely photo!',
+  createdAt: new Date().toISOString(),
+};
+
+const DEFAULT_PROPS: ComponentProps<typeof CommentControl> = {
+  pageId: 'p1',
+  commentCount: 0,
+  comments: undefined,
+  isLoading: false,
+  isError: false,
+  onAddComment: vi.fn(),
+  isAddPending: false,
+  addError: false,
+  onDeleteComment: vi.fn(),
+  pendingDeleteCommentId: null,
+  isAlbumOwner: false,
+};
+
+const renderControl = (props: Partial<ComponentProps<typeof CommentControl>> = {}) =>
+  render(<CommentControl {...DEFAULT_PROPS} {...props} />);
+
+describe('CommentControl', () => {
+  test('shows the trigger with the preloaded count even at zero', () => {
+    renderControl({ commentCount: 0 });
+    expect(screen.getByRole('button', { name: 'View comments (0)' })).toBeInTheDocument();
+  });
+
+  test('shows the preloaded count on the trigger before the thread is fetched', () => {
+    renderControl({ commentCount: 5, comments: undefined });
+    expect(screen.getByRole('button', { name: 'View comments (5)' })).toBeInTheDocument();
+  });
+
+  test('clicking the trigger opens the panel and notifies the parent', async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ onOpenChange });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+    expect(screen.getByRole('button', { name: 'Hide comments' })).toBeInTheDocument();
+  });
+
+  test('shows a loading message while the thread is being fetched', async () => {
+    const user = userEvent.setup();
+    renderControl({ isLoading: true, comments: undefined });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+
+    expect(screen.getByText('Loading comments…')).toBeInTheDocument();
+  });
+
+  test('shows an error message when the fetch fails', async () => {
+    const user = userEvent.setup();
+    renderControl({ isError: true, comments: undefined });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load comments. Try again.");
+  });
+
+  test('shows an empty state once the fetch resolves with no comments', async () => {
+    const user = userEvent.setup();
+    renderControl({ comments: [] });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+
+    expect(screen.getByText('No comments yet.')).toBeInTheDocument();
+  });
+
+  test('renders each comment with its author and text', async () => {
+    const user = userEvent.setup();
+    renderControl({ commentCount: 1, comments: [COMMENT] });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.getByText('maria')).toBeInTheDocument();
+    expect(screen.getByText('Lovely photo!')).toBeInTheDocument();
+  });
+
+  test('shows a delete button on the viewer\'s own comment', async () => {
+    const user = userEvent.setup();
+    renderControl({ commentCount: 1, comments: [COMMENT], viewerUsername: 'maria' });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.getByRole('button', { name: 'Delete your comment' })).toBeInTheDocument();
+  });
+
+  test('shows a delete button on someone else\'s comment when the viewer is the album owner', async () => {
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerUsername: 'someone-else',
+      isAlbumOwner: true,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.getByRole('button', { name: 'Delete this comment' })).toBeInTheDocument();
+  });
+
+  test('hides the delete button for a comment that is neither the viewer\'s own nor theirs to moderate', async () => {
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerUsername: 'someone-else',
+      isAlbumOwner: false,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  test('clicking delete calls onDeleteComment with the comment id', async () => {
+    const onDeleteComment = vi.fn();
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerUsername: 'maria',
+      onDeleteComment,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+    await user.click(screen.getByRole('button', { name: 'Delete your comment' }));
+
+    expect(onDeleteComment).toHaveBeenCalledWith('c1');
+  });
+
+  test('shows a pending spinner in place of the delete button while that comment is being deleted', async () => {
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerUsername: 'maria',
+      pendingDeleteCommentId: 'c1',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.getByRole('button', { name: 'Delete your comment' })).toBeDisabled();
+  });
+
+  test('shows an error banner when posting a comment fails', async () => {
+    const user = userEvent.setup();
+    renderControl({ addError: true });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't post your comment. Try again.");
+  });
+
+  test('submitting the composer calls onAddComment with the typed text', async () => {
+    const onAddComment = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ comments: [], onAddComment });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+    await user.type(screen.getByPlaceholderText('Add a comment…'), 'Nice!{Enter}');
+
+    expect(onAddComment).toHaveBeenCalledWith('Nice!');
+  });
+
+  test('closes and reopens closed when the underlying photo (pageId) changes', async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = renderControl({ pageId: 'p1', onOpenChange });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+    expect(screen.getByRole('button', { name: 'Hide comments' })).toBeInTheDocument();
+
+    rerender(<CommentControl {...DEFAULT_PROPS} pageId="p2" onOpenChange={onOpenChange} />);
+
+    expect(screen.getByRole('button', { name: 'View comments (0)' })).toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
+  test('cannot be collapsed while a post is in flight, so its onError can never be detached mid-request', async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    renderControl({ comments: [], isAddPending: true, onOpenChange });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+    onOpenChange.mockClear();
+
+    expect(screen.getByRole('button', { name: 'Collapse comments' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Hide comments' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse comments' }));
+    await user.keyboard('{Escape}');
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+});

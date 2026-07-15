@@ -177,6 +177,43 @@ export function useSetAlbumReaction(albumId: string) {
   });
 }
 
+// Lazily fetched — only enabled while the viewer actually has a photo's
+// comment thread expanded, so opening the lightbox (or paging through
+// photos) never fires a comments request nobody asked to see.
+export function useComments(albumId: string | undefined, pageId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['albums', albumId, 'pages', pageId, 'comments'],
+    queryFn: () => albumsApi.listComments(albumId!, pageId!),
+    enabled: enabled && albumId !== undefined && pageId !== undefined,
+  });
+}
+
+export function useAddComment(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, text }: { pageId: string; text: string }) =>
+      albumsApi.addComment(albumId, pageId, text),
+    onSuccess: (_result, { pageId }) => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages', pageId, 'comments'] });
+      // The page list's commentCount lives alongside reactions on each page
+      // object — invalidated the same way useSetPageReaction invalidates it.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+    },
+  });
+}
+
+export function useDeleteComment(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, commentId }: { pageId: string; commentId: string }) =>
+      albumsApi.deleteComment(albumId, pageId, commentId),
+    onSuccess: (_result, { pageId }) => {
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages', pageId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+    },
+  });
+}
+
 export function useArchiveAlbum(albumId: string) {
   const queryClient = useQueryClient();
   return useMutation({

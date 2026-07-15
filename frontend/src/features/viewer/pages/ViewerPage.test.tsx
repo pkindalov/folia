@@ -787,6 +787,173 @@ describe('ViewerPage', () => {
     expect(screen.getByRole('button', { name: 'See who loved this album (0)' })).toBeDisabled();
   });
 
+  describe('comments in the lightbox', () => {
+    const COMMENT = {
+      _id: 'c1',
+      page: 'p1',
+      user: 'id2',
+      username: 'maria',
+      avatarUrl: null,
+      text: 'Lovely!',
+      createdAt: new Date().toISOString(),
+    };
+
+    test('opening the comment thread fetches and shows its comments', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(await screen.findByText('Lovely!')).toBeInTheDocument();
+      expect(screen.getByText('maria')).toBeInTheDocument();
+    });
+
+    test('does not show a delete button on someone else\'s comment for a regular viewer', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
+        'GET /api/albums/a1': { body: { album: { ...ALBUM.album, owner: 'someone-else' } } },
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await screen.findByText('Lovely!');
+
+      expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    });
+
+    test('shows a delete button on any comment for an Admin who does not own the album', async () => {
+      mockApi({
+        'GET /api/users/me': { body: { user: { ...ME.user, roles: ['Admin'] } } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
+        'GET /api/albums/a1': { body: { album: { ...ALBUM.album, owner: 'someone-else' } } },
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await screen.findByText('Lovely!');
+
+      expect(screen.getByRole('button', { name: 'Delete this comment' })).toBeInTheDocument();
+    });
+
+    test('posting a comment sends it to the server, shows a pending state, and clears the composer once it succeeds', async () => {
+      let resolvePost!: (response: Response) => void;
+      const pendingPost = new Promise<Response>((resolve) => {
+        resolvePost = resolve;
+      });
+      vi.mocked(fetch).mockImplementation((url, options) => {
+        const method = options?.method ?? 'GET';
+        const urlStr = String(url);
+        const respond = (body: unknown, status = 200) =>
+          Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+        if (urlStr.includes('/api/users/me')) return respond(ME);
+        if (urlStr.includes('/comments') && method === 'POST') return pendingPost;
+        if (urlStr.includes('/comments') && method === 'GET') return respond({ comments: [] });
+        if (urlStr.includes('/api/albums/a1/pages')) return respond({ pages: [PAGE_1] });
+        if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+        return respond({ error: 'Not found' }, 404);
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+      await screen.findByText('No comments yet.');
+
+      const textarea = screen.getByPlaceholderText('Add a comment…');
+      await user.type(textarea, 'Nice!{Enter}');
+
+      const postCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([u, o]) => String(u).includes('/api/albums/a1/pages/p1/comments') && o?.method === 'POST');
+      expect(postCall).toBeDefined();
+      expect(JSON.parse(postCall![1]!.body as string)).toEqual({ text: 'Nice!' });
+
+      // Still in flight — the typed text must not be lost yet.
+      expect(screen.getByRole('button', { name: 'Post comment' })).toBeDisabled();
+      expect(textarea).toHaveValue('Nice!');
+
+      resolvePost({
+        ok: true,
+        status: 201,
+        json: () =>
+          Promise.resolve({ comment: { ...COMMENT, user: 'id1', username: 'pan' }, commentCount: 1 }),
+      } as Response);
+
+      await waitFor(() => expect(textarea).toHaveValue(''));
+    });
+
+    test('keeps the typed text in the composer when posting a comment fails', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
+        'GET /api/albums/a1': { body: ALBUM },
+        'POST /api/albums/a1/pages/p1/comments': { body: { error: 'Could not save comment' }, status: 500 },
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+      await screen.findByText('No comments yet.');
+
+      const textarea = screen.getByPlaceholderText('Add a comment…');
+      await user.type(textarea, 'Nice!{Enter}');
+
+      expect(await screen.findByText('Could not save comment')).toBeInTheDocument();
+      expect(textarea).toHaveValue('Nice!');
+    });
+
+    test('does not leak a failed post\'s error banner onto the next photo\'s untouched comment panel', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages/p2/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+        'POST /api/albums/a1/pages/p1/comments': { body: { error: 'Could not save comment' }, status: 500 },
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+      await screen.findByText('No comments yet.');
+      await user.type(screen.getByPlaceholderText('Add a comment…'), 'Nice!{Enter}');
+      // Both the toast and CommentControl's own banner use role="alert" —
+      // this test only cares about the latter (the one that could leak
+      // across photos), so match on its exact text instead.
+      expect(await screen.findByText("Couldn't post your comment. Try again.")).toBeInTheDocument();
+
+      // Close this panel (mirrors what the Previous/Next guard now forces
+      // the viewer to do before navigating) and move to the next photo.
+      await user.click(screen.getByRole('button', { name: 'Collapse comments' }));
+      const dialog = screen.getByRole('dialog', { name: 'Photo viewer' });
+      await user.click(within(dialog).getByRole('button', { name: 'Next photo' }));
+      await within(dialog).findByAltText('photo2.jpg');
+
+      await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
+      await screen.findByText('No comments yet.');
+
+      expect(screen.queryByText("Couldn't post your comment. Try again.")).not.toBeInTheDocument();
+    });
+  });
+
   describe('autoplay slideshow', () => {
     beforeEach(() => {
       // shouldAdvanceTime keeps the fake clock ticking close to real time on
@@ -876,6 +1043,35 @@ describe('ViewerPage', () => {
       // The timer keeps advancing the current photo behind the lightbox.
       await act(() => vi.advanceTimersByTimeAsync(5000));
       expect(within(dialog).getByAltText('photo2.jpg')).toBeInTheDocument();
+    });
+
+    test('opening the comment panel stops autoplay, instead of it silently discarding an in-progress draft', async () => {
+      mockApi({
+        'GET /api/users/me': { body: ME },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
+        'GET /api/albums/a1': { body: ALBUM },
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderViewer();
+
+      await screen.findByAltText('photo1.jpg');
+      await user.click(screen.getByRole('button', { name: 'Play slideshow' }));
+
+      await user.click(screen.getByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (0)' }));
+      await within(dialog).findByText('No comments yet.');
+
+      expect(screen.getByRole('button', { name: 'Play slideshow' })).toBeInTheDocument();
+      await user.type(within(dialog).getByPlaceholderText('Add a comment…'), 'Nice!');
+
+      // The interval that would otherwise have advanced the photo (and
+      // force-closed this panel, discarding the draft) has now elapsed.
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+
+      expect(within(dialog).getByAltText('photo1.jpg')).toBeInTheDocument();
+      expect(within(dialog).getByPlaceholderText('Add a comment…')).toHaveValue('Nice!');
     });
 
     test('the lightbox countdown bar picks up already caught up to the real timer, instead of restarting at 0%', async () => {

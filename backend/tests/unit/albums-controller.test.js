@@ -10,6 +10,7 @@ const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const AlbumReaction = require('../../server/data/AlbumReaction');
+const Comment = require('../../server/data/Comment');
 const User = require('../../server/data/User');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
@@ -112,6 +113,7 @@ beforeEach(() => {
   jest.spyOn(AlbumReaction, 'aggregate').mockResolvedValue([]);
   jest.spyOn(AlbumReaction, 'find').mockImplementation(() => mockReactorQuery([]));
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
   // setReaction re-verifies the album still exists before writing; default
   // to "still there" so tests that don't care about the concurrent-delete
   // race can't accidentally hit the real Mongoose model.

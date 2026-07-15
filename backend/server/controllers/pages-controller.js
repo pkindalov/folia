@@ -3,9 +3,12 @@ const fs = require('fs');
 const Album = require('../data/Album');
 const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
+const Comment = require('../data/Comment');
 const storage = require('../utilities/storage');
-const { notifyAlbumEvent, notifyPageReaction } = require('../utilities/album-notifications');
+const { notifyAlbumEvent, notifyPageReaction, notifyPageComment } = require('../utilities/album-notifications');
+const { resolveCommentCounts, withCommentAuthors } = require('../utilities/album-comments');
 const {
+  isNonEmptyString,
   isOwnerOrAdmin,
   checkAlbumReadAccess,
   resolveUsernames,
@@ -179,12 +182,16 @@ module.exports = {
       Page.find({ album: id })
         .sort('createdAt')
         .then((pages) =>
-          resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
+          Promise.all([
+            resolveReactionSummaries(pages, req.user._id),
+            resolveCommentCounts(pages),
+          ]).then(([summaryByPageId, commentCountByPageId]) => {
             res.json({
               pages: pages.map((page) => ({
                 ...page.toJSON(),
                 url: storage.photoUrl(album.owner, album._id, page.filename),
                 reactions: summaryByPageId.get(page._id.toString()),
+                commentCount: commentCountByPageId.get(page._id.toString()) ?? 0,
               })),
             });
           })
@@ -247,12 +254,16 @@ module.exports = {
           )
             .then((pages) =>
               syncPageCount(album).then((pageCount) =>
-                // Freshly inserted pages can't have any reactions yet, but
-                // resolving the summary the same way list()/setReaction() do
-                // (rather than hand-rolling a zero-filled shape here) keeps
-                // this response's page objects identical in shape everywhere
-                // the frontend's pageSchema is used.
-                resolveReactionSummaries(pages, req.user._id).then((summaryByPageId) => {
+                // Freshly inserted pages can't have any reactions or comments
+                // yet, but resolving the summaries the same way
+                // list()/setReaction() do (rather than hand-rolling a
+                // zero-filled shape here) keeps this response's page objects
+                // identical in shape everywhere the frontend's pageSchema is
+                // used.
+                Promise.all([
+                  resolveReactionSummaries(pages, req.user._id),
+                  resolveCommentCounts(pages),
+                ]).then(([summaryByPageId, commentCountByPageId]) => {
                   // One notification per upload request, not per photo — a
                   // batch of 10 photos is one "new photos added" event. The
                   // first uploaded photo rides along as a representative
@@ -268,6 +279,7 @@ module.exports = {
                       ...page.toJSON(),
                       url: storage.photoUrl(album.owner, album._id, page.filename),
                       reactions: summaryByPageId.get(page._id.toString()),
+                      commentCount: commentCountByPageId.get(page._id.toString()) ?? 0,
                     })),
                     pageCount,
                   });
@@ -312,16 +324,21 @@ module.exports = {
           if (captionChanged) {
             notifyAlbumEvent({ type: 'album_photo_caption_updated', album, actorUser: req.user });
           }
-          // A caption edit doesn't touch reactions, but this page can
-          // already carry other users' reactions — resolve the real
-          // summary rather than a zero-filled placeholder so the response
-          // shape stays accurate ahead of the query invalidation.
-          return resolveReactionSummaries([saved], req.user._id).then((summaryByPageId) => {
+          // A caption edit doesn't touch reactions or comments, but this
+          // page can already carry other users' reactions/comments —
+          // resolve the real summaries rather than zero-filled placeholders
+          // so the response shape stays accurate ahead of the query
+          // invalidation.
+          return Promise.all([
+            resolveReactionSummaries([saved], req.user._id),
+            resolveCommentCounts([saved]),
+          ]).then(([summaryByPageId, commentCountByPageId]) => {
             res.json({
               page: {
                 ...saved.toJSON(),
                 url: storage.photoUrl(album.owner, album._id, saved.filename),
                 reactions: summaryByPageId.get(saved._id.toString()),
+                commentCount: commentCountByPageId.get(saved._id.toString()) ?? 0,
               },
             });
           });
@@ -450,6 +467,7 @@ module.exports = {
         return page
           .deleteOne()
           .then(() => Reaction.deleteMany({ page: page._id }))
+          .then(() => Comment.deleteMany({ page: page._id }))
           .then(() => {
             const filePath = storage.photoPath(album.owner, album._id, page.filename);
             fs.rm(filePath, { force: true }, (err) => {
@@ -470,5 +488,96 @@ module.exports = {
           });
       })
       .catch((err) => respondToAlbumWriteError(res, err, 'Failed to delete photo'));
+  },
+
+  listComments: (req, res) => {
+    const album = req.album;
+    const { pageId } = req.params;
+    if (!mongoose.isValidObjectId(pageId)) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        return Comment.find({ page: page._id })
+          .sort('createdAt')
+          .then((comments) =>
+            withCommentAuthors(comments).then((commentsWithAuthors) => {
+              res.json({ comments: commentsWithAuthors });
+            })
+          );
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to load comments' }));
+  },
+
+  addComment: (req, res) => {
+    const album = req.album;
+    const { pageId } = req.params;
+    if (!mongoose.isValidObjectId(pageId)) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    const { text } = req.body || {};
+    if (!isNonEmptyString(text)) {
+      return res.status(400).json({ error: 'text is required' });
+    }
+    if (text.trim().length > Comment.MAX_COMMENT_LENGTH) {
+      return res
+        .status(400)
+        .json({ error: `text must be at most ${Comment.MAX_COMMENT_LENGTH} characters` });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        return Comment.create({
+          page: page._id,
+          album: album._id,
+          user: req.user._id,
+          text,
+        }).then((comment) => {
+          notifyPageComment({ page, album, commentText: comment.text, commenterUser: req.user });
+
+          return Promise.all([withCommentAuthors([comment]), Comment.countDocuments({ page: page._id })]).then(
+            ([[commentWithAuthor], commentCount]) => {
+              res.status(201).json({ comment: commentWithAuthor, commentCount });
+            }
+          );
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to save comment' }));
+  },
+
+  deleteComment: (req, res) => {
+    const album = req.album;
+    const { pageId, commentId } = req.params;
+    if (!mongoose.isValidObjectId(pageId) || !mongoose.isValidObjectId(commentId)) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        return Comment.findOne({ _id: commentId, page: page._id }).then((comment) => {
+          if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+          const isAuthor = comment.user.toString() === req.user._id.toString();
+          if (!isAuthor && !isOwnerOrAdmin(album, req.user)) {
+            return res.status(403).json({ error: 'You cannot delete this comment' });
+          }
+
+          return comment
+            .deleteOne()
+            .then(() => Comment.countDocuments({ page: page._id }))
+            .then((commentCount) => {
+              res.json({ deleted: true, commentCount });
+            });
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to delete comment' }));
   },
 };

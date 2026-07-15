@@ -2,7 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useSetCoverPhoto, useArchiveAlbum } from './hooks';
+import { useSetCoverPhoto, useArchiveAlbum, useAddComment, useDeleteComment } from './hooks';
 import type { Album } from './schemas';
 import { createTestQueryClient } from '../../tests/test-utils';
 import { tokenStorage } from '../../lib/api-client';
@@ -76,5 +76,58 @@ describe('useArchiveAlbum', () => {
       viewerReacted: true,
       reactors: ['maria', 'sam'],
     });
+  });
+});
+
+describe('useAddComment', () => {
+  test('invalidates the comment thread and the page list on success', async () => {
+    vi.mocked(fetch).mockImplementation(() =>
+      respond({
+        comment: {
+          _id: 'c1',
+          page: 'p1',
+          user: 'u1',
+          username: 'maria',
+          avatarUrl: null,
+          text: 'Nice!',
+          createdAt: new Date().toISOString(),
+        },
+        commentCount: 1,
+      })
+    );
+    const queryClient = createTestQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAddComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', text: 'Nice!' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['albums', 'a1', 'pages', 'p1', 'comments'],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
+  });
+});
+
+describe('useDeleteComment', () => {
+  test('invalidates the comment thread and the page list on success', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 0 }));
+    const queryClient = createTestQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useDeleteComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['albums', 'a1', 'pages', 'p1', 'comments'],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
   });
 });

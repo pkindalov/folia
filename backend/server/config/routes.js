@@ -114,6 +114,24 @@ module.exports = (app) => {
     controllers.pages.requireReadableAlbum,
     controllers.pages.setReaction
   );
+  app.get(
+    '/api/albums/:id/pages/:pageId/comments',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.pages.listComments
+  );
+  app.post(
+    '/api/albums/:id/pages/:pageId/comments',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.pages.addComment
+  );
+  app.delete(
+    '/api/albums/:id/pages/:pageId/comments/:commentId',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.pages.deleteComment
+  );
 
   // Circles
   app.get('/api/circles', auth.isAuthenticated, controllers.circles.list);

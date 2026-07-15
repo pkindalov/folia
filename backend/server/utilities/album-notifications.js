@@ -87,4 +87,28 @@ function notifyAlbumReaction({ album, reactorUser }) {
     .catch((err) => console.error('Failed to create/prune album_reaction notification', err));
 }
 
-module.exports = { notifyAlbumEvent, notifyPageReaction, notifyAlbumReaction };
+// Fire-and-forget: notifies an album's owner that someone commented on one
+// of its pages. Same single-recipient, self-action-skipping shape as
+// notifyPageReaction — commenting is available on any album the commenter
+// can view (private, shared, or public), not just circle-shared ones.
+// commentText is snapshotted onto the notification (see Notification.js) so
+// it keeps reading correctly even if the comment is later deleted.
+function notifyPageComment({ page, album, commentText, commenterUser }) {
+  const ownerId = album.owner.toString();
+  if (ownerId === commenterUser._id.toString()) return;
+
+  Notification.create({
+    recipient: ownerId,
+    type: 'page_comment',
+    actorUsername: commenterUser.username,
+    actor: commenterUser._id,
+    album: album._id,
+    albumTitle: album.title,
+    page: page._id,
+    commentText,
+  })
+    .then(() => Notification.pruneExcessForRecipient(ownerId))
+    .catch((err) => console.error('Failed to create/prune page_comment notification', err));
+}
+
+module.exports = { notifyAlbumEvent, notifyPageReaction, notifyAlbumReaction, notifyPageComment };

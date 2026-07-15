@@ -97,6 +97,7 @@ export const pageSchema = z
     url: z.string(),
     caption: z.string().default(''),
     reactions: reactionSummarySchema,
+    commentCount: z.number().default(0),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
   })
@@ -119,6 +120,35 @@ export const setAlbumReactionResponseSchema = z.object({ reactions: albumReactio
 export const MAX_CAPTION_LENGTH = 500;
 
 export type Page = z.infer<typeof pageSchema>;
+
+export const commentSchema = z
+  .object({
+    _id: z.string(),
+    page: z.string(),
+    user: z.string(),
+    username: z.string(),
+    // Signed, time-limited avatar URL, resolved fresh on every response —
+    // null for a commenter with no avatar set, same shape as
+    // actorAvatarUrl on a notification.
+    avatarUrl: z.string().nullable(),
+    text: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().optional(),
+  })
+  .passthrough();
+export type Comment = z.infer<typeof commentSchema>;
+
+export const commentsResponseSchema = z.object({ comments: z.array(commentSchema) });
+export const addCommentResponseSchema = z.object({
+  comment: commentSchema,
+  commentCount: z.number(),
+});
+export const deleteCommentResponseSchema = z.object({
+  deleted: z.boolean(),
+  commentCount: z.number(),
+});
+
+export const MAX_COMMENT_LENGTH = 1000;
 
 // Mirrors the backend's multer config (server/config/upload.js) — used for
 // instant client-side feedback; the server remains the real boundary.

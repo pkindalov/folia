@@ -10,11 +10,11 @@ const { parsePage, checkAlbumReadAccess, fetchCirclesForAlbums } = require('../u
 const NOTIFICATIONS_PAGE_SIZE = 20;
 
 // album_shared/album_updated show the album's current cover image;
-// album_photos_added and page_reaction show the specific photo they
-// reference instead (see album-notifications.js) — every other type has
-// no thumbnail at all.
+// album_photos_added, page_reaction, and page_comment show the specific
+// photo they reference instead (see album-notifications.js) — every other
+// type has no thumbnail at all.
 const COVER_THUMBNAIL_TYPES = ['album_shared', 'album_updated'];
-const PAGE_THUMBNAIL_TYPES = ['album_photos_added', 'page_reaction'];
+const PAGE_THUMBNAIL_TYPES = ['album_photos_added', 'page_reaction', 'page_comment'];
 
 // Batches actor-avatar resolution for a page of notifications into a single
 // User lookup (mirrors albums-controller.js's resolveCoverImages) instead of

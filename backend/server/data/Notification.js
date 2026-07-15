@@ -15,13 +15,14 @@ const NOTIFICATION_TYPES = [
   'album_photo_caption_updated',
   'page_reaction',
   'album_reaction',
+  'page_comment',
 ];
 
 // Types that go straight to a single recipient (the album owner) rather than
 // fanning out to a circle, and can fire on a public album with no circle
 // involved at all — circle/circleName stay required for every other type,
 // which is scoped to a circle (an event on something shared with one).
-const CIRCLE_EXEMPT_TYPES = ['page_reaction', 'album_reaction'];
+const CIRCLE_EXEMPT_TYPES = ['page_reaction', 'album_reaction', 'page_comment'];
 
 const requiresCircle = function () {
   return !CIRCLE_EXEMPT_TYPES.includes(this.type);
@@ -34,6 +35,20 @@ const requiresCircle = function () {
 // type — see the comment on the page field below.
 const requiresPageReaction = function () {
   return this.type === 'page_reaction';
+};
+
+// commentText only ever applies to page_comment, and is required there —
+// same conditional-required treatment as requiresPageReaction above.
+const requiresPageComment = function () {
+  return this.type === 'page_comment';
+};
+
+// page is required for either page_reaction or page_comment — which page was
+// reacted to / commented on. Also set, optionally, on album_photos_added
+// (see the comment on the page field below), so this can't just be
+// requiresPageReaction.
+const requiresPage = function () {
+  return this.type === 'page_reaction' || this.type === 'page_comment';
 };
 
 // Soft cap per recipient — this is a growing, unbounded top-level
@@ -100,21 +115,30 @@ const notificationSchema = new mongoose.Schema(
     albumTitle: {
       type: String,
     },
-    // Required for page_reaction (which page was reacted to). Also set,
-    // optionally, on album_photos_added as a representative photo from the
-    // uploaded batch. Used by notifications-controller.js to show a
-    // thumbnail and deep-link to that photo for both types; not required on
-    // album_photos_added since a notification predating this feature (or
-    // one whose batch somehow yielded no pages) simply has none.
+    // Required for page_reaction/page_comment (which page was reacted to or
+    // commented on). Also set, optionally, on album_photos_added as a
+    // representative photo from the uploaded batch. Used by
+    // notifications-controller.js to show a thumbnail and deep-link to that
+    // photo for all three types; not required on album_photos_added since a
+    // notification predating this feature (or one whose batch somehow
+    // yielded no pages) simply has none.
     page: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Page',
-      required: requiresPageReaction,
+      required: requiresPage,
     },
     reactionType: {
       type: String,
       enum: REACTION_TYPES,
       required: requiresPageReaction,
+    },
+    // Snapshot of the comment body at creation time, same "survives later
+    // edits/deletes" reasoning as albumTitle — a notification is a record of
+    // what happened, so deleting the comment shouldn't make this stop
+    // reading correctly.
+    commentText: {
+      type: String,
+      required: requiresPageComment,
     },
     read: {
       type: Boolean,

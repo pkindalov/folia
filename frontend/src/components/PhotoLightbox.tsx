@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import ReactionControl from './ReactionControl';
+import CommentControl from './CommentControl';
 import useFocusTrap from '../hooks/useFocusTrap';
-import type { ReactionSummary, ReactionType } from '../features/flipbooks';
+import type { Comment, ReactionSummary, ReactionType } from '../features/flipbooks';
 
 type LightboxPhoto = {
   _id: string;
   url: string;
   filename?: string;
   caption?: string;
-  // Reactions are viewer-only (see ViewerPage) — absent when the lightbox is
-  // opened from the editor's page-management view.
+  // Reactions and comments are viewer-only (see ViewerPage) — absent when
+  // the lightbox is opened from the editor's page-management view.
   reactions?: ReactionSummary;
+  commentCount?: number;
 };
 
 type PhotoLightboxProps = {
@@ -21,6 +23,18 @@ type PhotoLightboxProps = {
   onNavigate: (index: number) => void;
   onReact?: (pageId: string, type: ReactionType) => void;
   isReactionPending?: boolean;
+  // Comments, like reactions, are viewer-only — all of the following are
+  // omitted together when the lightbox is opened from the editor.
+  comments?: Comment[];
+  isCommentsLoading?: boolean;
+  isCommentsError?: boolean;
+  onCommentsOpenChange?: (isOpen: boolean) => void;
+  onAddComment?: (pageId: string, text: string) => void;
+  isAddCommentPending?: boolean;
+  addCommentError?: boolean;
+  onDeleteComment?: (pageId: string, commentId: string) => void;
+  pendingDeleteCommentId?: string | null;
+  isAlbumOwner?: boolean;
   viewerUsername?: string;
   // When the album viewer's slideshow keeps running behind the zoomed-in
   // photo, these mirror AlbumSpread's own progress bar so the countdown to
@@ -48,6 +62,16 @@ export default function PhotoLightbox({
   onNavigate,
   onReact,
   isReactionPending = false,
+  comments,
+  isCommentsLoading = false,
+  isCommentsError = false,
+  onCommentsOpenChange,
+  onAddComment,
+  isAddCommentPending = false,
+  addCommentError = false,
+  onDeleteComment,
+  pendingDeleteCommentId = null,
+  isAlbumOwner = false,
   viewerUsername,
   isAutoPlaying = false,
   autoPlayIntervalMs,
@@ -59,11 +83,19 @@ export default function PhotoLightbox({
   const hasNext = index < photos.length - 1;
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, photo !== undefined);
-  // While the photo's own "who reacted" list is open on top, arrow keys
-  // should page through it (or do nothing), not also flip the photo
-  // underneath — which would silently close the modal via ReactionControl's
-  // own pageId-tracked reset.
+  // While the photo's own "who reacted" list, or its comment thread, is open
+  // on top, arrow keys should page through it (or do nothing), not also flip
+  // the photo underneath — which would silently close either one out from
+  // under the viewer via their own pageId-tracked reset.
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
+  const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
+  const handleCommentsOpenChange = useCallback(
+    (isOpen: boolean) => {
+      setIsCommentsPanelOpen(isOpen);
+      onCommentsOpenChange?.(isOpen);
+    },
+    [onCommentsOpenChange]
+  );
 
   // A manual move — same reasoning as AlbumSpread's own prev/next buttons.
   const navigate = useCallback(
@@ -75,7 +107,7 @@ export default function PhotoLightbox({
   );
 
   useEffect(() => {
-    if (isReactorsModalOpen) return;
+    if (isReactorsModalOpen || isCommentsPanelOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
       if (event.key === 'ArrowLeft' && hasPrevious) navigate(index - 1);
@@ -85,7 +117,7 @@ export default function PhotoLightbox({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [index, hasPrevious, hasNext, photos.length, onClose, navigate, isReactorsModalOpen]);
+  }, [index, hasPrevious, hasNext, photos.length, onClose, navigate, isReactorsModalOpen, isCommentsPanelOpen]);
 
   if (!photo) return null;
 
@@ -96,13 +128,16 @@ export default function PhotoLightbox({
       aria-modal="true"
       aria-label="Photo viewer"
       className="fixed inset-0 z-100 bg-black/90 flex flex-col items-center justify-center p-6"
-      onClick={onClose}
+      onClick={() => {
+        if (!isCommentsPanelOpen) onClose();
+      }}
     >
       <button
         type="button"
         onClick={onClose}
+        disabled={isCommentsPanelOpen}
         aria-label="Close photo viewer"
-        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
       >
         <Icon name="close" className="text-2xl" />
       </button>
@@ -115,7 +150,12 @@ export default function PhotoLightbox({
           <button
             type="button"
             onClick={() => navigate(index - 1)}
-            disabled={!hasPrevious}
+            // Unlike the reactors modal (a backdrop-covering overlay that
+            // already blocks clicks to what's behind it), the comments panel
+            // is a plain inline element sitting beside these buttons — without
+            // this, clicking Previous/Next while a comment is half-typed would
+            // silently navigate and discard the draft.
+            disabled={!hasPrevious || isCommentsPanelOpen}
             aria-label="Previous photo"
             className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
           >
@@ -123,7 +163,7 @@ export default function PhotoLightbox({
           </button>
         )}
 
-        <div className="flex flex-col items-center gap-4 max-w-[80vw]">
+        <div className="flex flex-col items-center gap-4 max-w-[80vw] max-h-[85vh] overflow-y-auto">
           <div className="relative max-w-full">
             {isAutoPlaying && autoPlayIntervalMs !== undefined && (
               <div
@@ -170,7 +210,30 @@ export default function PhotoLightbox({
               isPending={isReactionPending}
               variant="dark"
               onReactorsModalOpenChange={setIsReactorsModalOpen}
+              // The comment composer is a plain textarea sitting right next
+              // to this control — without this, ReactionControl's global "r"
+              // / digit-key shortcuts would eat keystrokes typed into it (and
+              // "r" followed by a digit 1-6 would fire a real reaction
+              // mutation as a side effect of typing a comment).
+              isKeyboardShortcutsDisabled={isCommentsPanelOpen}
               viewerUsername={viewerUsername}
+            />
+          )}
+          {onAddComment && onDeleteComment && photo.commentCount !== undefined && (
+            <CommentControl
+              pageId={photo._id}
+              commentCount={photo.commentCount}
+              comments={comments}
+              isLoading={isCommentsLoading}
+              isError={isCommentsError}
+              onOpenChange={handleCommentsOpenChange}
+              onAddComment={(text) => onAddComment(photo._id, text)}
+              isAddPending={isAddCommentPending}
+              addError={addCommentError}
+              onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
+              pendingDeleteCommentId={pendingDeleteCommentId}
+              viewerUsername={viewerUsername}
+              isAlbumOwner={isAlbumOwner}
             />
           )}
         </div>
@@ -179,9 +242,10 @@ export default function PhotoLightbox({
           <button
             type="button"
             onClick={() => navigate(hasNext ? index + 1 : 0)}
+            disabled={isCommentsPanelOpen}
             aria-label={hasNext ? 'Next photo' : 'Back to first photo'}
             title={hasNext ? undefined : 'Back to first photo'}
-            className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
           >
             <Icon name={hasNext ? 'chevron_right' : 'replay'} className="text-2xl" />
           </button>

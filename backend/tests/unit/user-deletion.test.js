@@ -8,6 +8,7 @@ const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const AlbumReaction = require('../../server/data/AlbumReaction');
+const Comment = require('../../server/data/Comment');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
 const storage = require('../../server/utilities/storage');
@@ -43,6 +44,7 @@ beforeEach(() => {
   jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Circle, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});
@@ -178,7 +180,7 @@ describe('deleteUser', () => {
     expect(Notification.updateMany).not.toHaveBeenCalled();
   });
 
-  test('deletes pages, reactions, and album reactions for every album the user owns', async () => {
+  test('deletes pages, reactions, album reactions, and comments for every album the user owns', async () => {
     jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
     jest.spyOn(Album, 'find').mockResolvedValue([
       { _id: ALBUM_ID, title: 'Summer' },
@@ -187,6 +189,7 @@ describe('deleteUser', () => {
     const pageDeleteMany = jest.spyOn(Page, 'deleteMany');
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
     const albumReactionDeleteMany = jest.spyOn(AlbumReaction, 'deleteMany');
+    const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
 
     await deleteUser(USER_ID);
 
@@ -197,16 +200,21 @@ describe('deleteUser', () => {
     expect(albumReactionDeleteMany).toHaveBeenCalledWith({
       $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
     });
+    expect(commentDeleteMany).toHaveBeenCalledWith({
+      $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
+    });
   });
 
-  test('deletes the user\'s own reactions even when they own no albums', async () => {
+  test('deletes the user\'s own reactions and comments even when they own no albums', async () => {
     jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
     jest.spyOn(Album, 'find').mockResolvedValue([]);
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
+    const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
 
     await deleteUser(USER_ID);
 
     expect(reactionDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
+    expect(commentDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
   });
 
   test('deletes the notification inbox but leaves notifications where the user is only the actor', async () => {

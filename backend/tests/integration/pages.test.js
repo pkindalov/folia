@@ -7,6 +7,7 @@ const OWNER_ID = '507f1f77bcf86cd799439011';
 const OTHER_ID = '507f1f77bcf86cd799439022';
 const ALBUM_ID = '507f191e810c19729de860ea';
 const PAGE_ID = '507f191e810c19729de860eb';
+const COMMENT_ID = '507f191e810c19729de860ec';
 
 describe('album pages routes (integration)', () => {
   let app;
@@ -16,6 +17,7 @@ describe('album pages routes (integration)', () => {
   let Page;
   let Circle;
   let Reaction;
+  let Comment;
   let Notification;
   let auth;
   let signedUrl;
@@ -49,6 +51,7 @@ describe('album pages routes (integration)', () => {
     Page = require('../../server/data/Page');
     Circle = require('../../server/data/Circle');
     Reaction = require('../../server/data/Reaction');
+    Comment = require('../../server/data/Comment');
     Notification = require('../../server/data/Notification');
     auth = require('../../server/config/auth');
     signedUrl = require('../../server/utilities/signed-url');
@@ -73,6 +76,8 @@ describe('album pages routes (integration)', () => {
   beforeEach(() => {
     jest.spyOn(Reaction, 'aggregate').mockResolvedValue([]);
     jest.spyOn(Reaction, 'find').mockResolvedValue([]);
+    jest.spyOn(Comment, 'aggregate').mockResolvedValue([]);
+    jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
   });
 
   const fakeAlbum = (overrides = {}) => ({
@@ -502,6 +507,251 @@ describe('album pages routes (integration)', () => {
         .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/reaction`)
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'like' });
+
+      expect(res.status).toBe(200);
+      expect(deleteOne).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /api/albums/:id/pages/:pageId/comments', () => {
+    test('403 when a stranger requests comments on a private album\'s photo', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    test('200 returns the comment thread with each author resolved', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockResolvedValue([
+          {
+            _id: COMMENT_ID,
+            page: PAGE_ID,
+            user: OTHER_ID,
+            text: 'Lovely!',
+            toJSON() {
+              const { toJSON: _drop, ...rest } = this;
+              return rest;
+            },
+          },
+        ]),
+      });
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.comments).toEqual([
+        expect.objectContaining({ _id: COMMENT_ID, text: 'Lovely!', username: 'maria', avatarUrl: null }),
+      ]);
+    });
+  });
+
+  describe('POST /api/albums/:id/pages/:pageId/comments', () => {
+    beforeEach(() => {
+      jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
+      jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan', avatarFilename: null }]);
+    });
+
+    test('401 without a token', async () => {
+      const res = await request(app).post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`);
+      expect(res.status).toBe(401);
+    });
+
+    test('403 when a stranger comments on a private album', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ text: 'Lovely!' });
+      expect(res.status).toBe(403);
+    });
+
+    test('400 for empty text', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: '   ' });
+      expect(res.status).toBe(400);
+    });
+
+    test('400 for text over the max length', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'x'.repeat(1001) });
+      expect(res.status).toBe(400);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Lovely!' });
+      expect(res.status).toBe(404);
+    });
+
+    test('201 saves the comment, returns the fresh count, and notifies the album owner', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({
+        visibility: 'shared',
+        sharedWithCircle: '507f1f77bcf86cd799439099',
+      });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({
+          name: 'Family',
+          owner: OWNER_ID,
+          members: [{ user: OTHER_ID, status: 'accepted' }],
+        })
+      );
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'create').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: OTHER_ID,
+        text: 'Lovely!',
+        toJSON() {
+          const { toJSON: _drop, ...rest } = this;
+          return rest;
+        },
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(1);
+
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${strangerToken}`)
+        .send({ text: 'Lovely!' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.commentCount).toBe(1);
+      expect(res.body.comment).toEqual(expect.objectContaining({ text: 'Lovely!' }));
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OWNER_ID, type: 'page_comment', commentText: 'Lovely!' })
+      );
+    });
+
+    test('does not notify anyone when the album owner comments on their own photo', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'create').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: OWNER_ID,
+        text: 'My own photo',
+        toJSON() {
+          const { toJSON: _drop, ...rest } = this;
+          return rest;
+        },
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(1);
+
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'My own photo' });
+
+      expect(res.status).toBe(201);
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('DELETE /api/albums/:id/pages/:pageId/comments/:commentId', () => {
+    test('404 when the comment does not belong to the photo', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    test('403 when a non-author, non-owner viewer tries to delete someone else\'s comment', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({ visibility: 'public' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: { toString: () => OWNER_ID },
+        deleteOne: jest.fn(),
+      });
+      const res = await request(app)
+        .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('200 when the comment author deletes their own comment', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({ visibility: 'public' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      const deleteOne = jest.fn().mockResolvedValue({});
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: { toString: () => OTHER_ID },
+        deleteOne,
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(0);
+
+      const res = await request(app)
+        .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ deleted: true, commentCount: 0 });
+      expect(deleteOne).toHaveBeenCalled();
+    });
+
+    test('200 when the album owner deletes someone else\'s comment', async () => {
+      authAs(OWNER_ID);
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      const deleteOne = jest.fn().mockResolvedValue({});
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: { toString: () => OTHER_ID },
+        deleteOne,
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(0);
+
+      const res = await request(app)
+        .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}`)
+        .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
       expect(deleteOne).toHaveBeenCalled();

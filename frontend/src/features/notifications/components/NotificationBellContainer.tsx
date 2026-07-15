@@ -105,6 +105,7 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
       album: notification.album ?? null,
       page: notification.page ?? null,
       reactionType: notification.reactionType ?? null,
+      commentText: notification.commentText ?? null,
       thumbnailUrl: notification.thumbnailUrl,
       read: notification.read,
       relativeTime: formatRelativeTime(notification.createdAt),

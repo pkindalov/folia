@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
@@ -13,6 +13,9 @@ import {
   usePages,
   useSetPageReaction,
   useSetAlbumReaction,
+  useComments,
+  useAddComment,
+  useDeleteComment,
   type ReactionType,
 } from '../../flipbooks';
 
@@ -41,6 +44,14 @@ export default function ViewerPage() {
     });
   };
 
+  // The backend already lets an Admin delete any comment (isOwnerOrAdmin) —
+  // mirror that here so the delete button isn't hidden from an Admin who's
+  // landed on someone else's album, same as CircleDetailPage's canManage.
+  const isAlbumOwner =
+    album !== undefined &&
+    me !== undefined &&
+    (album.owner === me._id || me.roles.includes('Admin'));
+
   // Tracked by photo id, not array index — a raw index would go stale (and
   // could silently point at an unrelated photo) if the page list changes
   // while the lightbox is open. Seeded from ?photo=<pageId> so a notification
@@ -67,20 +78,79 @@ export default function ViewerPage() {
     [pagesData]
   );
 
-  const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
+  // Gates the comment thread's fetch — only enabled while the lightbox's
+  // comment panel is actually expanded, so opening the lightbox or paging
+  // through photos never fires a request for a thread nobody asked to see.
+  // CommentControl resets this back to false itself (via onCommentsOpenChange)
+  // whenever the underlying photo changes.
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const { data: comments, isLoading: isCommentsLoading, isError: isCommentsError } = useComments(
+    id,
+    currentPhoto?._id,
+    isCommentsOpen
+  );
 
   // Owned here (not inside AlbumSpread) so the header's play/pause button and
   // the spread's own auto-advance timer always agree on state. AlbumSpread
   // is still the one actually running the timer and flipping pages — it
   // calls this back to false the moment the viewer stops being a passive
   // slideshow (manual navigation, the lightbox opening, the tab going
-  // background).
+  // background). Declared before the comments handlers below, which also
+  // stop it — opening the comment panel to type is exactly the kind of
+  // "viewer taking the wheel" autoplay should yield to.
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   // When the current countdown last (re)started — reported by AlbumSpread,
   // which owns the actual timer. PhotoLightbox mounts fresh every time the
   // viewer zooms in, so without this its own countdown bar would restart at
   // 0% instead of showing how much of the interval has really elapsed.
   const [autoPlayStartedAt, setAutoPlayStartedAt] = useState<number | undefined>(undefined);
+
+  const addComment = useAddComment(id ?? '');
+  const handleAddComment = (pageId: string, text: string) => {
+    addComment.mutate(
+      { pageId, text },
+      { onError: (mutationError) => toast.error(mutationError.message) }
+    );
+  };
+  // CommentControl's own effect re-fires onOpenChange whenever this
+  // function's identity changes (same reset-tracking shape as its pageId
+  // effect), so this must stay referentially stable across renders — a
+  // fresh closure every render would loop: open state changes -> ViewerPage
+  // re-renders -> new closure -> effect fires again -> ... A ref sidesteps
+  // that without needing addComment (a fresh object every render) in a
+  // dependency array.
+  const addCommentRef = useRef(addComment);
+  addCommentRef.current = addComment;
+  // addComment is one shared mutation for the whole page, not scoped per
+  // photo — its isError otherwise stays true (react-query only clears it on
+  // the next mutate()) until the viewer submits again, so a failed post on
+  // one photo would otherwise leak its error banner onto the next photo's
+  // freshly opened, untouched comment panel.
+  const handleCommentsOpenChange = useCallback((isOpen: boolean) => {
+    setIsCommentsOpen(isOpen);
+    if (isOpen) {
+      // AlbumSpread's autoplay timer isn't gated by the lightbox's own
+      // keyboard/button suspension (it deliberately keeps running behind a
+      // zoomed-in photo) — without this, it would silently advance the
+      // photo out from under an in-progress draft a few seconds later.
+      setIsAutoPlaying(false);
+    } else {
+      addCommentRef.current.reset();
+    }
+  }, []);
+
+  const deleteComment = useDeleteComment(id ?? '');
+  const handleDeleteComment = (pageId: string, commentId: string) => {
+    deleteComment.mutate(
+      { pageId, commentId },
+      { onError: (mutationError) => toast.error(mutationError.message) }
+    );
+  };
+  const pendingDeleteCommentId = deleteComment.isPending
+    ? (deleteComment.variables?.commentId ?? null)
+    : null;
+
+  const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const openLightbox = () => {
@@ -96,9 +166,17 @@ export default function ViewerPage() {
   // If the photo the lightbox is showing disappears from the list while it's
   // open (e.g. deleted from another tab), close it instead of silently
   // falling back to whatever photo now occupies index 0 — mirrors the
-  // editor's own PagesPanel, which unmounts its lightbox the same way.
+  // editor's own PagesPanel, which unmounts its lightbox the same way. Also
+  // resets the comments panel state directly (CommentControl unmounts here
+  // rather than closing itself, so its own onOpenChange(false) never fires)
+  // so a stale error banner or an unwanted eager comments fetch can't
+  // resurface the next time a (possibly different) photo's panel is opened.
   useEffect(() => {
-    if (isLightboxOpen && selectedIndex === -1) setIsLightboxOpen(false);
+    if (isLightboxOpen && selectedIndex === -1) {
+      setIsLightboxOpen(false);
+      setIsCommentsOpen(false);
+      addCommentRef.current.reset();
+    }
   }, [isLightboxOpen, selectedIndex]);
 
   // Autoplay reaching the last photo — stop rather than loop back to the
@@ -215,6 +293,16 @@ export default function ViewerPage() {
           onNavigate={navigateToIndex}
           onReact={handleReact}
           isReactionPending={setReaction.isPending}
+          comments={comments}
+          isCommentsLoading={isCommentsLoading}
+          isCommentsError={isCommentsError}
+          onCommentsOpenChange={handleCommentsOpenChange}
+          onAddComment={handleAddComment}
+          isAddCommentPending={addComment.isPending}
+          addCommentError={addComment.isError}
+          onDeleteComment={handleDeleteComment}
+          pendingDeleteCommentId={pendingDeleteCommentId}
+          isAlbumOwner={isAlbumOwner}
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}
           autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}
