@@ -6,6 +6,7 @@ const AlbumReaction = require('../data/AlbumReaction');
 const Circle = require('../data/Circle');
 const Notification = require('../data/Notification');
 const storage = require('./storage');
+const { notifyCircleDeleted, markAllCircleInvitesRead } = require('./circle-notifications');
 
 class UserNotFoundError extends Error {}
 
@@ -18,7 +19,7 @@ function planUserDeletion(userId) {
 
     return Promise.all([
       Album.find({ owner: userId }, '_id title'),
-      Circle.find({ owner: userId }, '_id name'),
+      Circle.find({ owner: userId }, '_id name owner members'),
     ]).then(([albums, circles]) => ({
       user,
       albums,
@@ -31,20 +32,22 @@ function planUserDeletion(userId) {
 
 // Deletes a user and everything that belongs to them: owned albums (and
 // their pages/reactions), owned circles (unsharing any album still pointing
-// at one first, same pattern as circles-controller.js's own remove()),
-// their own reactions on other people's content, their membership in other
-// people's circles, their notification inbox, and their upload + avatar
-// folders on disk. A notification where this user is merely the *actor* (a
-// reaction/upload on someone else's album) is deliberately left alone —
-// same intentional graceful-degradation as any other deleted-actor
-// notification (see notifications-controller.js), not an oversight.
+// at one first, then notifying members and clearing invite notifications —
+// same pattern, and same circle-notifications.js helpers, as
+// circles-controller.js's own remove()), their own reactions on other
+// people's content, their membership in other people's circles, their
+// notification inbox, and their upload + avatar folders on disk. A
+// notification where this user is merely the *actor* (a reaction/upload on
+// someone else's album) is deliberately left alone — same intentional
+// graceful-degradation as any other deleted-actor notification (see
+// notifications-controller.js), not an oversight.
 //
 // Disk is removed before any DB write, same reasoning as
 // albums-controller.js's remove(): if that throws, this rejects before
 // touching the database, so the whole deletion is safely retryable instead
 // of risking an orphaned folder with nothing left in Mongo to retry against.
 function deleteUser(userId) {
-  return planUserDeletion(userId).then(({ user, albumIds, circleIds }) => {
+  return planUserDeletion(userId).then(({ user, albumIds, circleIds, circles }) => {
     try {
       storage.removeUserDir(userId);
       storage.removeAvatarDir(userId);
@@ -62,6 +65,23 @@ function deleteUser(userId) {
       .then(() => AlbumReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => Album.deleteMany({ owner: userId }))
       .then(() => Circle.deleteMany({ owner: userId }))
+      .then(() => {
+        // Same notifications circles-controller.js's remove() fires once its
+        // own delete succeeds: tell every accepted member the circle is
+        // gone, and clear out any still-unread invite for it. Fire-and-forget
+        // (both helpers already catch their own errors) — this cascade must
+        // still complete and the account still get deleted even if a
+        // notification write fails.
+        circles.forEach((circle) => {
+          markAllCircleInvitesRead(circle._id);
+          notifyCircleDeleted({
+            circle,
+            circleName: circle.name,
+            actorUsername: user.username,
+            actorId: userId.toString(),
+          });
+        });
+      })
       .then(() => Notification.deleteMany({ recipient: userId }))
       .then(() => User.deleteOne({ _id: userId }))
       .then(() => ({

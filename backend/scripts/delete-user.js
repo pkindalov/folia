@@ -1,9 +1,10 @@
 /**
  * Deletes a user account and everything that belongs to it: owned albums
  * (pages, reactions), owned circles (unsharing any album pointing at one
- * first), the user's own reactions on other people's content, their
- * membership in other people's circles, their notification inbox, and
- * their upload + avatar folders on disk.
+ * first, then notifying members and clearing invite notifications), the
+ * user's own reactions on other people's content, their membership in other
+ * people's circles, their notification inbox, and their upload + avatar
+ * folders on disk.
  *
  * Usage:
  *   local:  node scripts/delete-user.js <userId>            (report only)

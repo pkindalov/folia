@@ -17,6 +17,9 @@ const USER_ID = '507f1f77bcf86cd799439011';
 const ALBUM_ID = '507f191e810c19729de860ea';
 const OTHER_ALBUM_ID = '507f191e810c19729de860eb';
 const CIRCLE_ID = '507f1f77bcf86cd799439033';
+const MEMBER_ID = '507f1f77bcf86cd799439044';
+
+const flush = () => new Promise(setImmediate);
 
 const fakeUser = (overrides = {}) => ({
   _id: USER_ID,
@@ -43,6 +46,9 @@ beforeEach(() => {
   jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Circle, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(Notification, 'create').mockResolvedValue({ _id: 'notif1' });
+  jest.spyOn(Notification, 'pruneExcessForRecipient').mockResolvedValue(null);
+  jest.spyOn(Notification, 'updateMany').mockResolvedValue({ acknowledged: true, modifiedCount: 0 });
   jest.spyOn(User, 'deleteOne').mockResolvedValue({});
 });
 
@@ -105,7 +111,7 @@ describe('deleteUser', () => {
 
   test('unshares albums pointing at a circle the user owns, before deleting the circle', async () => {
     jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
-    jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: CIRCLE_ID, name: 'Family' }]);
+    jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: CIRCLE_ID, name: 'Family', owner: USER_ID, members: [] }]);
     const updateMany = jest.spyOn(Album, 'updateMany');
 
     await deleteUser(USER_ID);
@@ -126,6 +132,50 @@ describe('deleteUser', () => {
       { 'members.user': USER_ID },
       { $pull: { members: { user: USER_ID } } }
     );
+  });
+
+  test('notifies accepted members that an owned circle is gone, and clears its invite notifications', async () => {
+    jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
+    jest.spyOn(Circle, 'find').mockResolvedValue([
+      {
+        _id: CIRCLE_ID,
+        name: 'Family',
+        owner: USER_ID,
+        members: [{ user: MEMBER_ID, status: 'accepted' }],
+      },
+    ]);
+
+    await deleteUser(USER_ID);
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: MEMBER_ID,
+        type: 'circle_deleted',
+        circle: CIRCLE_ID,
+        circleName: 'Family',
+        actorUsername: 'zztestuser-123',
+        actor: USER_ID,
+      })
+    );
+    expect(Notification.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({ recipient: USER_ID, type: 'circle_deleted' })
+    );
+    expect(Notification.updateMany).toHaveBeenCalledWith(
+      { circle: CIRCLE_ID, type: 'circle_invite', read: false },
+      { $set: { read: true, readAt: expect.any(Date) } }
+    );
+  });
+
+  test('does not notify anyone when the user owned no circles', async () => {
+    jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
+    jest.spyOn(Circle, 'find').mockResolvedValue([]);
+
+    await deleteUser(USER_ID);
+    await flush();
+
+    expect(Notification.create).not.toHaveBeenCalled();
+    expect(Notification.updateMany).not.toHaveBeenCalled();
   });
 
   test('deletes pages, reactions, and album reactions for every album the user owns', async () => {
@@ -196,7 +246,7 @@ describe('deleteUser', () => {
   test('resolves with a summary of what was deleted', async () => {
     jest.spyOn(User, 'findById').mockResolvedValue(fakeUser({ username: 'zzcleanuptest' }));
     jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, title: 'Summer' }]);
-    jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: CIRCLE_ID, name: 'Family' }]);
+    jest.spyOn(Circle, 'find').mockResolvedValue([{ _id: CIRCLE_ID, name: 'Family', owner: USER_ID, members: [] }]);
 
     const result = await deleteUser(USER_ID);
 
