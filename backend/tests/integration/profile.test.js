@@ -268,6 +268,7 @@ describe('profile routes (integration)', () => {
     let Reaction;
     let AlbumReaction;
     let Comment;
+    let CommentReaction;
     let Notification;
 
     beforeAll(() => {
@@ -277,6 +278,7 @@ describe('profile routes (integration)', () => {
       Reaction = require('../../server/data/Reaction');
       AlbumReaction = require('../../server/data/AlbumReaction');
       Comment = require('../../server/data/Comment');
+      CommentReaction = require('../../server/data/CommentReaction');
       Notification = require('../../server/data/Notification');
     });
 
@@ -289,6 +291,7 @@ describe('profile routes (integration)', () => {
       jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
       jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Circle, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});

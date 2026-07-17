@@ -9,6 +9,7 @@ const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const AlbumReaction = require('../../server/data/AlbumReaction');
 const Comment = require('../../server/data/Comment');
+const CommentReaction = require('../../server/data/CommentReaction');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
 const storage = require('../../server/utilities/storage');
@@ -45,6 +46,7 @@ beforeEach(() => {
   jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Circle, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Notification, 'deleteMany').mockResolvedValue({});
@@ -190,6 +192,7 @@ describe('deleteUser', () => {
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
     const albumReactionDeleteMany = jest.spyOn(AlbumReaction, 'deleteMany');
     const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
+    const commentReactionDeleteMany = jest.spyOn(CommentReaction, 'deleteMany');
 
     await deleteUser(USER_ID);
 
@@ -203,6 +206,9 @@ describe('deleteUser', () => {
     expect(commentDeleteMany).toHaveBeenCalledWith({
       $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
     });
+    expect(commentReactionDeleteMany).toHaveBeenCalledWith({
+      $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
+    });
   });
 
   test('deletes the user\'s own reactions and comments even when they own no albums', async () => {
@@ -210,11 +216,13 @@ describe('deleteUser', () => {
     jest.spyOn(Album, 'find').mockResolvedValue([]);
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
     const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
+    const commentReactionDeleteMany = jest.spyOn(CommentReaction, 'deleteMany');
 
     await deleteUser(USER_ID);
 
     expect(reactionDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
     expect(commentDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
+    expect(commentReactionDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
   });
 
   test('deletes the notification inbox but leaves notifications where the user is only the actor', async () => {

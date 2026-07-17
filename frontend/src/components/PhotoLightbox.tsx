@@ -38,6 +38,8 @@ type PhotoLightboxProps = {
   erroredCommentTarget?: string | null;
   onDeleteComment?: (pageId: string, commentId: string) => void;
   pendingDeleteCommentId?: string | null;
+  onReactToComment?: (pageId: string, commentId: string, type: ReactionType) => void;
+  pendingReactionCommentId?: string | null;
   isAlbumOwner?: boolean;
   hasMoreComments?: boolean;
   isFetchingMoreComments?: boolean;
@@ -79,6 +81,8 @@ export default function PhotoLightbox({
   erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId = null,
+  onReactToComment,
+  pendingReactionCommentId = null,
   isAlbumOwner = false,
   hasMoreComments = false,
   isFetchingMoreComments = false,
@@ -248,6 +252,12 @@ export default function PhotoLightbox({
                   erroredCommentTarget={erroredCommentTarget}
                   onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
                   pendingDeleteCommentId={pendingDeleteCommentId}
+                  onReactToComment={
+                    onReactToComment
+                      ? (commentId, type) => onReactToComment(photo._id, commentId, type)
+                      : undefined
+                  }
+                  pendingReactionCommentId={pendingReactionCommentId}
                   variant="dark"
                   viewerUsername={viewerUsername}
                   isAlbumOwner={isAlbumOwner}

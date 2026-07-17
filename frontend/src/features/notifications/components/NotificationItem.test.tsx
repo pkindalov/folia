@@ -68,6 +68,22 @@ const replyNotification: NotificationItemData = {
   relativeTime: 'Just now',
 };
 
+const commentReactionNotification: NotificationItemData = {
+  _id: 'n5',
+  type: 'comment_reaction',
+  actorUsername: 'sam',
+  actorAvatarUrl: null,
+  circleName: null,
+  albumTitle: 'Summer Trip',
+  album: 'a5',
+  page: 'p5',
+  reactionType: 'haha',
+  commentText: 'What a lovely photo, I really love the lighting here!',
+  thumbnailUrl: null,
+  read: false,
+  relativeTime: 'Just now',
+};
+
 function renderItem(notification: NotificationItemData) {
   return render(
     <MemoryRouter>
@@ -149,5 +165,28 @@ describe('NotificationItem', () => {
     renderItem(replyNotification);
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a4?photo=p4');
+  });
+
+  test('renders a comment_reaction notification as "reacted [icon] to your comment on a photo in AlbumTitle" with a preview', () => {
+    renderItem(commentReactionNotification);
+
+    expect(screen.getByText(/reacted/)).toBeInTheDocument();
+    expect(screen.getByText('sentiment_very_satisfied')).toBeInTheDocument();
+    expect(screen.getByText(/to your comment/)).toBeInTheDocument();
+    expect(screen.getByText(/on a photo in/)).toBeInTheDocument();
+    expect(screen.getByText('Summer Trip')).toBeInTheDocument();
+    expect(screen.getByText(/What a lovely photo, I really love the l…/)).toBeInTheDocument();
+  });
+
+  test('keeps the comment_reaction reaction name available to screen readers', () => {
+    renderItem(commentReactionNotification);
+
+    expect(screen.getByText('Haha', { selector: '.sr-only' })).toBeInTheDocument();
+  });
+
+  test('links a comment_reaction notification to the reacted-to comment\'s photo', () => {
+    renderItem(commentReactionNotification);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a5?photo=p5');
   });
 });

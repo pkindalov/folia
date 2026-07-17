@@ -229,6 +229,35 @@ describe('Notification model', () => {
       expect(err.errors.commentText).toBeDefined();
     });
 
+    test('accepts a valid comment_reaction notification with no circle or circleName', () => {
+      const notification = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'comment_reaction',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+        album: '507f191e810c19729de860eb',
+        albumTitle: 'Summer Trip',
+        page: '507f191e810c19729de860ec',
+        reactionType: 'love',
+        commentText: 'What a lovely photo!',
+      });
+      expect(notification.validateSync()).toBeUndefined();
+      expect(notification.circle).toBeUndefined();
+      expect(notification.circleName).toBeUndefined();
+    });
+
+    test('requires page, reactionType and commentText for a comment_reaction notification', () => {
+      const err = new Notification({
+        recipient: RECIPIENT_ID,
+        type: 'comment_reaction',
+        actorUsername: 'sam',
+        actor: ACTOR_ID,
+      }).validateSync();
+      expect(err.errors.page).toBeDefined();
+      expect(err.errors.reactionType).toBeDefined();
+      expect(err.errors.commentText).toBeDefined();
+    });
+
     test('non-page_reaction types still require circle and circleName', () => {
       const err = new Notification({
         recipient: RECIPIENT_ID,

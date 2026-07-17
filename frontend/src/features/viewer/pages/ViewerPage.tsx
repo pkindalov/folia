@@ -16,6 +16,7 @@ import {
   useComments,
   useAddComment,
   useDeleteComment,
+  useSetCommentReaction,
   type ReactionType,
 } from '../../flipbooks';
 
@@ -167,6 +168,17 @@ export default function ViewerPage() {
     ? (deleteComment.variables?.commentId ?? null)
     : null;
 
+  const setCommentReaction = useSetCommentReaction(id ?? '');
+  const handleReactToComment = (pageId: string, commentId: string, type: ReactionType) => {
+    setCommentReaction.mutate(
+      { pageId, commentId, type },
+      { onError: (mutationError) => toast.error(mutationError.message) }
+    );
+  };
+  const pendingReactionCommentId = setCommentReaction.isPending
+    ? (setCommentReaction.variables?.commentId ?? null)
+    : null;
+
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -306,6 +318,8 @@ export default function ViewerPage() {
               erroredCommentTarget={erroredCommentTarget}
               onDeleteComment={handleDeleteComment}
               pendingDeleteCommentId={pendingDeleteCommentId}
+              onReactToComment={handleReactToComment}
+              pendingReactionCommentId={pendingReactionCommentId}
               isAlbumOwner={isAlbumOwner}
               hasMoreComments={hasMoreComments}
               isFetchingMoreComments={isFetchingMoreComments}
@@ -333,6 +347,8 @@ export default function ViewerPage() {
           erroredCommentTarget={erroredCommentTarget}
           onDeleteComment={handleDeleteComment}
           pendingDeleteCommentId={pendingDeleteCommentId}
+          onReactToComment={handleReactToComment}
+          pendingReactionCommentId={pendingReactionCommentId}
           isAlbumOwner={isAlbumOwner}
           hasMoreComments={hasMoreComments}
           isFetchingMoreComments={isFetchingMoreComments}

@@ -4,14 +4,17 @@ const Album = require('../data/Album');
 const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const Comment = require('../data/Comment');
+const CommentReaction = require('../data/CommentReaction');
 const storage = require('../utilities/storage');
 const {
   notifyAlbumEvent,
   notifyPageReaction,
   notifyPageComment,
   notifyCommentReply,
+  notifyCommentReaction,
 } = require('../utilities/album-notifications');
 const { resolveCommentCounts, withCommentAuthors, attachReplies } = require('../utilities/album-comments');
+const { resolveCommentReactionSummaries } = require('../utilities/comment-reactions');
 const {
   isNonEmptyString,
   isOwnerOrAdmin,
@@ -473,6 +476,7 @@ module.exports = {
           .deleteOne()
           .then(() => Reaction.deleteMany({ page: page._id }))
           .then(() => Comment.deleteMany({ page: page._id }))
+          .then(() => CommentReaction.deleteMany({ page: page._id }))
           .then(() => {
             const filePath = storage.photoPath(album.owner, album._id, page.filename);
             fs.rm(filePath, { force: true }, (err) => {
@@ -539,7 +543,22 @@ module.exports = {
             return withCommentAuthors(oldestFirst)
               .then((commentsWithAuthors) => attachReplies(commentsWithAuthors))
               .then((commentsWithReplies) => {
-                res.json({ comments: commentsWithReplies, hasMore });
+                // Reaction summaries for every top-level comment and every
+                // reply in this portion, resolved in one batched call rather
+                // than one per comment — same N+1-avoidance shape as
+                // resolveReactionSummaries/resolveCommentCounts above.
+                const flatComments = commentsWithReplies.flatMap((comment) => [comment, ...comment.replies]);
+                return resolveCommentReactionSummaries(flatComments, req.user._id).then((summaryByCommentId) => {
+                  const commentsWithReactions = commentsWithReplies.map((comment) => ({
+                    ...comment,
+                    reactions: summaryByCommentId.get(comment._id.toString()),
+                    replies: comment.replies.map((reply) => ({
+                      ...reply,
+                      reactions: summaryByCommentId.get(reply._id.toString()),
+                    })),
+                  }));
+                  res.json({ comments: commentsWithReactions, hasMore });
+                });
               });
           });
       })
@@ -593,9 +612,23 @@ module.exports = {
             }
 
             return Promise.all([withCommentAuthors([comment]), Comment.countDocuments({ page: page._id })]).then(
-              ([[commentWithAuthor], commentCount]) => {
-                res.status(201).json({ comment: commentWithAuthor, commentCount });
-              }
+              ([[commentWithAuthor], commentCount]) =>
+                // A freshly created comment can't have any reactions yet, but
+                // resolving the summary the same way listComments/
+                // setCommentReaction do (rather than hand-rolling a
+                // zero-filled shape here) keeps this response's comment
+                // object identical in shape everywhere the frontend's
+                // commentSchema is used — same reasoning as upload()'s
+                // resolveReactionSummaries call above.
+                resolveCommentReactionSummaries([commentWithAuthor], req.user._id).then((summaryByCommentId) => {
+                  res.status(201).json({
+                    comment: {
+                      ...commentWithAuthor,
+                      reactions: summaryByCommentId.get(commentWithAuthor._id.toString()),
+                    },
+                    commentCount,
+                  });
+                })
             );
           });
 
@@ -642,18 +675,105 @@ module.exports = {
             return res.status(403).json({ error: 'You cannot delete this comment' });
           }
 
-          return comment
-            .deleteOne()
-            // Cascades to this comment's own replies, if it's a top-level
-            // one — a reply has no replies of its own (one level deep, see
-            // addComment), so this is a no-op for replies themselves.
-            .then(() => Comment.deleteMany({ parentComment: comment._id }))
-            .then(() => Comment.countDocuments({ page: page._id }))
-            .then((commentCount) => {
-              res.json({ deleted: true, commentCount });
-            });
+          // Captured before any deletes below, so this comment's own
+          // reactions and its replies' reactions can be cascade-deleted
+          // together in one CommentReaction query — a reply has no replies
+          // of its own (one level deep, see addComment), so this resolves to
+          // just [comment._id] when deleting a reply itself.
+          return Comment.find({ parentComment: comment._id }, '_id').then((replies) => {
+            const deletedCommentIds = [comment._id, ...replies.map((reply) => reply._id)];
+
+            return comment
+              .deleteOne()
+              // Cascades to this comment's own replies, if it's a top-level
+              // one — a reply has no replies of its own (one level deep, see
+              // addComment), so this is a no-op for replies themselves.
+              .then(() => Comment.deleteMany({ parentComment: comment._id }))
+              .then(() => CommentReaction.deleteMany({ comment: { $in: deletedCommentIds } }))
+              .then(() => Comment.countDocuments({ page: page._id }))
+              .then((commentCount) => {
+                res.json({ deleted: true, commentCount });
+              });
+          });
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to delete comment' }));
+  },
+
+  setCommentReaction: (req, res) => {
+    const album = req.album;
+    const { pageId, commentId } = req.params;
+    if (!mongoose.isValidObjectId(pageId) || !mongoose.isValidObjectId(commentId)) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const { type } = req.body || {};
+    if (!Reaction.REACTION_TYPES.includes(type)) {
+      return res
+        .status(400)
+        .json({ error: `type must be one of: ${Reaction.REACTION_TYPES.join(', ')}` });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        return Comment.findOne({ _id: commentId, page: page._id }).then((comment) => {
+          if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+          // Same create/toggle/switch/race-reconciliation shape as
+          // setReaction above, scoped to a comment instead of a page — see
+          // setReaction's comments for why each branch exists.
+          const createReaction = (notify) =>
+            CommentReaction.create({
+              comment: comment._id,
+              page: page._id,
+              album: album._id,
+              user: req.user._id,
+              type,
+            })
+              .then(() => {
+                if (notify) {
+                  notifyCommentReaction({
+                    page,
+                    album,
+                    commentText: comment.text,
+                    reactionType: type,
+                    reactorUser: req.user,
+                    commentAuthorId: comment.user,
+                  });
+                }
+              })
+              .catch((err) => {
+                if (err.code !== 11000) throw err;
+                return CommentReaction.findOne({ comment: comment._id, user: req.user._id }).then((winner) => {
+                  if (!winner || winner.type === type) return;
+                  winner.type = type;
+                  return winner.save();
+                });
+              });
+
+          return CommentReaction.findOne({ comment: comment._id, user: req.user._id })
+            .then((existing) => {
+              // Picking the same reaction again removes it (toggle-off).
+              if (existing && existing.type === type) return existing.deleteOne();
+
+              if (existing) {
+                existing.type = type;
+                return existing.save().catch((err) => {
+                  if (!(err instanceof mongoose.Error.DocumentNotFoundError)) throw err;
+                  return createReaction(false);
+                });
+              }
+
+              return createReaction(true);
+            })
+            .then(() => resolveCommentReactionSummaries([comment], req.user._id))
+            .then((summaryByCommentId) => {
+              res.json({ reactions: summaryByCommentId.get(comment._id.toString()) });
+            });
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to save reaction' }));
   },
 };

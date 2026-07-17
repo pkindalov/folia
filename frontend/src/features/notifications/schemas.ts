@@ -15,6 +15,7 @@ export const NOTIFICATION_TYPES = [
   'album_reaction',
   'page_comment',
   'comment_reply',
+  'comment_reaction',
 ] as const;
 
 export const REACTION_NOTIFICATION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const;
@@ -33,24 +34,26 @@ export const notificationSchema = z
     // response — null for a legacy notification with no recorded actor, or
     // one whose actor account no longer exists.
     actorAvatarUrl: z.string().nullable(),
-    // Only present on the album_* and page_reaction types.
+    // Only present on the album_* and page_reaction/comment_reaction types.
     album: z.string().optional(),
     albumTitle: z.string().optional(),
-    // Required for page_reaction/page_comment/comment_reply (which page was
-    // reacted to / commented on / replied to). Also present, optionally, on
+    // Required for page_reaction/page_comment/comment_reply/comment_reaction
+    // (which page was reacted to / commented on / replied to / had one of
+    // its comments reacted to). Also present, optionally, on
     // album_photos_added as the representative uploaded photo used for the
     // thumbnail below and to deep-link into the viewer.
     page: z.string().optional(),
     reactionType: z.enum(REACTION_NOTIFICATION_TYPES).optional(),
     // Snapshot of the comment body at creation time — present on
-    // page_comment (the comment) and comment_reply (the reply), same
-    // "survives later edits/deletes" reasoning as albumTitle.
+    // page_comment (the comment), comment_reply (the reply), and
+    // comment_reaction (the reacted-to comment), same "survives later
+    // edits/deletes" reasoning as albumTitle.
     commentText: z.string().optional(),
     // Signed, time-limited thumbnail URL — the album's cover image for
     // album_shared/album_updated, the referenced photo for
-    // album_photos_added/page_reaction/page_comment/comment_reply, resolved
-    // fresh on every response. Null for every other type, or when the
-    // underlying album/photo no longer exists.
+    // album_photos_added/page_reaction/page_comment/comment_reply/
+    // comment_reaction, resolved fresh on every response. Null for every
+    // other type, or when the underlying album/photo no longer exists.
     thumbnailUrl: z.string().nullable(),
     read: z.boolean(),
     createdAt: z.string(),

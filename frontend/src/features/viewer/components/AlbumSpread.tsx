@@ -47,6 +47,8 @@ type AlbumSpreadProps = {
   erroredCommentTarget?: string | null;
   onDeleteComment?: (pageId: string, commentId: string) => void;
   pendingDeleteCommentId?: string | null;
+  onReactToComment?: (pageId: string, commentId: string, type: ReactionType) => void;
+  pendingReactionCommentId?: string | null;
   isAlbumOwner?: boolean;
   hasMoreComments?: boolean;
   isFetchingMoreComments?: boolean;
@@ -119,6 +121,8 @@ export default function AlbumSpread({
   erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId = null,
+  onReactToComment,
+  pendingReactionCommentId = null,
   isAlbumOwner = false,
   hasMoreComments = false,
   isFetchingMoreComments = false,
@@ -363,6 +367,12 @@ export default function AlbumSpread({
                       erroredCommentTarget={erroredCommentTarget}
                       onDeleteComment={(commentId) => onDeleteComment(currentPhoto._id, commentId)}
                       pendingDeleteCommentId={pendingDeleteCommentId}
+                      onReactToComment={
+                        onReactToComment
+                          ? (commentId, type) => onReactToComment(currentPhoto._id, commentId, type)
+                          : undefined
+                      }
+                      pendingReactionCommentId={pendingReactionCommentId}
                       variant="light"
                       viewerUsername={viewerUsername}
                       isAlbumOwner={isAlbumOwner}

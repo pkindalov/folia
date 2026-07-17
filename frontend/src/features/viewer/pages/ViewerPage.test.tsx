@@ -796,6 +796,7 @@ describe('ViewerPage', () => {
       avatarUrl: null,
       text: 'Lovely!',
       parentComment: null,
+      reactions: NO_REACTIONS,
       createdAt: new Date().toISOString(),
       replies: [],
     };
@@ -827,6 +828,7 @@ describe('ViewerPage', () => {
         avatarUrl: null,
         text: 'Newer!',
         parentComment: null,
+        reactions: NO_REACTIONS,
         createdAt: '2025-06-02T00:00:00.000Z',
         replies: [],
       };
@@ -838,6 +840,7 @@ describe('ViewerPage', () => {
         avatarUrl: null,
         text: 'Older!',
         parentComment: null,
+        reactions: NO_REACTIONS,
         createdAt: '2025-06-01T00:00:00.000Z',
         replies: [],
       };
@@ -893,6 +896,7 @@ describe('ViewerPage', () => {
         avatarUrl: null,
         text: 'Thanks!',
         parentComment: 'c1',
+        reactions: NO_REACTIONS,
         createdAt: new Date().toISOString(),
       };
       vi.mocked(fetch).mockImplementation((url, options) => {

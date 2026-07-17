@@ -328,6 +328,36 @@ describe('notifications-controller', () => {
       );
     });
 
+    test('resolves thumbnailUrl to the reacted-to comment\'s photo for comment_reaction notifications', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({
+            type: 'comment_reaction',
+            album: ALBUM_ID,
+            page: PAGE_ID,
+            reactionType: 'love',
+            commentText: 'Lovely!',
+          }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest.spyOn(Album, 'find').mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID }]);
+      jest.spyOn(Page, 'find').mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      jest.spyOn(storage, 'photoUrl').mockReturnValue('https://signed.example/photo.jpg');
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notifications: [
+            expect.objectContaining({ thumbnailUrl: 'https://signed.example/photo.jpg' }),
+          ],
+        })
+      );
+    });
+
     test('falls back to null thumbnailUrl when a page_comment notification\'s recipient can no longer read the album', async () => {
       jest.spyOn(Notification, 'find').mockReturnValue(
         mockNotificationQuery([

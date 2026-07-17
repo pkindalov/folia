@@ -3,7 +3,14 @@ import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CommentControl from './CommentControl';
-import type { TopLevelComment } from '../features/flipbooks';
+import type { ReactionSummary, TopLevelComment } from '../features/flipbooks';
+
+const ZERO_REACTIONS: ReactionSummary = {
+  counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+  total: 0,
+  viewerReaction: null,
+  reactors: [],
+};
 
 const COMMENT: TopLevelComment = {
   _id: 'c1',
@@ -13,6 +20,7 @@ const COMMENT: TopLevelComment = {
   avatarUrl: null,
   text: 'Lovely photo!',
   parentComment: null,
+  reactions: ZERO_REACTIONS,
   createdAt: new Date().toISOString(),
   replies: [],
 };
@@ -285,6 +293,7 @@ describe('CommentControl', () => {
         avatarUrl: null,
         text: 'Totally agree!',
         parentComment: 'c1',
+        reactions: ZERO_REACTIONS,
         createdAt: new Date().toISOString(),
       };
       renderControl({
@@ -313,6 +322,7 @@ describe('CommentControl', () => {
         avatarUrl: null,
         text: 'Totally agree!',
         parentComment: 'c1',
+        reactions: ZERO_REACTIONS,
         createdAt: new Date().toISOString(),
       };
       renderControl({
@@ -372,6 +382,80 @@ describe('CommentControl', () => {
       await user.click(screen.getByRole('button', { name: 'Reply' }));
       // Only the top-level error banner — the reply composer got no error of its own.
       expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+  });
+
+  describe('reactions', () => {
+    test('does not render a reaction control when onReactToComment is omitted', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT] });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.queryByRole('button', { name: 'React to this comment' })).not.toBeInTheDocument();
+    });
+
+    test('shows "Like" on a comment with no viewer reaction yet', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], onReactToComment: vi.fn() });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.getByRole('button', { name: 'React to this comment' })).toHaveTextContent('Like');
+    });
+
+    test('picking a reaction calls onReactToComment with the comment id and chosen type', async () => {
+      const onReactToComment = vi.fn();
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], onReactToComment });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'React to this comment' }));
+      await user.click(screen.getByRole('button', { name: 'Love' }));
+
+      expect(onReactToComment).toHaveBeenCalledWith('c1', 'love');
+    });
+
+    test('disables the reaction trigger while that comment\'s reaction mutation is pending', async () => {
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 1,
+        comments: [COMMENT],
+        onReactToComment: vi.fn(),
+        pendingReactionCommentId: 'c1',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.getByRole('button', { name: 'React to this comment' })).toBeDisabled();
+    });
+
+    test('reacting to a reply calls onReactToComment with the reply\'s own id', async () => {
+      const onReactToComment = vi.fn();
+      const user = userEvent.setup();
+      const REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'u2',
+        username: 'sam',
+        avatarUrl: null,
+        text: 'Totally agree!',
+        parentComment: 'c1',
+        reactions: ZERO_REACTIONS,
+        createdAt: new Date().toISOString(),
+      };
+      renderControl({
+        commentCount: 1,
+        comments: [{ ...COMMENT, replies: [REPLY] }],
+        onReactToComment,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      const [, replyReactionTrigger] = screen.getAllByRole('button', { name: 'React to this comment' });
+      await user.click(replyReactionTrigger);
+      await user.click(screen.getByRole('button', { name: 'Haha' }));
+
+      expect(onReactToComment).toHaveBeenCalledWith('reply1', 'haha');
     });
   });
 });

@@ -17,42 +17,51 @@ const NOTIFICATION_TYPES = [
   'album_reaction',
   'page_comment',
   'comment_reply',
+  'comment_reaction',
 ];
 
 // Types that go straight to a single recipient (the album owner for
 // page_reaction/album_reaction/page_comment, the parent comment's author for
-// comment_reply) rather than fanning out to a circle, and can fire on a
-// public album with no circle involved at all — circle/circleName stay
-// required for every other type, which is scoped to a circle (an event on
-// something shared with one).
-const CIRCLE_EXEMPT_TYPES = ['page_reaction', 'album_reaction', 'page_comment', 'comment_reply'];
+// comment_reply, the reacted-to comment's author for comment_reaction)
+// rather than fanning out to a circle, and can fire on a public album with no
+// circle involved at all — circle/circleName stay required for every other
+// type, which is scoped to a circle (an event on something shared with one).
+const CIRCLE_EXEMPT_TYPES = ['page_reaction', 'album_reaction', 'page_comment', 'comment_reply', 'comment_reaction'];
 
 const requiresCircle = function () {
   return !CIRCLE_EXEMPT_TYPES.includes(this.type);
 };
 
-// The inverse: reactionType only ever applies to page_reaction, and is
-// required there — mirrors requiresCircle's conditional-required treatment
-// rather than leaving it unconstrained. page is also gated by this (required
-// for page_reaction), but unlike reactionType it isn't exclusive to that
-// type — see the comment on the page field below.
+// The inverse: reactionType only ever applies to page_reaction/
+// comment_reaction, and is required on both — mirrors requiresCircle's
+// conditional-required treatment rather than leaving it unconstrained. page
+// is also gated by this (required for page_reaction), but unlike
+// reactionType it isn't exclusive to that type — see the comment on the page
+// field below.
 const requiresPageReaction = function () {
-  return this.type === 'page_reaction';
+  return this.type === 'page_reaction' || this.type === 'comment_reaction';
 };
 
-// commentText applies to page_comment and comment_reply (a reply's own
-// text), and is required on both — same conditional-required treatment as
+// commentText applies to page_comment, comment_reply (a reply's own text),
+// and comment_reaction (a snapshot of the comment that was reacted to), and
+// is required on all three — same conditional-required treatment as
 // requiresPageReaction above.
 const requiresPageComment = function () {
-  return this.type === 'page_comment' || this.type === 'comment_reply';
+  return this.type === 'page_comment' || this.type === 'comment_reply' || this.type === 'comment_reaction';
 };
 
-// page is required for page_reaction, page_comment, or comment_reply —
-// which page was reacted to / commented on / replied to. Also set,
-// optionally, on album_photos_added (see the comment on the page field
-// below), so this can't just be requiresPageReaction.
+// page is required for page_reaction, page_comment, comment_reply, or
+// comment_reaction — which page was reacted to / commented on / replied to /
+// had one of its comments reacted to. Also set, optionally, on
+// album_photos_added (see the comment on the page field below), so this
+// can't just be requiresPageReaction.
 const requiresPage = function () {
-  return this.type === 'page_reaction' || this.type === 'page_comment' || this.type === 'comment_reply';
+  return (
+    this.type === 'page_reaction' ||
+    this.type === 'page_comment' ||
+    this.type === 'comment_reply' ||
+    this.type === 'comment_reaction'
+  );
 };
 
 // Soft cap per recipient — this is a growing, unbounded top-level
@@ -108,10 +117,10 @@ const notificationSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    // Only set for the album_* and page_reaction types — a snapshot of
-    // which album and what its title was, for the same reason circleName is
-    // a snapshot: the notification should still read correctly even after
-    // the album is later renamed or deleted.
+    // Only set for the album_* and page_reaction/comment_reaction types — a
+    // snapshot of which album and what its title was, for the same reason
+    // circleName is a snapshot: the notification should still read correctly
+    // even after the album is later renamed or deleted.
     album: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Album',
@@ -119,13 +128,14 @@ const notificationSchema = new mongoose.Schema(
     albumTitle: {
       type: String,
     },
-    // Required for page_reaction/page_comment/comment_reply (which page was
-    // reacted to / commented on / replied to). Also set, optionally, on
-    // album_photos_added as a representative photo from the uploaded batch.
-    // Used by notifications-controller.js to show a thumbnail and deep-link
-    // to that photo for all four types; not required on album_photos_added
-    // since a notification predating this feature (or one whose batch
-    // somehow yielded no pages) simply has none.
+    // Required for page_reaction/page_comment/comment_reply/comment_reaction
+    // (which page was reacted to / commented on / replied to / had one of its
+    // comments reacted to). Also set, optionally, on album_photos_added as a
+    // representative photo from the uploaded batch. Used by
+    // notifications-controller.js to show a thumbnail and deep-link to that
+    // photo for all five types; not required on album_photos_added since a
+    // notification predating this feature (or one whose batch somehow
+    // yielded no pages) simply has none.
     page: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Page',
@@ -136,10 +146,10 @@ const notificationSchema = new mongoose.Schema(
       enum: REACTION_TYPES,
       required: requiresPageReaction,
     },
-    // Snapshot of the comment body at creation time, same "survives later
-    // edits/deletes" reasoning as albumTitle — a notification is a record of
-    // what happened, so deleting the comment shouldn't make this stop
-    // reading correctly.
+    // Snapshot of the comment body at creation time (the reacted-to comment's
+    // text, for comment_reaction), same "survives later edits/deletes"
+    // reasoning as albumTitle — a notification is a record of what happened,
+    // so deleting the comment shouldn't make this stop reading correctly.
     commentText: {
       type: String,
       required: requiresPageComment,

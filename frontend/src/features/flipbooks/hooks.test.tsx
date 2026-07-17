@@ -2,10 +2,24 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useSetCoverPhoto, useArchiveAlbum, useAddComment, useDeleteComment, useComments } from './hooks';
+import {
+  useSetCoverPhoto,
+  useArchiveAlbum,
+  useAddComment,
+  useDeleteComment,
+  useSetCommentReaction,
+  useComments,
+} from './hooks';
 import type { Album } from './schemas';
 import { createTestQueryClient } from '../../tests/test-utils';
 import { tokenStorage } from '../../lib/api-client';
+
+const ZERO_REACTIONS = {
+  counts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+  total: 0,
+  viewerReaction: null,
+  reactors: [],
+};
 
 const CACHED_ALBUM: Album = {
   _id: 'a1',
@@ -93,6 +107,7 @@ describe('useComments', () => {
       avatarUrl: null,
       text: 'Lovely!',
       parentComment: null,
+      reactions: ZERO_REACTIONS,
       createdAt: new Date().toISOString(),
       replies: [],
     };
@@ -142,6 +157,7 @@ describe('useAddComment', () => {
     avatarUrl: null,
     text: 'Nice!',
     parentComment: null,
+    reactions: ZERO_REACTIONS,
     createdAt: new Date().toISOString(),
   };
 
@@ -299,5 +315,72 @@ describe('useDeleteComment', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
     expect(cached?.pages[0].comments).toEqual([{ ...PARENT, replies: [KEEP_REPLY] }]);
+  });
+});
+
+describe('useSetCommentReaction', () => {
+  const NEW_REACTIONS = {
+    counts: { like: 0, love: 1, haha: 0, wow: 0, sad: 0, angry: 0 },
+    total: 1,
+    viewerReaction: 'love' as const,
+    reactors: [{ username: 'maria', type: 'love' as const }],
+  };
+
+  test('patches the reacted-to top-level comment in its cached page instead of invalidating the thread', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ reactions: NEW_REACTIONS }));
+    const queryClient = createTestQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const REACTED = { _id: 'c1', text: 'Lovely!', replies: [] };
+    const UNRELATED = { _id: 'c2', text: 'Unrelated', replies: [] };
+    seedCommentsCache(queryClient, [{ comments: [REACTED, UNRELATED], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSetCommentReaction('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1', type: 'love' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([
+      { ...REACTED, reactions: NEW_REACTIONS },
+      UNRELATED,
+    ]);
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
+  });
+
+  test('patches a reacted-to reply within its parent\'s replies array, leaving sibling replies untouched', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ reactions: NEW_REACTIONS }));
+    const queryClient = createTestQueryClient();
+    const REACTED_REPLY = { _id: 'reply1', text: 'Totally agree!' };
+    const SIBLING_REPLY = { _id: 'reply2', text: 'Me too' };
+    const PARENT = { _id: 'c1', text: 'Original comment', replies: [REACTED_REPLY, SIBLING_REPLY] };
+    seedCommentsCache(queryClient, [{ comments: [PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSetCommentReaction('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'reply1', type: 'love' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([
+      { ...PARENT, replies: [{ ...REACTED_REPLY, reactions: NEW_REACTIONS }, SIBLING_REPLY] },
+    ]);
+  });
+
+  test('does not crash when the thread was never fetched (no cached data to patch)', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ reactions: NEW_REACTIONS }));
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSetCommentReaction('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1', type: 'love' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toBeUndefined();
   });
 });

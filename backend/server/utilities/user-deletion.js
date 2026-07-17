@@ -4,6 +4,7 @@ const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const AlbumReaction = require('../data/AlbumReaction');
 const Comment = require('../data/Comment');
+const CommentReaction = require('../data/CommentReaction');
 const Circle = require('../data/Circle');
 const Notification = require('../data/Notification');
 const storage = require('./storage');
@@ -66,6 +67,7 @@ function deleteUser(userId) {
       .then(() => Reaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => AlbumReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => Comment.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
+      .then(() => CommentReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => Album.deleteMany({ owner: userId }))
       .then(() => Circle.deleteMany({ owner: userId }))
       .then(() => {

@@ -11,6 +11,7 @@ const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const AlbumReaction = require('../../server/data/AlbumReaction');
 const Comment = require('../../server/data/Comment');
+const CommentReaction = require('../../server/data/CommentReaction');
 const User = require('../../server/data/User');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
@@ -114,6 +115,7 @@ beforeEach(() => {
   jest.spyOn(AlbumReaction, 'find').mockImplementation(() => mockReactorQuery([]));
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
   // setReaction re-verifies the album still exists before writing; default
   // to "still there" so tests that don't care about the concurrent-delete
   // race can't accidentally hit the real Mongoose model.
@@ -1476,6 +1478,18 @@ describe('albums-controller', () => {
       controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
       await flush();
       expect(AlbumReaction.deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
+      expect(res.json).toHaveBeenCalledWith({ deleted: true });
+    });
+
+    test('deletes reactions on the album\'s comments along with its pages', async () => {
+      const album = fakeAlbum();
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Album, 'findOneAndDelete').mockResolvedValue(album);
+      jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
+      const res = mockRes();
+      controller.remove({ params: { id: ALBUM_ID }, user: owner }, res);
+      await flush();
+      expect(CommentReaction.deleteMany).toHaveBeenCalledWith({ album: ALBUM_ID });
       expect(res.json).toHaveBeenCalledWith({ deleted: true });
     });
 

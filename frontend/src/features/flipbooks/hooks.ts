@@ -324,6 +324,39 @@ export function useDeleteComment(albumId: string) {
   });
 }
 
+export function useSetCommentReaction(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, commentId, type }: { pageId: string; commentId: string; type: ReactionType }) =>
+      albumsApi.setCommentReaction(albumId, pageId, commentId, type),
+    onSuccess: (reactions, { pageId, commentId }) => {
+      // Patched directly into the cache, not invalidated — same reasoning as
+      // useAddComment/useDeleteComment: a refetch could shift where
+      // already-loaded pages' cursors fall. Unlike those two, this never
+      // changes comments.length or which comment is newest, so it can't
+      // disturb CommentControl's scroll-position-preservation effect either.
+      queryClient.setQueryData<CommentsQueryData>(commentsQueryKey(albumId, pageId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            comments: page.comments.map((comment) => {
+              if (comment._id === commentId) return { ...comment, reactions };
+              return {
+                ...comment,
+                replies: comment.replies.map((reply) =>
+                  reply._id === commentId ? { ...reply, reactions } : reply
+                ),
+              };
+            }),
+          })),
+        };
+      });
+    },
+  });
+}
+
 export function useArchiveAlbum(albumId: string) {
   const queryClient = useQueryClient();
   return useMutation({

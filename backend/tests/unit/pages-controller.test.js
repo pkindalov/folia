@@ -15,6 +15,7 @@ const Album = require('../../server/data/Album');
 const Page = require('../../server/data/Page');
 const Reaction = require('../../server/data/Reaction');
 const Comment = require('../../server/data/Comment');
+const CommentReaction = require('../../server/data/CommentReaction');
 const Circle = require('../../server/data/Circle');
 const Notification = require('../../server/data/Notification');
 const User = require('../../server/data/User');
@@ -108,6 +109,10 @@ beforeEach(() => {
   // mocks above.
   jest.spyOn(Comment, 'aggregate').mockResolvedValue([]);
   jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(Comment, 'find').mockResolvedValue([]);
+  jest.spyOn(CommentReaction, 'aggregate').mockResolvedValue([]);
+  jest.spyOn(CommentReaction, 'find').mockResolvedValue([]);
+  jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(User, 'find').mockResolvedValue([]);
   // upload() re-checks the album still exists right before writing Page
   // rows, to close the window where a concurrent album delete could have

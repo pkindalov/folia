@@ -2,9 +2,10 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import Icon from "./Icon";
 import Avatar from "./Avatar";
 import CommentComposer from "./CommentComposer";
+import CommentReactionControl from "./CommentReactionControl";
 import useEscapeKey from "../hooks/useEscapeKey";
 import { formatRelativeTime } from "../features/notifications/relativeTime";
-import type { Comment, TopLevelComment } from "../features/flipbooks";
+import type { Comment, ReactionType, TopLevelComment } from "../features/flipbooks";
 
 type CommentControlProps = {
   /** Resets the panel closed when the underlying photo changes — same reasoning as ReactionControl's pageId prop. */
@@ -35,6 +36,10 @@ type CommentControlProps = {
   onDeleteComment: (commentId: string) => void;
   /** _id of the comment currently being deleted, or null. */
   pendingDeleteCommentId: string | null;
+  /** Omitted entirely (rather than made optional-and-unused) hides the reaction control on every row — mirrors onDeleteComment/onAddComment's own presence-gating shape. */
+  onReactToComment?: (commentId: string, type: ReactionType) => void;
+  /** _id of the comment whose reaction mutation is in flight, or null. */
+  pendingReactionCommentId?: string | null;
   viewerUsername?: string;
   isAlbumOwner: boolean;
   /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
@@ -54,6 +59,10 @@ function CommentRow({
   isDeletePending,
   onDelete,
   isLight,
+  variant,
+  onReact,
+  isReactionPending,
+  viewerUsername,
   // "li" for a reply — each is a direct sibling inside its own replies
   // <ul>. "div" for a top-level comment — TopLevelCommentItem already
   // supplies the <li> for the outer comments <ul>, and a <li> can't
@@ -66,6 +75,10 @@ function CommentRow({
   isDeletePending: boolean;
   onDelete: () => void;
   isLight: boolean;
+  variant: "light" | "dark";
+  onReact?: (type: ReactionType) => void;
+  isReactionPending: boolean;
+  viewerUsername?: string;
   as?: "li" | "div";
 }) {
   const Container = as;
@@ -96,6 +109,17 @@ function CommentRow({
         >
           {comment.text}
         </p>
+        {onReact && (
+          <div className="mt-1">
+            <CommentReactionControl
+              reactions={comment.reactions}
+              onReact={onReact}
+              isPending={isReactionPending}
+              variant={variant}
+              viewerUsername={viewerUsername}
+            />
+          </div>
+        )}
       </div>
       {canDelete && (
         <button
@@ -131,6 +155,8 @@ function TopLevelCommentItem({
   isAlbumOwner,
   pendingDeleteCommentId,
   onDeleteComment,
+  onReactToComment,
+  pendingReactionCommentId,
   isLight,
   variant,
   isReplying,
@@ -144,6 +170,8 @@ function TopLevelCommentItem({
   isAlbumOwner: boolean;
   pendingDeleteCommentId: string | null;
   onDeleteComment: (commentId: string) => void;
+  onReactToComment?: (commentId: string, type: ReactionType) => void;
+  pendingReactionCommentId?: string | null;
   isLight: boolean;
   variant: "light" | "dark";
   isReplying: boolean;
@@ -160,7 +188,11 @@ function TopLevelCommentItem({
         canDelete={comment.username === viewerUsername || isAlbumOwner}
         isDeletePending={pendingDeleteCommentId === comment._id}
         onDelete={() => onDeleteComment(comment._id)}
+        onReact={onReactToComment ? (type) => onReactToComment(comment._id, type) : undefined}
+        isReactionPending={pendingReactionCommentId === comment._id}
+        viewerUsername={viewerUsername}
         isLight={isLight}
+        variant={variant}
         as="div"
       />
       <div className="pl-10 flex flex-col gap-2">
@@ -203,7 +235,11 @@ function TopLevelCommentItem({
                 canDelete={reply.username === viewerUsername || isAlbumOwner}
                 isDeletePending={pendingDeleteCommentId === reply._id}
                 onDelete={() => onDeleteComment(reply._id)}
+                onReact={onReactToComment ? (type) => onReactToComment(reply._id, type) : undefined}
+                isReactionPending={pendingReactionCommentId === reply._id}
+                viewerUsername={viewerUsername}
                 isLight={isLight}
+                variant={variant}
               />
             ))}
           </ul>
@@ -226,6 +262,8 @@ export default function CommentControl({
   erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId,
+  onReactToComment,
+  pendingReactionCommentId = null,
   viewerUsername,
   isAlbumOwner,
   variant = 'dark',
@@ -383,6 +421,8 @@ export default function CommentControl({
               isAlbumOwner={isAlbumOwner}
               pendingDeleteCommentId={pendingDeleteCommentId}
               onDeleteComment={onDeleteComment}
+              onReactToComment={onReactToComment}
+              pendingReactionCommentId={pendingReactionCommentId}
               isLight={isLight}
               variant={variant}
               isReplying={replyingToCommentId === comment._id}

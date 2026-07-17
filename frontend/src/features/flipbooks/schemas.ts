@@ -136,6 +136,7 @@ export const commentSchema = z
     // exactly one level deep, so a reply's own parentComment is never set
     // on another comment that already has one.
     parentComment: z.string().nullable(),
+    reactions: reactionSummarySchema,
     createdAt: z.string(),
     updatedAt: z.string().optional(),
   })
@@ -163,6 +164,7 @@ export const deleteCommentResponseSchema = z.object({
   deleted: z.boolean(),
   commentCount: z.number(),
 });
+export const setCommentReactionResponseSchema = z.object({ reactions: reactionSummarySchema });
 
 export const MAX_COMMENT_LENGTH = 1000;
 

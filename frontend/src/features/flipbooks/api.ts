@@ -13,6 +13,7 @@ import {
   commentsResponseSchema,
   addCommentResponseSchema,
   deleteCommentResponseSchema,
+  setCommentReactionResponseSchema,
   type Album,
   type AlbumFormInput,
   type AlbumReactionSummary,
@@ -166,4 +167,17 @@ export async function deleteComment(
     method: 'DELETE',
   });
   return deleteCommentResponseSchema.parse(data);
+}
+
+export async function setCommentReaction(
+  albumId: string,
+  pageId: string,
+  commentId: string,
+  type: ReactionType
+): Promise<ReactionSummary> {
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments/${commentId}/reaction`, {
+    method: 'PUT',
+    body: JSON.stringify({ type }),
+  });
+  return setCommentReactionResponseSchema.parse(data).reactions;
 }

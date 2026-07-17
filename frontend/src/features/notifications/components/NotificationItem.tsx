@@ -120,6 +120,36 @@ function ReplyMessageIcon({ commentText }: { commentText: string | null }) {
   );
 }
 
+// Rendered inline for comment_reaction — same truncated-preview shape as
+// ReplyMessageIcon, but with the picked reaction's own icon/verb (mirrors
+// ReactionMessageIcon) so the row reads as "reacted [icon] to your comment
+// "text" on a photo in", distinct from "replied to your comment".
+function CommentReactionMessageIcon({
+  type,
+  commentText,
+}: {
+  type: ReactionNotificationType;
+  commentText: string | null;
+}) {
+  const preview =
+    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
+      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
+      : commentText;
+
+  return (
+    <>
+      reacted{" "}
+      <Icon
+        name={REACTION_ICON[type]}
+        filled
+        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR[type]}`}
+      />
+      <span className="sr-only">{REACTION_LABELS[type]}</span> to your comment
+      {preview ? ` "${preview}"` : ""} on a photo in
+    </>
+  );
+}
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
   (notification: NotificationItemData) => MessageParts
@@ -190,6 +220,13 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),
+  comment_reaction: ({ albumTitle, circleName, reactionType, commentText }) => ({
+    leading: (
+      <CommentReactionMessageIcon type={reactionType ?? "like"} commentText={commentText} />
+    ),
+    subject: albumTitle ?? "an album",
+    trailing: circleName ? `shared with ${circleName}` : undefined,
+  }),
 };
 
 // Where clicking the row navigates. Most album_* types link straight to the
@@ -229,6 +266,10 @@ const LINK_TO_BY_TYPE: Record<
     return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
   },
   comment_reply: ({ album, page }) => {
+    if (!album) return "/circles";
+    return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
+  },
+  comment_reaction: ({ album, page }) => {
     if (!album) return "/circles";
     return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
   },
