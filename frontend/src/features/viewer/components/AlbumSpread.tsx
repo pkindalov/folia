@@ -4,7 +4,7 @@ import Icon from '../../../components/Icon';
 import ReactionControl from '../../../components/ReactionControl';
 import CommentControl from '../../../components/CommentControl';
 import KeyboardShortcutsHint from '../../../components/KeyboardShortcutsHint';
-import type { Album, Comment, Page, ReactionType } from '../../flipbooks';
+import type { Album, Page, ReactionType, TopLevelComment } from '../../flipbooks';
 
 type AlbumSpreadProps = {
   album: Album;
@@ -34,13 +34,17 @@ type AlbumSpreadProps = {
   // Comments — same shared state ViewerPage feeds to PhotoLightbox, so the
   // thread for the current photo reads the same whether it's opened from
   // here or from the zoomed-in view.
-  comments?: Comment[];
+  comments?: TopLevelComment[];
   isCommentsLoading?: boolean;
   isCommentsError?: boolean;
   onCommentsOpenChange?: (isOpen: boolean) => void;
-  onAddComment?: (pageId: string, text: string) => void;
-  isAddCommentPending?: boolean;
-  addCommentError?: boolean;
+  onAddComment?: (pageId: string, text: string, parentCommentId?: string) => void;
+  // Which composer's submission is in flight/errored — null for the
+  // top-level composer, a comment id for that comment's reply composer,
+  // undefined for neither. See ViewerPage's pendingCommentTarget for why
+  // this isn't just a flat boolean shared by every composer.
+  pendingCommentTarget?: string | null;
+  erroredCommentTarget?: string | null;
   onDeleteComment?: (pageId: string, commentId: string) => void;
   pendingDeleteCommentId?: string | null;
   isAlbumOwner?: boolean;
@@ -111,8 +115,8 @@ export default function AlbumSpread({
   isCommentsError = false,
   onCommentsOpenChange,
   onAddComment,
-  isAddCommentPending = false,
-  addCommentError = false,
+  pendingCommentTarget,
+  erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId = null,
   isAlbumOwner = false,
@@ -354,9 +358,9 @@ export default function AlbumSpread({
                       isLoading={isCommentsLoading}
                       isError={isCommentsError}
                       onOpenChange={handleCommentsOpenChange}
-                      onAddComment={(text) => onAddComment(currentPhoto._id, text)}
-                      isAddPending={isAddCommentPending}
-                      addError={addCommentError}
+                      onAddComment={(text, parentCommentId) => onAddComment(currentPhoto._id, text, parentCommentId)}
+                      pendingCommentTarget={pendingCommentTarget}
+                      erroredCommentTarget={erroredCommentTarget}
                       onDeleteComment={(commentId) => onDeleteComment(currentPhoto._id, commentId)}
                       pendingDeleteCommentId={pendingDeleteCommentId}
                       variant="light"

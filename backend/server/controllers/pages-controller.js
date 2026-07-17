@@ -5,8 +5,13 @@ const Page = require('../data/Page');
 const Reaction = require('../data/Reaction');
 const Comment = require('../data/Comment');
 const storage = require('../utilities/storage');
-const { notifyAlbumEvent, notifyPageReaction, notifyPageComment } = require('../utilities/album-notifications');
-const { resolveCommentCounts, withCommentAuthors } = require('../utilities/album-comments');
+const {
+  notifyAlbumEvent,
+  notifyPageReaction,
+  notifyPageComment,
+  notifyCommentReply,
+} = require('../utilities/album-notifications');
+const { resolveCommentCounts, withCommentAuthors, attachReplies } = require('../utilities/album-comments');
 const {
   isNonEmptyString,
   isOwnerOrAdmin,
@@ -514,7 +519,14 @@ module.exports = {
       .then((page) => {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
 
-        const filter = { page: page._id, ...(beforeDate ? { createdAt: { $lt: beforeDate } } : {}) };
+        // Top-level only — replies are fetched and attached separately
+        // below, and never count toward this portion's page size (see
+        // attachReplies).
+        const filter = {
+          page: page._id,
+          parentComment: null,
+          ...(beforeDate ? { createdAt: { $lt: beforeDate } } : {}),
+        };
         return Comment.find(filter)
           .sort('-createdAt')
           .limit(Comment.COMMENTS_PAGE_SIZE + 1)
@@ -524,9 +536,11 @@ module.exports = {
             // count query.
             const hasMore = newestFirst.length > Comment.COMMENTS_PAGE_SIZE;
             const oldestFirst = newestFirst.slice(0, Comment.COMMENTS_PAGE_SIZE).reverse();
-            return withCommentAuthors(oldestFirst).then((commentsWithAuthors) => {
-              res.json({ comments: commentsWithAuthors, hasMore });
-            });
+            return withCommentAuthors(oldestFirst)
+              .then((commentsWithAuthors) => attachReplies(commentsWithAuthors))
+              .then((commentsWithReplies) => {
+                res.json({ comments: commentsWithReplies, hasMore });
+              });
           });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load comments' }));
@@ -539,7 +553,7 @@ module.exports = {
       return res.status(404).json({ error: 'Photo not found' });
     }
 
-    const { text } = req.body || {};
+    const { text, parentComment: parentCommentId } = req.body || {};
     if (!isNonEmptyString(text)) {
       return res.status(400).json({ error: 'text is required' });
     }
@@ -548,24 +562,62 @@ module.exports = {
         .status(400)
         .json({ error: `text must be at most ${Comment.MAX_COMMENT_LENGTH} characters` });
     }
+    if (parentCommentId !== undefined && !mongoose.isValidObjectId(parentCommentId)) {
+      return res.status(400).json({ error: 'parentComment must be a valid comment id' });
+    }
 
     Page.findOne({ _id: pageId, album: album._id })
       .then((page) => {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
 
-        return Comment.create({
-          page: page._id,
-          album: album._id,
-          user: req.user._id,
-          text,
-        }).then((comment) => {
-          notifyPageComment({ page, album, commentText: comment.text, commenterUser: req.user });
-
-          return Promise.all([withCommentAuthors([comment]), Comment.countDocuments({ page: page._id })]).then(
-            ([[commentWithAuthor], commentCount]) => {
-              res.status(201).json({ comment: commentWithAuthor, commentCount });
+        // A reply notifies whoever wrote the comment being replied to,
+        // instead of the album owner — see notifyCommentReply.
+        const createComment = (parent) =>
+          Comment.create({
+            page: page._id,
+            album: album._id,
+            user: req.user._id,
+            text,
+            parentComment: parent ? parent._id : null,
+          }).then((comment) => {
+            if (parent) {
+              notifyCommentReply({
+                page,
+                album,
+                commentText: comment.text,
+                replierUser: req.user,
+                parentCommentAuthorId: parent.user,
+              });
+            } else {
+              notifyPageComment({ page, album, commentText: comment.text, commenterUser: req.user });
             }
-          );
+
+            return Promise.all([withCommentAuthors([comment]), Comment.countDocuments({ page: page._id })]).then(
+              ([[commentWithAuthor], commentCount]) => {
+                res.status(201).json({ comment: commentWithAuthor, commentCount });
+              }
+            );
+          });
+
+        if (parentCommentId === undefined) return createComment(null);
+
+        // A concurrent deleteComment removing this exact parent between the
+        // findOne below and the create above would leave the reply pointing
+        // at a comment that no longer exists — attachReplies would then
+        // never surface it (it only fetches replies for parent ids present
+        // in the current page), so it'd sit invisible while still counting
+        // toward commentCount. Not closed here, on the same "not worth it
+        // at this app's scale" basis as the other unguarded races in this
+        // file (see upload's page-count check).
+        return Comment.findOne({ _id: parentCommentId, page: page._id }).then((parent) => {
+          if (!parent) return res.status(404).json({ error: 'Comment not found' });
+          // Replies are exactly one level deep — replying to a reply would
+          // otherwise silently build an unbounded thread the UI was never
+          // designed to render.
+          if (parent.parentComment) {
+            return res.status(400).json({ error: 'Cannot reply to a reply' });
+          }
+          return createComment(parent);
         });
       })
       .catch(() => res.status(500).json({ error: 'Failed to save comment' }));
@@ -592,6 +644,10 @@ module.exports = {
 
           return comment
             .deleteOne()
+            // Cascades to this comment's own replies, if it's a top-level
+            // one — a reply has no replies of its own (one level deep, see
+            // addComment), so this is a no-op for replies themselves.
+            .then(() => Comment.deleteMany({ parentComment: comment._id }))
             .then(() => Comment.countDocuments({ page: page._id }))
             .then((commentCount) => {
               res.json({ deleted: true, commentCount });

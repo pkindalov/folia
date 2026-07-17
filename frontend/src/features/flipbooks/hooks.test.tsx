@@ -92,7 +92,9 @@ describe('useComments', () => {
       username: 'maria',
       avatarUrl: null,
       text: 'Lovely!',
+      parentComment: null,
       createdAt: new Date().toISOString(),
+      replies: [],
     };
     vi.mocked(fetch).mockImplementation((url) => {
       const urlStr = String(url);
@@ -139,6 +141,7 @@ describe('useAddComment', () => {
     username: 'maria',
     avatarUrl: null,
     text: 'Nice!',
+    parentComment: null,
     createdAt: new Date().toISOString(),
   };
 
@@ -162,8 +165,10 @@ describe('useAddComment', () => {
     result.current.mutate({ pageId: 'p1', text: 'Nice!' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Merged in as a fresh top-level comment (its own replies array starts
+    // empty) — everything already cached passes through unchanged.
     expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toEqual({
-      pages: [{ comments: [EXISTING, NEW_COMMENT], hasMore: false }],
+      pages: [{ comments: [EXISTING, { ...NEW_COMMENT, replies: [] }], hasMore: false }],
       pageParams: [undefined],
     });
     expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
@@ -190,7 +195,7 @@ describe('useAddComment', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
-    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT, NEW_COMMENT]);
+    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT, { ...NEW_COMMENT, replies: [] }]);
     expect(cached?.pages[1].comments).toEqual([OLDER_PAGE_COMMENT]);
   });
 
@@ -207,6 +212,25 @@ describe('useAddComment', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toBeUndefined();
   });
+
+  test('appends a reply into its parent comment\'s replies array, wherever that parent is loaded', async () => {
+    const REPLY = { ...NEW_COMMENT, _id: 'reply1', text: 'Thanks!', parentComment: 'c1' };
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: REPLY, commentCount: 2 }));
+    const queryClient = createTestQueryClient();
+    const PARENT = { _id: 'c1', text: 'Original comment', replies: [] };
+    const UNRELATED = { _id: 'c2', text: 'Unrelated comment', replies: [] };
+    seedCommentsCache(queryClient, [{ comments: [UNRELATED, PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAddComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', text: 'Thanks!', parentCommentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([UNRELATED, { ...PARENT, replies: [REPLY] }]);
+  });
 });
 
 describe('useDeleteComment', () => {
@@ -214,8 +238,8 @@ describe('useDeleteComment', () => {
     vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 1 }));
     const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
-    const KEEP = { _id: 'c-keep', text: 'Stays' };
-    const REMOVE = { _id: 'c1', text: 'Goes' };
+    const KEEP = { _id: 'c-keep', text: 'Stays', replies: [] };
+    const REMOVE = { _id: 'c1', text: 'Goes', replies: [] };
     seedCommentsCache(queryClient, [{ comments: [REMOVE, KEEP], hasMore: false }]);
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -238,9 +262,9 @@ describe('useDeleteComment', () => {
   test('leaves an unrelated, already-loaded page untouched', async () => {
     vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 1 }));
     const queryClient = createTestQueryClient();
-    const NEWEST_PAGE_COMMENT = { _id: 'c2', text: 'Newest so far' };
-    const OLDER_PAGE_KEEP = { _id: 'c-keep', text: 'Stays' };
-    const OLDER_PAGE_REMOVE = { _id: 'c1', text: 'Goes' };
+    const NEWEST_PAGE_COMMENT = { _id: 'c2', text: 'Newest so far', replies: [] };
+    const OLDER_PAGE_KEEP = { _id: 'c-keep', text: 'Stays', replies: [] };
+    const OLDER_PAGE_REMOVE = { _id: 'c1', text: 'Goes', replies: [] };
     seedCommentsCache(queryClient, [
       { comments: [NEWEST_PAGE_COMMENT], hasMore: true },
       { comments: [OLDER_PAGE_REMOVE, OLDER_PAGE_KEEP], hasMore: false },
@@ -256,5 +280,24 @@ describe('useDeleteComment', () => {
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
     expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT]);
     expect(cached?.pages[1].comments).toEqual([OLDER_PAGE_KEEP]);
+  });
+
+  test('removes a reply from its parent comment\'s replies array, leaving the parent itself in place', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 1 }));
+    const queryClient = createTestQueryClient();
+    const KEEP_REPLY = { _id: 'reply-keep', text: 'Stays' };
+    const REMOVE_REPLY = { _id: 'reply-remove', text: 'Goes' };
+    const PARENT = { _id: 'c1', text: 'Original comment', replies: [REMOVE_REPLY, KEEP_REPLY] };
+    seedCommentsCache(queryClient, [{ comments: [PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useDeleteComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'reply-remove' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([{ ...PARENT, replies: [KEEP_REPLY] }]);
   });
 });

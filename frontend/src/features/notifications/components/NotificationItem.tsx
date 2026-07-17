@@ -98,6 +98,28 @@ function CommentMessageIcon({ commentText }: { commentText: string | null }) {
   );
 }
 
+// Rendered inline for comment_reply — same truncated-preview shape as
+// CommentMessageIcon, but with a reply icon and verb so the row reads
+// distinctly from "commented on your photo" (this is "replied to your
+// comment", a different relationship to the viewer).
+function ReplyMessageIcon({ commentText }: { commentText: string | null }) {
+  const preview =
+    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
+      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
+      : commentText;
+
+  return (
+    <>
+      replied{" "}
+      <Icon
+        name="reply"
+        className="text-sm align-text-bottom text-secondary"
+      />
+      {preview ? ` "${preview}"` : ""} to your comment on a photo in
+    </>
+  );
+}
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
   (notification: NotificationItemData) => MessageParts
@@ -163,6 +185,11 @@ const MESSAGE_PARTS_BY_TYPE: Record<
     subject: albumTitle ?? "an album",
     trailing: circleName ? `shared with ${circleName}` : undefined,
   }),
+  comment_reply: ({ albumTitle, circleName, commentText }) => ({
+    leading: <ReplyMessageIcon commentText={commentText} />,
+    subject: albumTitle ?? "an album",
+    trailing: circleName ? `shared with ${circleName}` : undefined,
+  }),
 };
 
 // Where clicking the row navigates. Most album_* types link straight to the
@@ -198,6 +225,10 @@ const LINK_TO_BY_TYPE: Record<
   },
   album_reaction: ({ album }) => (album ? `/book/${album}` : "/circles"),
   page_comment: ({ album, page }) => {
+    if (!album) return "/circles";
+    return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
+  },
+  comment_reply: ({ album, page }) => {
     if (!album) return "/circles";
     return page ? `/book/${album}?photo=${page}` : `/book/${album}`;
   },

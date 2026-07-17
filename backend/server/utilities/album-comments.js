@@ -45,4 +45,35 @@ function withCommentAuthors(comments) {
   });
 }
 
-module.exports = { resolveCommentCounts, withCommentAuthors };
+// Attaches each top-level comment's replies (as already-resolved plain
+// objects — pass the output of withCommentAuthors, not raw documents) as a
+// nested `replies` array, ascending by createdAt. One batched query for
+// every parent in the page, not one per comment — same N+1-avoidance shape
+// as resolveCommentCounts above. Replies are never separately paginated
+// (see pages-controller.js's listComments): a heavily-replied comment is
+// expected to be rare at this app's scale, so embedding them all here is
+// simpler than a second cursor system just for replies.
+function attachReplies(topLevelComments) {
+  const parentIds = topLevelComments.map((comment) => comment._id);
+  if (parentIds.length === 0) return Promise.resolve([]);
+
+  return Comment.find({ parentComment: { $in: parentIds } })
+    .sort('createdAt')
+    .then((replies) =>
+      withCommentAuthors(replies).then((repliesWithAuthors) => {
+        const repliesByParentId = new Map();
+        for (const reply of repliesWithAuthors) {
+          const parentId = reply.parentComment.toString();
+          const existing = repliesByParentId.get(parentId) ?? [];
+          existing.push(reply);
+          repliesByParentId.set(parentId, existing);
+        }
+        return topLevelComments.map((comment) => ({
+          ...comment,
+          replies: repliesByParentId.get(comment._id.toString()) ?? [],
+        }));
+      })
+    );
+}
+
+module.exports = { resolveCommentCounts, withCommentAuthors, attachReplies };

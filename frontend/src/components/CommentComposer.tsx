@@ -8,13 +8,23 @@ type CommentComposerProps = {
   hasError: boolean;
   /** Mirrors CommentControl's variant — light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). */
   variant?: 'light' | 'dark';
+  placeholder?: string;
+  /** Focuses the textarea on mount — used for the inline reply composer, which only mounts once the viewer has already asked to reply. */
+  autoFocus?: boolean;
 };
 
 const REMAINING_CHARACTERS_WARNING_THRESHOLD = 100;
 const REMAINING_CHARACTERS_CRITICAL_THRESHOLD = 20;
 
-/** Textarea + submit button for adding a comment, pinned at the bottom of CommentControl's panel. */
-export default function CommentComposer({ onSubmit, isPending, hasError, variant = 'dark' }: CommentComposerProps) {
+/** Textarea + submit button for adding a comment, pinned at the bottom of CommentControl's panel (or, with a different placeholder, inline as a reply composer). */
+export default function CommentComposer({
+  onSubmit,
+  isPending,
+  hasError,
+  variant = 'dark',
+  placeholder = 'Add a comment…',
+  autoFocus = false,
+}: CommentComposerProps) {
   const isLight = variant === 'light';
   const [draftText, setDraftText] = useState('');
 
@@ -64,9 +74,10 @@ export default function CommentComposer({ onSubmit, isPending, hasError, variant
           onKeyDown={onTextareaKeyDown}
           rows={2}
           maxLength={MAX_COMMENT_LENGTH}
-          placeholder="Add a comment…"
+          placeholder={placeholder}
           aria-label="Comment text"
           disabled={isPending}
+          autoFocus={autoFocus}
           className={`flex-1 rounded-panel px-3 py-2 font-body text-sm border border-transparent focus:outline-none focus-visible:border-secondary resize-none disabled:opacity-60 ${
             isLight
               ? 'bg-surface-container-low text-on-surface placeholder-on-surface-variant'

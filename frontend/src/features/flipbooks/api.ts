@@ -22,6 +22,7 @@ import {
   type PaginatedPublicAlbums,
   type ReactionSummary,
   type ReactionType,
+  type TopLevelComment,
 } from './schemas';
 
 export async function listAlbums(
@@ -137,7 +138,7 @@ export async function listComments(
   albumId: string,
   pageId: string,
   before?: string
-): Promise<{ comments: Comment[]; hasMore: boolean }> {
+): Promise<{ comments: TopLevelComment[]; hasMore: boolean }> {
   const query = before ? `?before=${encodeURIComponent(before)}` : '';
   const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments${query}`);
   return commentsResponseSchema.parse(data);
@@ -146,11 +147,12 @@ export async function listComments(
 export async function addComment(
   albumId: string,
   pageId: string,
-  text: string
+  text: string,
+  parentCommentId?: string
 ): Promise<{ comment: Comment; commentCount: number }> {
   const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments`, {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(parentCommentId ? { text, parentComment: parentCommentId } : { text }),
   });
   return addCommentResponseSchema.parse(data);
 }

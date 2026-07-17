@@ -3,7 +3,7 @@ import Icon from './Icon';
 import ReactionControl from './ReactionControl';
 import CommentControl from './CommentControl';
 import useFocusTrap from '../hooks/useFocusTrap';
-import type { Comment, ReactionSummary, ReactionType } from '../features/flipbooks';
+import type { ReactionSummary, ReactionType, TopLevelComment } from '../features/flipbooks';
 
 type LightboxPhoto = {
   _id: string;
@@ -25,13 +25,17 @@ type PhotoLightboxProps = {
   isReactionPending?: boolean;
   // Comments, like reactions, are viewer-only — all of the following are
   // omitted together when the lightbox is opened from the editor.
-  comments?: Comment[];
+  comments?: TopLevelComment[];
   isCommentsLoading?: boolean;
   isCommentsError?: boolean;
   onCommentsOpenChange?: (isOpen: boolean) => void;
-  onAddComment?: (pageId: string, text: string) => void;
-  isAddCommentPending?: boolean;
-  addCommentError?: boolean;
+  onAddComment?: (pageId: string, text: string, parentCommentId?: string) => void;
+  // Which composer's submission is in flight/errored — null for the
+  // top-level composer, a comment id for that comment's reply composer,
+  // undefined for neither. See ViewerPage's pendingCommentTarget for why
+  // this isn't just a flat boolean shared by every composer.
+  pendingCommentTarget?: string | null;
+  erroredCommentTarget?: string | null;
   onDeleteComment?: (pageId: string, commentId: string) => void;
   pendingDeleteCommentId?: string | null;
   isAlbumOwner?: boolean;
@@ -71,8 +75,8 @@ export default function PhotoLightbox({
   isCommentsError = false,
   onCommentsOpenChange,
   onAddComment,
-  isAddCommentPending = false,
-  addCommentError = false,
+  pendingCommentTarget,
+  erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId = null,
   isAlbumOwner = false,
@@ -239,9 +243,9 @@ export default function PhotoLightbox({
                   isLoading={isCommentsLoading}
                   isError={isCommentsError}
                   onOpenChange={handleCommentsOpenChange}
-                  onAddComment={(text) => onAddComment(photo._id, text)}
-                  isAddPending={isAddCommentPending}
-                  addError={addCommentError}
+                  onAddComment={(text, parentCommentId) => onAddComment(photo._id, text, parentCommentId)}
+                  pendingCommentTarget={pendingCommentTarget}
+                  erroredCommentTarget={erroredCommentTarget}
                   onDeleteComment={(commentId) => onDeleteComment(photo._id, commentId)}
                   pendingDeleteCommentId={pendingDeleteCommentId}
                   variant="dark"

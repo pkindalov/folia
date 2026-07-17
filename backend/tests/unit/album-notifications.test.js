@@ -5,6 +5,7 @@ const {
   notifyPageReaction,
   notifyAlbumReaction,
   notifyPageComment,
+  notifyCommentReply,
 } = require('../../server/utilities/album-notifications');
 
 const flush = () => new Promise(setImmediate);
@@ -13,6 +14,7 @@ const OWNER_ID = '507f1f77bcf86cd799439011';
 const ACTOR_ID = '507f1f77bcf86cd799439022';
 const MEMBER_ID = '507f1f77bcf86cd799439033';
 const PENDING_MEMBER_ID = '507f1f77bcf86cd799439044';
+const PARENT_AUTHOR_ID = '507f1f77bcf86cd799439055';
 const CIRCLE_ID = '507f191e810c19729de860ea';
 const ALBUM_ID = '507f191e810c19729de860eb';
 const PAGE_ID = '507f191e810c19729de860ec';
@@ -302,6 +304,77 @@ describe('notifyPageComment', () => {
         album: fakeAlbum(),
         commentText: 'Nice!',
         commenterUser: actorUser,
+      })
+    ).not.toThrow();
+    await flush();
+
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe('notifyCommentReply', () => {
+  test('notifies the parent comment\'s author (not the album owner) with the page, snapshot commentText and replier username', async () => {
+    notifyCommentReply({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'Totally agree!',
+      replierUser: actorUser,
+      parentCommentAuthorId: PARENT_AUTHOR_ID,
+    });
+    await flush();
+
+    expect(Notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: PARENT_AUTHOR_ID,
+        type: 'comment_reply',
+        actorUsername: 'pan',
+        actor: ACTOR_ID,
+        album: ALBUM_ID,
+        albumTitle: 'Summer Trip',
+        page: PAGE_ID,
+        commentText: 'Totally agree!',
+      })
+    );
+  });
+
+  test('does not notify when replying to your own comment (no self-notification)', async () => {
+    notifyCommentReply({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'Adding more context',
+      replierUser: actorUser,
+      parentCommentAuthorId: ACTOR_ID,
+    });
+    await flush();
+
+    expect(Notification.create).not.toHaveBeenCalled();
+  });
+
+  test('prunes the recipient\'s notifications after creating one', async () => {
+    notifyCommentReply({
+      page: fakePage(),
+      album: fakeAlbum(),
+      commentText: 'Totally agree!',
+      replierUser: actorUser,
+      parentCommentAuthorId: PARENT_AUTHOR_ID,
+    });
+    await flush();
+
+    expect(Notification.pruneExcessForRecipient).toHaveBeenCalledWith(PARENT_AUTHOR_ID);
+  });
+
+  test('never throws when Notification.create fails — logs and swallows', async () => {
+    Notification.create.mockRejectedValue(new Error('db down'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      notifyCommentReply({
+        page: fakePage(),
+        album: fakeAlbum(),
+        commentText: 'Totally agree!',
+        replierUser: actorUser,
+        parentCommentAuthorId: PARENT_AUTHOR_ID,
       })
     ).not.toThrow();
     await flush();

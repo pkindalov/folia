@@ -795,7 +795,9 @@ describe('ViewerPage', () => {
       username: 'maria',
       avatarUrl: null,
       text: 'Lovely!',
+      parentComment: null,
       createdAt: new Date().toISOString(),
+      replies: [],
     };
 
     test('opening the comment thread fetches and shows its comments', async () => {
@@ -824,7 +826,9 @@ describe('ViewerPage', () => {
         username: 'maria',
         avatarUrl: null,
         text: 'Newer!',
+        parentComment: null,
         createdAt: '2025-06-02T00:00:00.000Z',
+        replies: [],
       };
       const OLDER_COMMENT = {
         _id: 'c1',
@@ -833,7 +837,9 @@ describe('ViewerPage', () => {
         username: 'maria',
         avatarUrl: null,
         text: 'Older!',
+        parentComment: null,
         createdAt: '2025-06-01T00:00:00.000Z',
+        replies: [],
       };
       vi.mocked(fetch).mockImplementation((url, options) => {
         const method = options?.method ?? 'GET';
@@ -876,6 +882,50 @@ describe('ViewerPage', () => {
           String(requestUrl).includes(`before=${encodeURIComponent(NEWER_COMMENT.createdAt)}`)
         )
       ).toBe(true);
+    });
+
+    test('replying to a comment sends parentComment and renders the reply nested under it', async () => {
+      const REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'id1',
+        username: 'pan',
+        avatarUrl: null,
+        text: 'Thanks!',
+        parentComment: 'c1',
+        createdAt: new Date().toISOString(),
+      };
+      vi.mocked(fetch).mockImplementation((url, options) => {
+        const method = options?.method ?? 'GET';
+        const urlStr = String(url);
+        const respond = (body: unknown, status = 200) =>
+          Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+        if (urlStr.includes('/api/users/me')) return respond(ME);
+        if (urlStr.includes('/comments') && method === 'POST') return respond({ comment: REPLY, commentCount: 2 });
+        if (urlStr.includes('/comments') && method === 'GET') return respond({ comments: [COMMENT], hasMore: false });
+        if (urlStr.includes('/api/albums/a1/pages')) return respond({ pages: [{ ...PAGE_1, commentCount: 1 }] });
+        if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+        return respond({ error: 'Not found' }, 404);
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
+      await within(dialog).findByText('Lovely!');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Reply' }));
+      await user.type(within(dialog).getByPlaceholderText('Write a reply…'), 'Thanks!{Enter}');
+
+      expect(await within(dialog).findByText('Thanks!')).toBeInTheDocument();
+
+      const postCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([requestUrl, options]) => String(requestUrl).includes('/comments') && options?.method === 'POST');
+      expect(postCall).toBeDefined();
+      expect(JSON.parse(postCall![1]!.body as string)).toEqual({ text: 'Thanks!', parentComment: 'c1' });
     });
 
     test('does not show a delete button on someone else\'s comment for a regular viewer', async () => {

@@ -4,7 +4,7 @@ import Avatar from "./Avatar";
 import CommentComposer from "./CommentComposer";
 import useEscapeKey from "../hooks/useEscapeKey";
 import { formatRelativeTime } from "../features/notifications/relativeTime";
-import type { Comment } from "../features/flipbooks";
+import type { Comment, TopLevelComment } from "../features/flipbooks";
 
 type CommentControlProps = {
   /** Resets the panel closed when the underlying photo changes — same reasoning as ReactionControl's pageId prop. */
@@ -12,14 +12,26 @@ type CommentControlProps = {
   /** Shown on the trigger even before the thread has been fetched. */
   commentCount: number;
   /** undefined while not yet fetched. */
-  comments: Comment[] | undefined;
+  comments: TopLevelComment[] | undefined;
   isLoading: boolean;
   isError: boolean;
   /** Fires whenever the panel opens/closes — the parent uses this to gate the lazy fetch and to suspend the lightbox's arrow-key navigation while the panel is open. */
   onOpenChange?: (isOpen: boolean) => void;
-  onAddComment: (text: string) => void;
-  isAddPending: boolean;
-  addError: boolean;
+  /** parentCommentId is set when submitting a reply to a top-level comment — replies are exactly one level deep, so it's never itself a reply's id. */
+  onAddComment: (text: string, parentCommentId?: string) => void;
+  /**
+   * Which composer's submission is in flight — null for the top-level
+   * composer, a comment id for that comment's own reply composer,
+   * undefined for neither. There's only one shared addComment mutation for
+   * the whole page (see ViewerPage), so without this every mounted
+   * composer (the bottom one, plus whichever reply composer happens to be
+   * open) would show the same pending/error state regardless of which one
+   * actually submitted — including CommentComposer silently clearing an
+   * unrelated, untouched draft the moment the *other* composer's
+   * submission settles.
+   */
+  pendingCommentTarget?: string | null;
+  erroredCommentTarget?: string | null;
   onDeleteComment: (commentId: string) => void;
   /** _id of the comment currently being deleted, or null. */
   pendingDeleteCommentId: string | null;
@@ -42,6 +54,11 @@ function CommentRow({
   isDeletePending,
   onDelete,
   isLight,
+  // "li" for a reply — each is a direct sibling inside its own replies
+  // <ul>. "div" for a top-level comment — TopLevelCommentItem already
+  // supplies the <li> for the outer comments <ul>, and a <li> can't
+  // validly contain another <li> without a <ul>/<ol> in between.
+  as = "li",
 }: {
   comment: Comment;
   isOwnComment: boolean;
@@ -49,9 +66,11 @@ function CommentRow({
   isDeletePending: boolean;
   onDelete: () => void;
   isLight: boolean;
+  as?: "li" | "div";
 }) {
+  const Container = as;
   return (
-    <li
+    <Container
       className={`flex items-start gap-2.5 ${isDeletePending ? "opacity-60" : ""}`}
     >
       <Avatar
@@ -99,6 +118,97 @@ function CommentRow({
           )}
         </button>
       )}
+    </Container>
+  );
+}
+
+// A top-level comment plus its Reply trigger, inline reply composer (when
+// open), and its own replies — exactly one level deep, so a reply never
+// gets a Reply trigger of its own.
+function TopLevelCommentItem({
+  comment,
+  viewerUsername,
+  isAlbumOwner,
+  pendingDeleteCommentId,
+  onDeleteComment,
+  isLight,
+  variant,
+  isReplying,
+  onToggleReply,
+  onAddReply,
+  isAddPending,
+  addError,
+}: {
+  comment: TopLevelComment;
+  viewerUsername?: string;
+  isAlbumOwner: boolean;
+  pendingDeleteCommentId: string | null;
+  onDeleteComment: (commentId: string) => void;
+  isLight: boolean;
+  variant: "light" | "dark";
+  isReplying: boolean;
+  onToggleReply: () => void;
+  onAddReply: (text: string) => void;
+  isAddPending: boolean;
+  addError: boolean;
+}) {
+  return (
+    <li className="flex flex-col gap-1.5">
+      <CommentRow
+        comment={comment}
+        isOwnComment={comment.username === viewerUsername}
+        canDelete={comment.username === viewerUsername || isAlbumOwner}
+        isDeletePending={pendingDeleteCommentId === comment._id}
+        onDelete={() => onDeleteComment(comment._id)}
+        isLight={isLight}
+        as="div"
+      />
+      <div className="pl-10 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={onToggleReply}
+          className={`self-start font-ui text-xs uppercase tracking-wide transition-colors ${
+            isLight ? "text-on-surface-variant hover:text-secondary" : "text-white/50 hover:text-white"
+          }`}
+        >
+          {isReplying ? "Cancel" : "Reply"}
+        </button>
+        {isReplying && (
+          <>
+            <CommentComposer
+              onSubmit={onAddReply}
+              isPending={isAddPending}
+              hasError={addError}
+              variant={variant}
+              placeholder="Write a reply…"
+              autoFocus
+            />
+            {addError && (
+              <p
+                role="alert"
+                className="bg-error-container text-on-error-container rounded-paper font-ui text-xs px-3 py-2"
+              >
+                Couldn&apos;t post your reply. Try again.
+              </p>
+            )}
+          </>
+        )}
+        {comment.replies.length > 0 && (
+          <ul className="flex flex-col gap-2.5">
+            {comment.replies.map((reply) => (
+              <CommentRow
+                key={reply._id}
+                comment={reply}
+                isOwnComment={reply.username === viewerUsername}
+                canDelete={reply.username === viewerUsername || isAlbumOwner}
+                isDeletePending={pendingDeleteCommentId === reply._id}
+                onDelete={() => onDeleteComment(reply._id)}
+                isLight={isLight}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </li>
   );
 }
@@ -112,8 +222,8 @@ export default function CommentControl({
   isError,
   onOpenChange,
   onAddComment,
-  isAddPending,
-  addError,
+  pendingCommentTarget,
+  erroredCommentTarget,
   onDeleteComment,
   pendingDeleteCommentId,
   viewerUsername,
@@ -125,6 +235,12 @@ export default function CommentControl({
   onFetchMoreComments,
 }: CommentControlProps) {
   const isLight = variant === 'light';
+  // null represents the top-level (bottom) composer specifically — see the
+  // prop doc above for why undefined ("nothing pending/errored") and null
+  // ("the top-level composer, specifically") have to stay distinguishable.
+  const isTopLevelAddPending = pendingCommentTarget === null;
+  const topLevelAddError = erroredCommentTarget === null;
+  const isAnyAddPending = pendingCommentTarget !== undefined;
   const [isOpen, setIsOpen] = useState(false);
   useEffect(() => onOpenChange?.(isOpen), [isOpen, onOpenChange]);
   const close = useCallback(() => setIsOpen(false), []);
@@ -136,7 +252,7 @@ export default function CommentControl({
   // handleCommentsOpenChange) mid-request would detach this submission's
   // own onError callback, silently swallowing a failure that lands after
   // the panel is already closed.
-  useEscapeKey(isOpen && !isAddPending, close);
+  useEscapeKey(isOpen && !isAnyAddPending, close);
 
   // Same reset-on-pageId-change trick as ReactionControl: this instance is
   // reused across photo navigation (no `key` prop), and PhotoLightbox's
@@ -146,10 +262,16 @@ export default function CommentControl({
   // than in an effect) avoids a frame where the stale panel is still
   // visible.
   const [lastPageId, setLastPageId] = useState(pageId);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   if (pageId !== lastPageId) {
     setLastPageId(pageId);
     setIsOpen(false);
+    setReplyingToCommentId(null);
   }
+
+  const handleToggleReply = (commentId: string) => {
+    setReplyingToCommentId((current) => (current === commentId ? null : commentId));
+  };
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -252,16 +374,22 @@ export default function CommentControl({
             )}
           </button>
         )}
-        <ul className="flex flex-col gap-2.5 py-2 px-3">
+        <ul className="flex flex-col gap-3 py-2 px-3">
           {comments.map((comment) => (
-            <CommentRow
+            <TopLevelCommentItem
               key={comment._id}
               comment={comment}
-              isOwnComment={comment.username === viewerUsername}
-              canDelete={comment.username === viewerUsername || isAlbumOwner}
-              isDeletePending={pendingDeleteCommentId === comment._id}
-              onDelete={() => onDeleteComment(comment._id)}
+              viewerUsername={viewerUsername}
+              isAlbumOwner={isAlbumOwner}
+              pendingDeleteCommentId={pendingDeleteCommentId}
+              onDeleteComment={onDeleteComment}
               isLight={isLight}
+              variant={variant}
+              isReplying={replyingToCommentId === comment._id}
+              onToggleReply={() => handleToggleReply(comment._id)}
+              onAddReply={(text) => onAddComment(text, comment._id)}
+              isAddPending={pendingCommentTarget === comment._id}
+              addError={erroredCommentTarget === comment._id}
             />
           ))}
         </ul>
@@ -277,7 +405,7 @@ export default function CommentControl({
         // Blocked from closing (not from opening — that case can't arise,
         // since a post can't be in flight before the panel is open) while a
         // post is in flight, same reasoning as the collapse button below.
-        disabled={isOpen && isAddPending}
+        disabled={isOpen && isAnyAddPending}
         aria-expanded={isOpen}
         aria-controls={panelId}
         aria-label={
@@ -315,7 +443,7 @@ export default function CommentControl({
               onClick={() => setIsOpen(false)}
               // See useEscapeKey above — closing while a post is in flight
               // would detach that submission's own error callback.
-              disabled={isAddPending}
+              disabled={isAnyAddPending}
               aria-label="Collapse comments"
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-secondary disabled:opacity-40 disabled:pointer-events-none ${
                 isLight
@@ -331,7 +459,7 @@ export default function CommentControl({
             {renderListContent()}
           </div>
 
-          {addError && (
+          {topLevelAddError && (
             <p
               role="alert"
               className="bg-error-container text-on-error-container rounded-paper font-ui text-sm px-3 py-2 mx-2 mt-2"
@@ -343,8 +471,8 @@ export default function CommentControl({
           <div className={`border-t ${isLight ? "border-outline-variant/40" : "border-white/10"}`}>
             <CommentComposer
               onSubmit={onAddComment}
-              isPending={isAddPending}
-              hasError={addError}
+              isPending={isTopLevelAddPending}
+              hasError={topLevelAddError}
               variant={variant}
             />
           </div>

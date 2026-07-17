@@ -111,4 +111,34 @@ function notifyPageComment({ page, album, commentText, commenterUser }) {
     .catch((err) => console.error('Failed to create/prune page_comment notification', err));
 }
 
-module.exports = { notifyAlbumEvent, notifyPageReaction, notifyAlbumReaction, notifyPageComment };
+// Fire-and-forget: notifies the author of a top-level comment that someone
+// replied to it. Deliberately distinct from notifyPageComment — a reply
+// notifies whoever wrote the comment being replied to, not the album owner
+// (who already got their own page_comment notification for the original
+// comment, and would otherwise get a second one for every reply to it).
+// No-ops silently for a self-reply (replying to your own comment doesn't
+// need telling about it).
+function notifyCommentReply({ page, album, commentText, replierUser, parentCommentAuthorId }) {
+  if (parentCommentAuthorId.toString() === replierUser._id.toString()) return;
+
+  Notification.create({
+    recipient: parentCommentAuthorId,
+    type: 'comment_reply',
+    actorUsername: replierUser.username,
+    actor: replierUser._id,
+    album: album._id,
+    albumTitle: album.title,
+    page: page._id,
+    commentText,
+  })
+    .then(() => Notification.pruneExcessForRecipient(parentCommentAuthorId))
+    .catch((err) => console.error('Failed to create/prune comment_reply notification', err));
+}
+
+module.exports = {
+  notifyAlbumEvent,
+  notifyPageReaction,
+  notifyAlbumReaction,
+  notifyPageComment,
+  notifyCommentReply,
+};

@@ -12,19 +12,21 @@ export type NotificationItemData = {
   type: AppNotification['type'];
   actorUsername: string;
   actorAvatarUrl: string | null;
-  // Only present on circle-scoped types — page_reaction/page_comment have
-  // neither.
+  // Only present on circle-scoped types — page_reaction/page_comment/
+  // comment_reply have neither.
   circleName: string | null;
-  // Only present on the album_* and page_reaction/page_comment types.
+  // Only present on the album_* and page_reaction/page_comment/comment_reply
+  // types.
   albumTitle: string | null;
   album: string | null;
-  // Required for page_reaction/page_comment; also present on
+  // Required for page_reaction/page_comment/comment_reply; also present on
   // album_photos_added as the representative uploaded photo (thumbnail +
   // deep-link target).
   page: string | null;
   // Only present on page_reaction.
   reactionType: AppNotification['reactionType'] | null;
-  // Only present on page_comment — a snapshot of the comment body.
+  // Present on page_comment (the comment) and comment_reply (the reply) — a
+  // snapshot of that comment's body.
   commentText: string | null;
   thumbnailUrl: string | null;
   read: boolean;

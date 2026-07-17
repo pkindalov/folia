@@ -110,12 +110,25 @@ export default function ViewerPage() {
   const [autoPlayStartedAt, setAutoPlayStartedAt] = useState<number | undefined>(undefined);
 
   const addComment = useAddComment(id ?? '');
-  const handleAddComment = (pageId: string, text: string) => {
+  const handleAddComment = (pageId: string, text: string, parentCommentId?: string) => {
     addComment.mutate(
-      { pageId, text },
+      { pageId, text, parentCommentId },
       { onError: (mutationError) => toast.error(mutationError.message) }
     );
   };
+  // Which composer's submission is in flight/errored — the top-level
+  // bottom composer (null) or a specific reply's inline composer (its
+  // parent comment's id) — since addComment is one shared mutation across
+  // every composer on the page (see the comment below), same "read the
+  // target back off the mutation's own variables" trick as
+  // pendingDeleteCommentId. Without this, a reply submitting would also
+  // flash the top-level composer as pending/errored (and vice versa),
+  // including silently clearing an unrelated, untouched draft the moment
+  // the *other* composer's submission settles — CommentComposer clears its
+  // draft based on isPending/hasError transitioning, and every mounted
+  // composer instance was otherwise watching the same shared booleans.
+  const pendingCommentTarget = addComment.isPending ? (addComment.variables?.parentCommentId ?? null) : undefined;
+  const erroredCommentTarget = addComment.isError ? (addComment.variables?.parentCommentId ?? null) : undefined;
   // CommentControl's own effect re-fires onOpenChange whenever this
   // function's identity changes (same reset-tracking shape as its pageId
   // effect), so this must stay referentially stable across renders — a
@@ -289,8 +302,8 @@ export default function ViewerPage() {
               isCommentsError={isCommentsError}
               onCommentsOpenChange={handleCommentsOpenChange}
               onAddComment={handleAddComment}
-              isAddCommentPending={addComment.isPending}
-              addCommentError={addComment.isError}
+              pendingCommentTarget={pendingCommentTarget}
+              erroredCommentTarget={erroredCommentTarget}
               onDeleteComment={handleDeleteComment}
               pendingDeleteCommentId={pendingDeleteCommentId}
               isAlbumOwner={isAlbumOwner}
@@ -316,8 +329,8 @@ export default function ViewerPage() {
           isCommentsError={isCommentsError}
           onCommentsOpenChange={handleCommentsOpenChange}
           onAddComment={handleAddComment}
-          isAddCommentPending={addComment.isPending}
-          addCommentError={addComment.isError}
+          pendingCommentTarget={pendingCommentTarget}
+          erroredCommentTarget={erroredCommentTarget}
           onDeleteComment={handleDeleteComment}
           pendingDeleteCommentId={pendingDeleteCommentId}
           isAlbumOwner={isAlbumOwner}

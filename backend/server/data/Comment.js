@@ -32,6 +32,16 @@ const commentSchema = new mongoose.Schema(
       trim: true,
       maxlength: MAX_COMMENT_LENGTH,
     },
+    // Set only on a reply — the top-level comment it answers. Replies are
+    // exactly one level deep (enforced in pages-controller.js's addComment,
+    // not here): a reply's own parentComment is never itself set on
+    // another comment that already has one.
+    parentComment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );

@@ -3,16 +3,18 @@ import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CommentControl from './CommentControl';
-import type { Comment } from '../features/flipbooks';
+import type { TopLevelComment } from '../features/flipbooks';
 
-const COMMENT: Comment = {
+const COMMENT: TopLevelComment = {
   _id: 'c1',
   page: 'p1',
   user: 'u1',
   username: 'maria',
   avatarUrl: null,
   text: 'Lovely photo!',
+  parentComment: null,
   createdAt: new Date().toISOString(),
+  replies: [],
 };
 
 const DEFAULT_PROPS: ComponentProps<typeof CommentControl> = {
@@ -22,8 +24,6 @@ const DEFAULT_PROPS: ComponentProps<typeof CommentControl> = {
   isLoading: false,
   isError: false,
   onAddComment: vi.fn(),
-  isAddPending: false,
-  addError: false,
   onDeleteComment: vi.fn(),
   pendingDeleteCommentId: null,
   isAlbumOwner: false,
@@ -160,7 +160,7 @@ describe('CommentControl', () => {
 
   test('shows an error banner when posting a comment fails', async () => {
     const user = userEvent.setup();
-    renderControl({ addError: true });
+    renderControl({ erroredCommentTarget: null });
 
     await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
 
@@ -195,7 +195,7 @@ describe('CommentControl', () => {
   test('cannot be collapsed while a post is in flight, so its onError can never be detached mid-request', async () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
-    renderControl({ comments: [], isAddPending: true, onOpenChange });
+    renderControl({ comments: [], pendingCommentTarget: null, onOpenChange });
 
     await user.click(screen.getByRole('button', { name: 'View comments (0)' }));
     onOpenChange.mockClear();
@@ -247,6 +247,131 @@ describe('CommentControl', () => {
       await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
 
       expect(screen.getByRole('button', { name: 'Loading earlier comments' })).toBeDisabled();
+    });
+  });
+
+  describe('replies', () => {
+    test('clicking Reply opens an inline composer, and submitting it calls onAddComment with the parent comment id', async () => {
+      const onAddComment = vi.fn();
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], onAddComment });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'Reply' }));
+      await user.type(screen.getByPlaceholderText('Write a reply…'), 'Totally agree!{Enter}');
+
+      expect(onAddComment).toHaveBeenCalledWith('Totally agree!', 'c1');
+    });
+
+    test('clicking Reply again (Cancel) hides the inline composer', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT] });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'Reply' }));
+      expect(screen.getByPlaceholderText('Write a reply…')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByPlaceholderText('Write a reply…')).not.toBeInTheDocument();
+    });
+
+    test('renders a reply with its own author, text, and delete button, but no Reply trigger of its own', async () => {
+      const user = userEvent.setup();
+      const REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'u2',
+        username: 'sam',
+        avatarUrl: null,
+        text: 'Totally agree!',
+        parentComment: 'c1',
+        createdAt: new Date().toISOString(),
+      };
+      renderControl({
+        commentCount: 1,
+        comments: [{ ...COMMENT, replies: [REPLY] }],
+        viewerUsername: 'sam',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.getByText('sam')).toBeInTheDocument();
+      expect(screen.getByText('Totally agree!')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete your comment' })).toBeInTheDocument();
+      // Only the top-level comment gets a Reply trigger — one level deep.
+      expect(screen.getAllByRole('button', { name: 'Reply' })).toHaveLength(1);
+    });
+
+    test('deleting a reply calls onDeleteComment with the reply\'s own id', async () => {
+      const onDeleteComment = vi.fn();
+      const user = userEvent.setup();
+      const REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'u2',
+        username: 'sam',
+        avatarUrl: null,
+        text: 'Totally agree!',
+        parentComment: 'c1',
+        createdAt: new Date().toISOString(),
+      };
+      renderControl({
+        commentCount: 1,
+        comments: [{ ...COMMENT, replies: [REPLY] }],
+        viewerUsername: 'sam',
+        onDeleteComment,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'Delete your comment' }));
+
+      expect(onDeleteComment).toHaveBeenCalledWith('reply1');
+    });
+
+    // Regression test: addComment is one shared mutation for the whole
+    // page, so before pendingCommentTarget/erroredCommentTarget existed,
+    // every mounted composer (the bottom one, plus whichever reply
+    // composer was open) watched the same isPending/hasError booleans —
+    // meaning an unrelated reply resolving would trigger the top-level
+    // composer's own "clear draft on successful settle" effect too.
+    test('a reply resolving elsewhere does not clear an untouched, unsubmitted top-level draft', async () => {
+      const user = userEvent.setup();
+      const { rerender } = renderControl({ commentCount: 1, comments: [COMMENT] });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      const topLevelTextarea = screen.getByPlaceholderText('Add a comment…');
+      await user.type(topLevelTextarea, 'Still typing this one');
+
+      // A reply to this comment starts submitting...
+      rerender(
+        <CommentControl {...DEFAULT_PROPS} comments={[COMMENT]} commentCount={1} pendingCommentTarget="c1" />
+      );
+      // ...and resolves successfully.
+      rerender(<CommentControl {...DEFAULT_PROPS} comments={[COMMENT]} commentCount={1} />);
+
+      expect(topLevelTextarea).toHaveValue('Still typing this one');
+    });
+
+    test('an errored reply shows its own inline error banner, next to its own composer', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], erroredCommentTarget: 'c1' });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'Reply' }));
+
+      expect(screen.getByRole('alert')).toHaveTextContent("Couldn't post your reply. Try again.");
+    });
+
+    test('a top-level error does not also flag an unrelated open reply composer', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], erroredCommentTarget: null });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      expect(screen.getByRole('alert')).toHaveTextContent("Couldn't post your comment. Try again.");
+
+      await user.click(screen.getByRole('button', { name: 'Reply' }));
+      // Only the top-level error banner — the reply composer got no error of its own.
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
     });
   });
 });

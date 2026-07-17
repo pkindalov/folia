@@ -5,6 +5,7 @@ const request = require('supertest');
 
 const OWNER_ID = '507f1f77bcf86cd799439011';
 const OTHER_ID = '507f1f77bcf86cd799439022';
+const REPLIER_ID = '507f1f77bcf86cd799439033';
 const ALBUM_ID = '507f191e810c19729de860ea';
 const PAGE_ID = '507f191e810c19729de860eb';
 const COMMENT_ID = '507f191e810c19729de860ec';
@@ -23,6 +24,7 @@ describe('album pages routes (integration)', () => {
   let signedUrl;
   let token;
   let strangerToken;
+  let replierToken;
 
   // Photo URLs now carry a signature (see storage.photoUrl / signed-url.js),
   // so a plain string-equality check against the old unsigned shape no
@@ -63,6 +65,7 @@ describe('album pages routes (integration)', () => {
 
     token = auth.signToken({ _id: OWNER_ID, username: 'pan' });
     strangerToken = auth.signToken({ _id: OTHER_ID, username: 'maria' });
+    replierToken = auth.signToken({ _id: REPLIER_ID, username: 'sam' });
   });
 
   afterAll(() => {
@@ -536,7 +539,12 @@ describe('album pages routes (integration)', () => {
     // Comment.find(...).sort(...).limit(...) — a chained mock builder shared
     // by the pagination tests below, so each only has to specify what
     // Comment.find eventually resolves to (newest-first, as the controller
-    // requests it).
+    // requests it). listComments also calls Comment.find a second time
+    // (via attachReplies, to fetch replies for the returned top-level
+    // comments) with a `parentComment: { $in }` filter and no `.limit()` —
+    // distinguished here by that filter shape so both calls resolve
+    // correctly instead of the second one crashing against a mock shaped
+    // only for the first.
     const fakeComment = (overrides) => ({
       page: PAGE_ID,
       user: OTHER_ID,
@@ -546,11 +554,13 @@ describe('album pages routes (integration)', () => {
       },
       ...overrides,
     });
-    const mockCommentFind = (newestFirstComments) => {
-      const limit = jest.fn().mockResolvedValue(newestFirstComments);
-      const sort = jest.fn().mockReturnValue({ limit });
-      jest.spyOn(Comment, 'find').mockReturnValue({ sort });
-      return { sort, limit };
+    const mockCommentFind = (newestFirstComments, replies = []) => {
+      jest.spyOn(Comment, 'find').mockImplementation((filter) => {
+        if (filter && filter.parentComment && filter.parentComment.$in) {
+          return { sort: jest.fn().mockResolvedValue(replies) };
+        }
+        return { sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(newestFirstComments) }) };
+      });
     };
 
     test('200 returns the comment thread with each author resolved', async () => {
@@ -569,6 +579,32 @@ describe('album pages routes (integration)', () => {
         expect.objectContaining({ _id: COMMENT_ID, text: 'Lovely!', username: 'maria', avatarUrl: null }),
       ]);
       expect(res.body.hasMore).toBe(false);
+    });
+
+    test('200 nests each top-level comment\'s replies, oldest-first, with their own authors resolved', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      const REPLY = fakeComment({
+        _id: 'reply1',
+        text: 'Totally agree!',
+        parentComment: COMMENT_ID,
+        user: OWNER_ID,
+      });
+      mockCommentFind([fakeComment({ _id: COMMENT_ID, text: 'Lovely!' })], [REPLY]);
+      jest.spyOn(User, 'find').mockResolvedValue([
+        { _id: OTHER_ID, username: 'maria', avatarFilename: null },
+        { _id: OWNER_ID, username: 'pan', avatarFilename: null },
+      ]);
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.comments[0].replies).toEqual([
+        expect.objectContaining({ _id: 'reply1', text: 'Totally agree!', username: 'pan' }),
+      ]);
     });
 
     test('200 returns hasMore: true and only a page\'s worth of comments when there are more', async () => {
@@ -614,6 +650,7 @@ describe('album pages routes (integration)', () => {
       expect(res.status).toBe(200);
       expect(findSpy).toHaveBeenCalledWith({
         page: PAGE_ID,
+        parentComment: null,
         createdAt: { $lt: new Date(before) },
       });
     });
@@ -747,6 +784,164 @@ describe('album pages routes (integration)', () => {
       expect(res.status).toBe(201);
       expect(Notification.create).not.toHaveBeenCalled();
     });
+
+    test('400 for a parentComment that is not a valid comment id', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Nice!', parentComment: 'not-an-id' });
+      expect(res.status).toBe(400);
+    });
+
+    test('404 when parentComment does not exist on this page', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Nice!', parentComment: COMMENT_ID });
+      expect(res.status).toBe(404);
+    });
+
+    test('400 when replying to a reply (one level deep only)', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: 'reply1',
+        page: PAGE_ID,
+        user: OTHER_ID,
+        parentComment: COMMENT_ID,
+      });
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Nice!', parentComment: 'reply1' });
+      expect(res.status).toBe(400);
+    });
+
+    test('201 saves a reply and notifies the parent comment\'s author, not the album owner', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: OTHER_ID,
+        parentComment: null,
+      });
+      jest.spyOn(Comment, 'create').mockResolvedValue({
+        _id: 'reply1',
+        page: PAGE_ID,
+        user: OWNER_ID,
+        text: 'Thanks!',
+        parentComment: COMMENT_ID,
+        toJSON() {
+          const { toJSON: _drop, ...rest } = this;
+          return rest;
+        },
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(2);
+
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Thanks!', parentComment: COMMENT_ID });
+
+      expect(res.status).toBe(201);
+      expect(res.body.comment).toEqual(expect.objectContaining({ text: 'Thanks!', parentComment: COMMENT_ID }));
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OTHER_ID, type: 'comment_reply', commentText: 'Thanks!' })
+      );
+      // The reply notifies the parent's author only — asserting no
+      // page_comment notification also fired covers the album owner (the
+      // replier here) not getting a second, redundant notification.
+      expect(Notification.create).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'page_comment' }));
+    });
+
+    test('with three distinct people (owner, parent comment author, replier), only the parent author is notified', async () => {
+      authAs(REPLIER_ID);
+      const album = fakeAlbum({ visibility: 'shared', sharedWithCircle: '507f1f77bcf86cd799439099' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Circle, 'findById').mockResolvedValue(
+        new Circle({
+          name: 'Family',
+          owner: OWNER_ID,
+          members: [{ user: REPLIER_ID, status: 'accepted' }],
+        })
+      );
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      // The parent comment's author (OTHER_ID) is neither the album owner
+      // nor the replier — the scenario a "reply also notifies the owner"
+      // regression would slip past the other reply tests, which only ever
+      // have two distinct identities in play.
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: OTHER_ID,
+        parentComment: null,
+      });
+      jest.spyOn(Comment, 'create').mockResolvedValue({
+        _id: 'reply1',
+        page: PAGE_ID,
+        user: REPLIER_ID,
+        text: 'Me too!',
+        parentComment: COMMENT_ID,
+        toJSON() {
+          const { toJSON: _drop, ...rest } = this;
+          return rest;
+        },
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(2);
+
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${replierToken}`)
+        .send({ text: 'Me too!', parentComment: COMMENT_ID });
+
+      expect(res.status).toBe(201);
+      expect(Notification.create).toHaveBeenCalledTimes(1);
+      expect(Notification.create).toHaveBeenCalledWith(
+        expect.objectContaining({ recipient: OTHER_ID, type: 'comment_reply' })
+      );
+      expect(Notification.create).not.toHaveBeenCalledWith(expect.objectContaining({ recipient: OWNER_ID }));
+    });
+
+    test('does not notify anyone when replying to your own comment', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: OWNER_ID,
+        parentComment: null,
+      });
+      jest.spyOn(Comment, 'create').mockResolvedValue({
+        _id: 'reply1',
+        page: PAGE_ID,
+        user: OWNER_ID,
+        text: 'Adding more context',
+        parentComment: COMMENT_ID,
+        toJSON() {
+          const { toJSON: _drop, ...rest } = this;
+          return rest;
+        },
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(2);
+
+      const res = await request(app)
+        .post(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ text: 'Adding more context', parentComment: COMMENT_ID });
+
+      expect(res.status).toBe(201);
+      expect(Notification.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('DELETE /api/albums/:id/pages/:pageId/comments/:commentId', () => {
@@ -821,6 +1016,29 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(deleteOne).toHaveBeenCalled();
+    });
+
+    test('200 cascades to delete the comment\'s own replies', async () => {
+      authAs(OTHER_ID);
+      const album = fakeAlbum({ visibility: 'public' });
+      jest.spyOn(Album, 'findById').mockResolvedValue(album);
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      const deleteOne = jest.fn().mockResolvedValue({});
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        user: { toString: () => OTHER_ID },
+        deleteOne,
+      });
+      jest.spyOn(Comment, 'countDocuments').mockResolvedValue(0);
+      const deleteManySpy = jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
+
+      const res = await request(app)
+        .delete(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(deleteManySpy).toHaveBeenCalledWith({ parentComment: COMMENT_ID });
     });
   });
 

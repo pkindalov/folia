@@ -52,6 +52,22 @@ const commentNotification: NotificationItemData = {
   relativeTime: 'Just now',
 };
 
+const replyNotification: NotificationItemData = {
+  _id: 'n4',
+  type: 'comment_reply',
+  actorUsername: 'sam',
+  actorAvatarUrl: null,
+  circleName: null,
+  albumTitle: 'Summer Trip',
+  album: 'a4',
+  page: 'p4',
+  reactionType: null,
+  commentText: 'Totally agree, the light is amazing!',
+  thumbnailUrl: null,
+  read: false,
+  relativeTime: 'Just now',
+};
+
 function renderItem(notification: NotificationItemData) {
   return render(
     <MemoryRouter>
@@ -117,5 +133,21 @@ describe('NotificationItem', () => {
     renderItem(commentNotification);
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a3?photo=p3');
+  });
+
+  test('renders a comment_reply notification as "replied [icon] to your comment on a photo in AlbumTitle" with a preview', () => {
+    renderItem(replyNotification);
+
+    expect(screen.getByText(/replied/)).toBeInTheDocument();
+    expect(screen.getByText('reply')).toBeInTheDocument();
+    expect(screen.getByText(/to your comment on a photo in/)).toBeInTheDocument();
+    expect(screen.getByText('Summer Trip')).toBeInTheDocument();
+    expect(screen.getByText(/Totally agree, the light is amazing!/)).toBeInTheDocument();
+  });
+
+  test('links a comment_reply notification to the replied-to photo', () => {
+    renderItem(replyNotification);
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/book/a4?photo=p4');
   });
 });

@@ -132,14 +132,25 @@ export const commentSchema = z
     // actorAvatarUrl on a notification.
     avatarUrl: z.string().nullable(),
     text: z.string(),
+    // Set only on a reply — the top-level comment it answers. Replies are
+    // exactly one level deep, so a reply's own parentComment is never set
+    // on another comment that already has one.
+    parentComment: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string().optional(),
   })
   .passthrough();
 export type Comment = z.infer<typeof commentSchema>;
 
+// A top-level comment as returned by listComments, with its replies
+// embedded (never separately paginated — see the backend's attachReplies).
+export const topLevelCommentSchema = commentSchema.extend({
+  replies: z.array(commentSchema),
+});
+export type TopLevelComment = z.infer<typeof topLevelCommentSchema>;
+
 export const commentsResponseSchema = z.object({
-  comments: z.array(commentSchema),
+  comments: z.array(topLevelCommentSchema),
   // Whether an older portion exists beyond this response — drives the
   // "See earlier comments" button.
   hasMore: z.boolean(),

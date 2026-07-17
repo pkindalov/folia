@@ -9,7 +9,7 @@ import {
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as albumsApi from './api';
-import type { Album, AlbumFormInput, Comment, ReactionType } from './schemas';
+import type { Album, AlbumFormInput, ReactionType, TopLevelComment } from './schemas';
 
 export function useAlbums(page: number, visibility?: Album['visibility']) {
   return useQuery({
@@ -185,7 +185,7 @@ export function useSetAlbumReaction(albumId: string) {
   });
 }
 
-type CommentsPage = { comments: Comment[]; hasMore: boolean };
+type CommentsPage = { comments: TopLevelComment[]; hasMore: boolean };
 type CommentsQueryData = InfiniteData<CommentsPage, string | undefined>;
 
 function commentsQueryKey(albumId: string | undefined, pageId: string | undefined) {
@@ -219,7 +219,7 @@ export function useComments(albumId: string | undefined, pageId: string | undefi
   // refetch shifts where that boundary falls.
   const comments = useMemo(() => {
     const seen = new Set<string>();
-    const flattened: Comment[] = [];
+    const flattened: TopLevelComment[] = [];
     for (const page of [...(query.data?.pages ?? [])].reverse()) {
       for (const comment of page.comments) {
         if (seen.has(comment._id)) continue;
@@ -250,19 +250,39 @@ export function useComments(albumId: string | undefined, pageId: string | undefi
 export function useAddComment(albumId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ pageId, text }: { pageId: string; text: string }) =>
-      albumsApi.addComment(albumId, pageId, text),
+    mutationFn: ({ pageId, text, parentCommentId }: { pageId: string; text: string; parentCommentId?: string }) =>
+      albumsApi.addComment(albumId, pageId, text, parentCommentId),
     onSuccess: (result, { pageId }) => {
-      // Patched directly into the newest (first) loaded page rather than
-      // invalidated — re-deriving every already-loaded page's cursor from
-      // scratch on a refetch can shift where page boundaries fall and drop
-      // an already-visible older comment that no longer lands in any of the
+      // Patched directly into the cache rather than invalidated —
+      // re-deriving every already-loaded page's cursor from scratch on a
+      // refetch can shift where page boundaries fall and drop an
+      // already-visible older comment that no longer lands in any of the
       // refetched pages. The mutation response is already the source of
       // truth for what changed, so there's nothing a refetch would add.
       queryClient.setQueryData<CommentsQueryData>(commentsQueryKey(albumId, pageId), (previous) => {
-        const [firstPage, ...rest] = previous?.pages ?? [];
-        if (!previous || !firstPage) return previous;
-        return { ...previous, pages: [{ ...firstPage, comments: [...firstPage.comments, result.comment] }, ...rest] };
+        if (!previous) return previous;
+
+        // A reply — one level deep, so it always answers a top-level
+        // comment (never another reply) — is appended into that parent's
+        // own replies array, wherever that parent happens to be loaded.
+        if (result.comment.parentComment) {
+          const parentId = result.comment.parentComment;
+          return {
+            ...previous,
+            pages: previous.pages.map((page) => ({
+              ...page,
+              comments: page.comments.map((comment) =>
+                comment._id === parentId ? { ...comment, replies: [...comment.replies, result.comment] } : comment
+              ),
+            })),
+          };
+        }
+
+        // A top-level comment always belongs on the newest (first) page.
+        const [firstPage, ...rest] = previous.pages;
+        if (!firstPage) return previous;
+        const newTopLevelComment = { ...result.comment, replies: [] };
+        return { ...previous, pages: [{ ...firstPage, comments: [...firstPage.comments, newTopLevelComment] }, ...rest] };
       });
       // The page list's commentCount lives alongside reactions on each page
       // object — invalidated the same way useSetPageReaction invalidates it.
@@ -278,8 +298,9 @@ export function useDeleteComment(albumId: string) {
       albumsApi.deleteComment(albumId, pageId, commentId),
     onSuccess: (_result, { pageId, commentId }) => {
       // Same reasoning as useAddComment: filtered out of whichever loaded
-      // page holds it rather than invalidated, so an unrelated already-
-      // loaded older portion can't be dropped by a refetch recomputing page
+      // page (or, for a reply, whichever top-level comment's replies array)
+      // holds it, rather than invalidated — an unrelated already-loaded
+      // older portion can't be dropped by a refetch recomputing page
       // boundaries from scratch. Each page's own hasMore/cursor is left
       // alone — cursors are fixed at fetch time and unaffected by removing
       // an item from what's currently displayed.
@@ -289,7 +310,12 @@ export function useDeleteComment(albumId: string) {
           ...previous,
           pages: previous.pages.map((page) => ({
             ...page,
-            comments: page.comments.filter((comment) => comment._id !== commentId),
+            comments: page.comments
+              .filter((comment) => comment._id !== commentId)
+              .map((comment) => ({
+                ...comment,
+                replies: comment.replies.filter((reply) => reply._id !== commentId),
+              })),
           })),
         };
       });
