@@ -208,4 +208,45 @@ describe('CommentControl', () => {
 
     expect(onOpenChange).not.toHaveBeenCalled();
   });
+
+  describe('pagination', () => {
+    test('does not show a "See earlier comments" button when there is no older portion', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [COMMENT], hasMoreComments: false });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.queryByRole('button', { name: /see earlier comments/i })).not.toBeInTheDocument();
+    });
+
+    test('shows a "See earlier comments" button when an older portion exists, and clicking it fetches more', async () => {
+      const onFetchMoreComments = vi.fn();
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 1,
+        comments: [COMMENT],
+        hasMoreComments: true,
+        onFetchMoreComments,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: /see earlier comments/i }));
+
+      expect(onFetchMoreComments).toHaveBeenCalledTimes(1);
+    });
+
+    test('disables the "See earlier comments" button while the older portion is loading', async () => {
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 1,
+        comments: [COMMENT],
+        hasMoreComments: true,
+        isFetchingMoreComments: true,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.getByRole('button', { name: 'Loading earlier comments' })).toBeDisabled();
+    });
+  });
 });

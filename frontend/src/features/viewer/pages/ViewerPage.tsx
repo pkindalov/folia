@@ -84,11 +84,15 @@ export default function ViewerPage() {
   // CommentControl resets this back to false itself (via onCommentsOpenChange)
   // whenever the underlying photo changes.
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const { data: comments, isLoading: isCommentsLoading, isError: isCommentsError } = useComments(
-    id,
-    currentPhoto?._id,
-    isCommentsOpen
-  );
+  const {
+    comments,
+    isLoading: isCommentsLoading,
+    isError: isCommentsError,
+    hasFetchMoreError,
+    hasMoreComments,
+    isFetchingMoreComments,
+    fetchMoreComments,
+  } = useComments(id, currentPhoto?._id, isCommentsOpen);
 
   // Owned here (not inside AlbumSpread) so the header's play/pause button and
   // the spread's own auto-advance timer always agree on state. AlbumSpread
@@ -290,6 +294,10 @@ export default function ViewerPage() {
               onDeleteComment={handleDeleteComment}
               pendingDeleteCommentId={pendingDeleteCommentId}
               isAlbumOwner={isAlbumOwner}
+              hasMoreComments={hasMoreComments}
+              isFetchingMoreComments={isFetchingMoreComments}
+              hasFetchMoreCommentsError={hasFetchMoreError}
+              onFetchMoreComments={fetchMoreComments}
             />
           )}
         </div>
@@ -313,6 +321,10 @@ export default function ViewerPage() {
           onDeleteComment={handleDeleteComment}
           pendingDeleteCommentId={pendingDeleteCommentId}
           isAlbumOwner={isAlbumOwner}
+          hasMoreComments={hasMoreComments}
+          isFetchingMoreComments={isFetchingMoreComments}
+          hasFetchMoreCommentsError={hasFetchMoreError}
+          onFetchMoreComments={fetchMoreComments}
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}
           autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}

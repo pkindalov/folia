@@ -533,24 +533,31 @@ describe('album pages routes (integration)', () => {
       expect(res.status).toBe(404);
     });
 
+    // Comment.find(...).sort(...).limit(...) — a chained mock builder shared
+    // by the pagination tests below, so each only has to specify what
+    // Comment.find eventually resolves to (newest-first, as the controller
+    // requests it).
+    const fakeComment = (overrides) => ({
+      page: PAGE_ID,
+      user: OTHER_ID,
+      toJSON() {
+        const { toJSON: _drop, ...rest } = this;
+        return rest;
+      },
+      ...overrides,
+    });
+    const mockCommentFind = (newestFirstComments) => {
+      const limit = jest.fn().mockResolvedValue(newestFirstComments);
+      const sort = jest.fn().mockReturnValue({ limit });
+      jest.spyOn(Comment, 'find').mockReturnValue({ sort });
+      return { sort, limit };
+    };
+
     test('200 returns the comment thread with each author resolved', async () => {
       authAs(OWNER_ID);
       jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
       jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
-      jest.spyOn(Comment, 'find').mockReturnValue({
-        sort: jest.fn().mockResolvedValue([
-          {
-            _id: COMMENT_ID,
-            page: PAGE_ID,
-            user: OTHER_ID,
-            text: 'Lovely!',
-            toJSON() {
-              const { toJSON: _drop, ...rest } = this;
-              return rest;
-            },
-          },
-        ]),
-      });
+      mockCommentFind([fakeComment({ _id: COMMENT_ID, text: 'Lovely!' })]);
       jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
 
       const res = await request(app)
@@ -561,6 +568,65 @@ describe('album pages routes (integration)', () => {
       expect(res.body.comments).toEqual([
         expect.objectContaining({ _id: COMMENT_ID, text: 'Lovely!', username: 'maria', avatarUrl: null }),
       ]);
+      expect(res.body.hasMore).toBe(false);
+    });
+
+    test('200 returns hasMore: true and only a page\'s worth of comments when there are more', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      // One more than COMMENTS_PAGE_SIZE, newest-first (as the controller
+      // requests) — the extra document signals there's another page.
+      const newestFirst = Array.from({ length: Comment.COMMENTS_PAGE_SIZE + 1 }, (_, i) =>
+        fakeComment({ _id: `comment-${i}`, text: `Comment ${i}` })
+      );
+      mockCommentFind(newestFirst);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.hasMore).toBe(true);
+      expect(res.body.comments).toHaveLength(Comment.COMMENTS_PAGE_SIZE);
+      // The 21st (extra) newest-first document is dropped, and the
+      // remaining page is reversed back to oldest-first for display — same
+      // as the unpaginated response always was.
+      expect(res.body.comments[0]).toMatchObject({ _id: `comment-${Comment.COMMENTS_PAGE_SIZE - 1}` });
+    });
+
+    test('passes a valid `before` cursor through as a createdAt filter', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      const findSpy = jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue([]) }),
+      });
+
+      const before = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .query({ before })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(findSpy).toHaveBeenCalledWith({
+        page: PAGE_ID,
+        createdAt: { $lt: new Date(before) },
+      });
+    });
+
+    test('400 when `before` is not a valid date', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .query({ before: 'not-a-date' })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
     });
   });
 

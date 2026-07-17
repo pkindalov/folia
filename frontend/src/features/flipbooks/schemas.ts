@@ -138,7 +138,12 @@ export const commentSchema = z
   .passthrough();
 export type Comment = z.infer<typeof commentSchema>;
 
-export const commentsResponseSchema = z.object({ comments: z.array(commentSchema) });
+export const commentsResponseSchema = z.object({
+  comments: z.array(commentSchema),
+  // Whether an older portion exists beyond this response — drives the
+  // "See earlier comments" button.
+  hasMore: z.boolean(),
+});
 export const addCommentResponseSchema = z.object({
   comment: commentSchema,
   commentCount: z.number(),

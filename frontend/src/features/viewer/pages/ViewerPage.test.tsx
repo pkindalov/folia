@@ -801,7 +801,7 @@ describe('ViewerPage', () => {
     test('opening the comment thread fetches and shows its comments', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
         'GET /api/albums/a1': { body: ALBUM },
       });
@@ -816,10 +816,72 @@ describe('ViewerPage', () => {
       expect(within(dialog).getByText('maria')).toBeInTheDocument();
     });
 
+    test('clicking "See earlier comments" loads and prepends an older portion', async () => {
+      const NEWER_COMMENT = {
+        _id: 'c2',
+        page: 'p1',
+        user: 'id2',
+        username: 'maria',
+        avatarUrl: null,
+        text: 'Newer!',
+        createdAt: '2025-06-02T00:00:00.000Z',
+      };
+      const OLDER_COMMENT = {
+        _id: 'c1',
+        page: 'p1',
+        user: 'id2',
+        username: 'maria',
+        avatarUrl: null,
+        text: 'Older!',
+        createdAt: '2025-06-01T00:00:00.000Z',
+      };
+      vi.mocked(fetch).mockImplementation((url, options) => {
+        const method = options?.method ?? 'GET';
+        const urlStr = String(url);
+        const respond = (body: unknown, status = 200) =>
+          Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+        if (urlStr.includes('/api/users/me')) return respond(ME);
+        if (urlStr.includes('/api/albums/a1/pages/p1/comments')) {
+          // The first request has no cursor; "See earlier comments" adds
+          // `before`, pinned to the oldest comment already loaded.
+          return urlStr.includes('before=')
+            ? respond({ comments: [OLDER_COMMENT], hasMore: false })
+            : respond({ comments: [NEWER_COMMENT], hasMore: true });
+        }
+        if (method === 'GET' && urlStr.includes('/api/albums/a1/pages')) {
+          return respond({ pages: [{ ...PAGE_1, commentCount: 2 }] });
+        }
+        if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+        return respond({ error: 'Not found' }, 404);
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (2)' }));
+
+      expect(await within(dialog).findByText('Newer!')).toBeInTheDocument();
+      expect(within(dialog).queryByText('Older!')).not.toBeInTheDocument();
+
+      await user.click(within(dialog).getByRole('button', { name: /see earlier comments/i }));
+
+      expect(await within(dialog).findByText('Older!')).toBeInTheDocument();
+      expect(within(dialog).getByText('Newer!')).toBeInTheDocument();
+
+      const commentFetches = vi.mocked(fetch).mock.calls.filter(([requestUrl]) => String(requestUrl).includes('/comments'));
+      expect(
+        commentFetches.some(([requestUrl]) =>
+          String(requestUrl).includes(`before=${encodeURIComponent(NEWER_COMMENT.createdAt)}`)
+        )
+      ).toBe(true);
+    });
+
     test('does not show a delete button on someone else\'s comment for a regular viewer', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
         'GET /api/albums/a1': { body: { album: { ...ALBUM.album, owner: 'someone-else' } } },
       });
@@ -837,7 +899,7 @@ describe('ViewerPage', () => {
     test('shows a delete button on any comment for an Admin who does not own the album', async () => {
       mockApi({
         'GET /api/users/me': { body: { user: { ...ME.user, roles: ['Admin'] } } },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [COMMENT], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [{ ...PAGE_1, commentCount: 1 }] } },
         'GET /api/albums/a1': { body: { album: { ...ALBUM.album, owner: 'someone-else' } } },
       });
@@ -865,7 +927,7 @@ describe('ViewerPage', () => {
 
         if (urlStr.includes('/api/users/me')) return respond(ME);
         if (urlStr.includes('/comments') && method === 'POST') return pendingPost;
-        if (urlStr.includes('/comments') && method === 'GET') return respond({ comments: [] });
+        if (urlStr.includes('/comments') && method === 'GET') return respond({ comments: [], hasMore: false });
         if (urlStr.includes('/api/albums/a1/pages')) return respond({ pages: [PAGE_1] });
         if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
         return respond({ error: 'Not found' }, 404);
@@ -904,7 +966,7 @@ describe('ViewerPage', () => {
     test('keeps the typed text in the composer when posting a comment fails', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [PAGE_1] } },
         'GET /api/albums/a1': { body: ALBUM },
         'POST /api/albums/a1/pages/p1/comments': { body: { error: 'Could not save comment' }, status: 500 },
@@ -930,8 +992,8 @@ describe('ViewerPage', () => {
     test('does not leak a failed post\'s error banner onto the next photo\'s untouched comment panel', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
-        'GET /api/albums/a1/pages/p2/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [], hasMore: false } },
+        'GET /api/albums/a1/pages/p2/comments': { body: { comments: [], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
         'GET /api/albums/a1': { body: ALBUM },
         'POST /api/albums/a1/pages/p1/comments': { body: { error: 'Could not save comment' }, status: 500 },
@@ -1056,7 +1118,7 @@ describe('ViewerPage', () => {
     test('opening the comment panel stops autoplay, instead of it silently discarding an in-progress draft', async () => {
       mockApi({
         'GET /api/users/me': { body: ME },
-        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [] } },
+        'GET /api/albums/a1/pages/p1/comments': { body: { comments: [], hasMore: false } },
         'GET /api/albums/a1/pages': { body: { pages: [PAGE_1, PAGE_2] } },
         'GET /api/albums/a1': { body: ALBUM },
       });

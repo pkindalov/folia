@@ -2,7 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useSetCoverPhoto, useArchiveAlbum, useAddComment, useDeleteComment } from './hooks';
+import { useSetCoverPhoto, useArchiveAlbum, useAddComment, useDeleteComment, useComments } from './hooks';
 import type { Album } from './schemas';
 import { createTestQueryClient } from '../../tests/test-utils';
 import { tokenStorage } from '../../lib/api-client';
@@ -79,24 +79,81 @@ describe('useArchiveAlbum', () => {
   });
 });
 
-describe('useAddComment', () => {
-  test('invalidates the comment thread and the page list on success', async () => {
-    vi.mocked(fetch).mockImplementation(() =>
-      respond({
-        comment: {
-          _id: 'c1',
-          page: 'p1',
-          user: 'u1',
-          username: 'maria',
-          avatarUrl: null,
-          text: 'Nice!',
-          createdAt: new Date().toISOString(),
-        },
-        commentCount: 1,
-      })
+describe('useComments', () => {
+  // react-query's overall isError flips true on ANY failed page fetch,
+  // including a fetchNextPage call — without the isError/hasFetchMoreError
+  // split, a failed "See earlier comments" request would blow away the
+  // portion that was already loaded and rendering fine.
+  test('a failed "load more" surfaces as hasFetchMoreError, without wiping the already-loaded comments or flipping isError', async () => {
+    const EXISTING_COMMENT = {
+      _id: 'c1',
+      page: 'p1',
+      user: 'u1',
+      username: 'maria',
+      avatarUrl: null,
+      text: 'Lovely!',
+      createdAt: new Date().toISOString(),
+    };
+    vi.mocked(fetch).mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('before=')) return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'fail' }) } as Response);
+      return respond({ comments: [EXISTING_COMMENT], hasMore: true });
+    });
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
+
+    const { result } = renderHook(() => useComments('a1', 'p1', true), { wrapper });
+
+    await waitFor(() => expect(result.current.comments).toEqual([EXISTING_COMMENT]));
+    expect(result.current.isError).toBe(false);
+
+    result.current.fetchMoreComments();
+
+    await waitFor(() => expect(result.current.hasFetchMoreError).toBe(true));
+    expect(result.current.isError).toBe(false);
+    expect(result.current.comments).toEqual([EXISTING_COMMENT]);
+    expect(result.current.hasMoreComments).toBe(true);
+  });
+});
+
+// Shared shape for a comments infinite query's cache — matches what
+// useComments (hooks.ts) actually stores via useInfiniteQuery.
+const COMMENTS_QUERY_KEY = ['albums', 'a1', 'pages', 'p1', 'comments'];
+function seedCommentsCache(
+  queryClient: ReturnType<typeof createTestQueryClient>,
+  pages: Array<{ comments: Array<{ _id: string; [key: string]: unknown }>; hasMore: boolean }>
+) {
+  queryClient.setQueryData(COMMENTS_QUERY_KEY, {
+    pages,
+    pageParams: pages.map((_, index) => (index === 0 ? undefined : `cursor-${index}`)),
+  });
+}
+
+describe('useAddComment', () => {
+  const NEW_COMMENT = {
+    _id: 'c-new',
+    page: 'p1',
+    user: 'u1',
+    username: 'maria',
+    avatarUrl: null,
+    text: 'Nice!',
+    createdAt: new Date().toISOString(),
+  };
+
+  // A blanket invalidate would re-run getNextPageParam from scratch on
+  // fresh data for every already-loaded page — which can shift where page
+  // boundaries fall and drop an already-visible older comment that no
+  // longer lands in any of the refetched pages. Patching directly into the
+  // cached newest page avoids that entirely: no refetch, no boundary
+  // recompute, nothing to lose.
+  test('appends the new comment to the first cached page instead of invalidating the thread', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: NEW_COMMENT, commentCount: 2 }));
     const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const EXISTING = { _id: 'c1', text: 'Older one' };
+    seedCommentsCache(queryClient, [{ comments: [EXISTING], hasMore: false }]);
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
@@ -105,18 +162,61 @@ describe('useAddComment', () => {
     result.current.mutate({ pageId: 'p1', text: 'Nice!' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['albums', 'a1', 'pages', 'p1', 'comments'],
+    expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toEqual({
+      pages: [{ comments: [EXISTING, NEW_COMMENT], hasMore: false }],
+      pageParams: [undefined],
     });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
+  });
+
+  // A second (older) already-loaded page must survive untouched — this is
+  // the exact scenario a blanket invalidate could corrupt.
+  test('leaves already-loaded older pages untouched', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: NEW_COMMENT, commentCount: 3 }));
+    const queryClient = createTestQueryClient();
+    const NEWEST_PAGE_COMMENT = { _id: 'c2', text: 'Newest so far' };
+    const OLDER_PAGE_COMMENT = { _id: 'c1', text: 'From the older, already-loaded page' };
+    seedCommentsCache(queryClient, [
+      { comments: [NEWEST_PAGE_COMMENT], hasMore: true },
+      { comments: [OLDER_PAGE_COMMENT], hasMore: false },
+    ]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAddComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', text: 'Nice!' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT, NEW_COMMENT]);
+    expect(cached?.pages[1].comments).toEqual([OLDER_PAGE_COMMENT]);
+  });
+
+  test('does not crash when the thread was never fetched (no cached data to patch)', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: NEW_COMMENT, commentCount: 1 }));
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAddComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', text: 'Nice!' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toBeUndefined();
   });
 });
 
 describe('useDeleteComment', () => {
-  test('invalidates the comment thread and the page list on success', async () => {
-    vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 0 }));
+  test('removes the deleted comment from its cached page instead of invalidating the thread', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 1 }));
     const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    const KEEP = { _id: 'c-keep', text: 'Stays' };
+    const REMOVE = { _id: 'c1', text: 'Goes' };
+    seedCommentsCache(queryClient, [{ comments: [REMOVE, KEEP], hasMore: false }]);
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
@@ -125,9 +225,36 @@ describe('useDeleteComment', () => {
     result.current.mutate({ pageId: 'p1', commentId: 'c1' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['albums', 'a1', 'pages', 'p1', 'comments'],
+    expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toEqual({
+      pages: [{ comments: [KEEP], hasMore: false }],
+      pageParams: [undefined],
     });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
+  });
+
+  // Same "an unrelated already-loaded page must survive" regression as
+  // useAddComment above, but for a deletion landing in the older page.
+  test('leaves an unrelated, already-loaded page untouched', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ deleted: true, commentCount: 1 }));
+    const queryClient = createTestQueryClient();
+    const NEWEST_PAGE_COMMENT = { _id: 'c2', text: 'Newest so far' };
+    const OLDER_PAGE_KEEP = { _id: 'c-keep', text: 'Stays' };
+    const OLDER_PAGE_REMOVE = { _id: 'c1', text: 'Goes' };
+    seedCommentsCache(queryClient, [
+      { comments: [NEWEST_PAGE_COMMENT], hasMore: true },
+      { comments: [OLDER_PAGE_REMOVE, OLDER_PAGE_KEEP], hasMore: false },
+    ]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useDeleteComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT]);
+    expect(cached?.pages[1].comments).toEqual([OLDER_PAGE_KEEP]);
   });
 });

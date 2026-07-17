@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 
 const MAX_COMMENT_LENGTH = 1000;
+// Portion size for listComments' newest-first pagination — mirrors
+// ReactorsModal's server-side cap of 50, just paged instead of hard-capped.
+const COMMENTS_PAGE_SIZE = 20;
 
 const commentSchema = new mongoose.Schema(
   {
@@ -48,3 +51,4 @@ const Comment = mongoose.model('Comment', commentSchema);
 
 module.exports = Comment;
 module.exports.MAX_COMMENT_LENGTH = MAX_COMMENT_LENGTH;
+module.exports.COMMENTS_PAGE_SIZE = COMMENTS_PAGE_SIZE;

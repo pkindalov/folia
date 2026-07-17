@@ -497,17 +497,37 @@ module.exports = {
       return res.status(404).json({ error: 'Photo not found' });
     }
 
+    // `before` is the createdAt of the oldest comment already loaded by the
+    // caller — paging backward through history one portion at a time,
+    // newest-first, same shape as ReactorsModal's server-side cap. Omitted
+    // on the first request, which returns the most recent portion.
+    const { before } = req.query;
+    let beforeDate;
+    if (before !== undefined) {
+      beforeDate = new Date(before);
+      if (Number.isNaN(beforeDate.getTime())) {
+        return res.status(400).json({ error: 'before must be a valid date' });
+      }
+    }
+
     Page.findOne({ _id: pageId, album: album._id })
       .then((page) => {
         if (!page) return res.status(404).json({ error: 'Photo not found' });
 
-        return Comment.find({ page: page._id })
-          .sort('createdAt')
-          .then((comments) =>
-            withCommentAuthors(comments).then((commentsWithAuthors) => {
-              res.json({ comments: commentsWithAuthors });
-            })
-          );
+        const filter = { page: page._id, ...(beforeDate ? { createdAt: { $lt: beforeDate } } : {}) };
+        return Comment.find(filter)
+          .sort('-createdAt')
+          .limit(Comment.COMMENTS_PAGE_SIZE + 1)
+          .then((newestFirst) => {
+            // The extra document beyond the page size reveals whether
+            // there's another (older) portion to load, without a separate
+            // count query.
+            const hasMore = newestFirst.length > Comment.COMMENTS_PAGE_SIZE;
+            const oldestFirst = newestFirst.slice(0, Comment.COMMENTS_PAGE_SIZE).reverse();
+            return withCommentAuthors(oldestFirst).then((commentsWithAuthors) => {
+              res.json({ comments: commentsWithAuthors, hasMore });
+            });
+          });
       })
       .catch(() => res.status(500).json({ error: 'Failed to load comments' }));
   },

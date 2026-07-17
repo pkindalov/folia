@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import Avatar from "./Avatar";
 import CommentComposer from "./CommentComposer";
@@ -27,6 +27,12 @@ type CommentControlProps = {
   isAlbumOwner: boolean;
   /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
   variant?: 'light' | 'dark';
+  /** Whether an older portion of the thread exists beyond what's currently loaded. */
+  hasMoreComments?: boolean;
+  isFetchingMoreComments?: boolean;
+  /** A "See earlier comments" fetch failed — surfaced inline next to the button rather than replacing the (still-valid) already-loaded thread. */
+  hasFetchMoreCommentsError?: boolean;
+  onFetchMoreComments?: () => void;
 };
 
 function CommentRow({
@@ -113,6 +119,10 @@ export default function CommentControl({
   viewerUsername,
   isAlbumOwner,
   variant = 'dark',
+  hasMoreComments = false,
+  isFetchingMoreComments = false,
+  hasFetchMoreCommentsError = false,
+  onFetchMoreComments,
 }: CommentControlProps) {
   const isLight = variant === 'light';
   const [isOpen, setIsOpen] = useState(false);
@@ -142,13 +152,51 @@ export default function CommentControl({
   }
 
   const listRef = useRef<HTMLDivElement>(null);
-  // Basic "stick to bottom on new comment" — scrollTop rather than
-  // scrollIntoView on the last row, since the list can be empty and we don't
-  // want to depend on a specific row ref existing.
+
+  // Captured by handleFetchMore just before it asks for an older portion —
+  // scrollTop alongside scrollHeight, since the restore-position math below
+  // needs the delta, not just the new height (the "See earlier comments"
+  // button is normally only reachable at the very top of the list, but
+  // mobile overscroll/bounce can leave scrollTop slightly non-zero even
+  // there). Cleared unconditionally once the fetch settles — including on
+  // failure, where comments never changes — so a later, unrelated update
+  // can't misread a stale pending fetch as "an older portion just loaded"
+  // and apply leftover scroll math against it.
+  const pendingOlderPortion = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  const handleFetchMore = () => {
+    const list = listRef.current;
+    if (list) pendingOlderPortion.current = { scrollHeight: list.scrollHeight, scrollTop: list.scrollTop };
+    onFetchMoreComments?.();
+  };
   useEffect(() => {
-    if (listRef.current)
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [comments?.length]);
+    if (!isFetchingMoreComments) pendingOlderPortion.current = null;
+  }, [isFetchingMoreComments]);
+
+  // One effect, not two independent ones — an older portion loading and the
+  // newest comment changing (a fresh post landing at the same moment) can
+  // in principle land in the same commit, and only one of "restore the
+  // pre-fetch position" vs. "stick to the bottom" can win. Older-portion
+  // restoration takes explicit priority: revealing history the viewer just
+  // asked for shouldn't be undone by an unrelated concurrent post.
+  const previousCommentsRef = useRef<{ length: number; newestId: string | undefined }>({
+    length: 0,
+    newestId: undefined,
+  });
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const currentLength = comments?.length ?? 0;
+    const newestId = currentLength > 0 ? comments?.[currentLength - 1]?._id : undefined;
+    const previous = previousCommentsRef.current;
+    const pending = pendingOlderPortion.current;
+
+    if (list && pending && currentLength !== previous.length) {
+      list.scrollTop = pending.scrollTop + (list.scrollHeight - pending.scrollHeight);
+    } else if (list && newestId !== previous.newestId) {
+      list.scrollTop = list.scrollHeight;
+    }
+    pendingOlderPortion.current = null;
+    previousCommentsRef.current = { length: currentLength, newestId };
+  }, [comments]);
 
   const panelId = useId();
 
@@ -180,19 +228,44 @@ export default function CommentControl({
       );
     }
     return (
-      <ul className="flex flex-col gap-2.5 py-2 px-3">
-        {comments.map((comment) => (
-          <CommentRow
-            key={comment._id}
-            comment={comment}
-            isOwnComment={comment.username === viewerUsername}
-            canDelete={comment.username === viewerUsername || isAlbumOwner}
-            isDeletePending={pendingDeleteCommentId === comment._id}
-            onDelete={() => onDeleteComment(comment._id)}
-            isLight={isLight}
-          />
-        ))}
-      </ul>
+      <>
+        {hasMoreComments && (
+          <button
+            type="button"
+            onClick={handleFetchMore}
+            disabled={isFetchingMoreComments}
+            aria-label={isFetchingMoreComments ? "Loading earlier comments" : undefined}
+            className={`w-full flex items-center justify-center gap-1.5 py-2 font-ui text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none ${
+              hasFetchMoreCommentsError
+                ? "text-error hover:text-error"
+                : isLight
+                  ? "text-on-surface-variant hover:text-secondary disabled:text-on-surface-variant/60"
+                  : "text-white/60 hover:text-white disabled:text-white/40"
+            }`}
+          >
+            {isFetchingMoreComments ? (
+              <Icon name="progress_activity" className="text-base animate-spin" />
+            ) : hasFetchMoreCommentsError ? (
+              "Couldn't load earlier comments. Try again."
+            ) : (
+              "See earlier comments"
+            )}
+          </button>
+        )}
+        <ul className="flex flex-col gap-2.5 py-2 px-3">
+          {comments.map((comment) => (
+            <CommentRow
+              key={comment._id}
+              comment={comment}
+              isOwnComment={comment.username === viewerUsername}
+              canDelete={comment.username === viewerUsername || isAlbumOwner}
+              isDeletePending={pendingDeleteCommentId === comment._id}
+              onDelete={() => onDeleteComment(comment._id)}
+              isLight={isLight}
+            />
+          ))}
+        </ul>
+      </>
     );
   };
 

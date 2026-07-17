@@ -44,6 +44,10 @@ type AlbumSpreadProps = {
   onDeleteComment?: (pageId: string, commentId: string) => void;
   pendingDeleteCommentId?: string | null;
   isAlbumOwner?: boolean;
+  hasMoreComments?: boolean;
+  isFetchingMoreComments?: boolean;
+  hasFetchMoreCommentsError?: boolean;
+  onFetchMoreComments?: () => void;
 };
 
 type FlipState = {
@@ -112,6 +116,10 @@ export default function AlbumSpread({
   onDeleteComment,
   pendingDeleteCommentId = null,
   isAlbumOwner = false,
+  hasMoreComments = false,
+  isFetchingMoreComments = false,
+  hasFetchMoreCommentsError = false,
+  onFetchMoreComments,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -354,6 +362,10 @@ export default function AlbumSpread({
                       variant="light"
                       viewerUsername={viewerUsername}
                       isAlbumOwner={isAlbumOwner}
+                      hasMoreComments={hasMoreComments}
+                      isFetchingMoreComments={isFetchingMoreComments}
+                      hasFetchMoreCommentsError={hasFetchMoreCommentsError}
+                      onFetchMoreComments={onFetchMoreComments}
                     />
                   )}
                 </div>
