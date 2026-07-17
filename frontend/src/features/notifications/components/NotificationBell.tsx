@@ -208,8 +208,8 @@ export default function NotificationBell({
           style={anchorStyle}
           className={`fixed z-60 flex flex-col bg-surface-container-lowest rounded-panel paper-depth border border-outline-variant/40 overflow-hidden ${
             variant === 'sidebar'
-              ? 'left-8 w-95 max-h-105'
-              : 'w-[calc(100vw-40px)] max-w-100 max-h-[70vh]'
+              ? 'left-8 w-95 max-h-140'
+              : 'w-[calc(100vw-40px)] max-w-100 max-h-[85vh]'
           }`}
         >
           <div className="shrink-0 px-5 py-4 border-b border-outline-variant/40 font-ui text-ui-label uppercase text-on-surface-variant">
