@@ -1,9 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import Icon from './Icon';
+import Emoji from './Emoji';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type CommentReactionControlProps = {
@@ -152,7 +152,7 @@ export default function CommentReactionControl({
                 viewerReaction === type ? (isLight ? 'bg-surface-container-low scale-110' : 'bg-white/20 scale-110') : ''
               } ${REACTION_TEXT_COLOR[type]}`}
             >
-              <Icon name={REACTION_ICON[type]} className="text-lg" filled />
+              <Emoji emoji={REACTION_EMOJI[type]} className="text-lg" />
             </button>
           ))}
         </div>

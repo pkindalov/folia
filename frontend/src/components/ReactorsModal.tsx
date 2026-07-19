@@ -2,7 +2,8 @@ import { useId } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from './Modal';
 import Icon from './Icon';
-import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
+import Emoji from './Emoji';
+import { REACTION_EMOJI } from './reactionPresentation';
 import type { Reactor } from '../features/flipbooks';
 
 // Mirrors the backend's DELETED_USER_LABEL fallback (controller-helpers.js) —
@@ -62,11 +63,7 @@ export default function ReactorsModal({
         {reactors.map((reactor, index) => {
           const rowContent = (
             <>
-              <Icon
-                name={REACTION_ICON[reactor.type]}
-                filled
-                className={`text-base shrink-0 ${REACTION_TEXT_COLOR[reactor.type]}`}
-              />
+              <Emoji emoji={REACTION_EMOJI[reactor.type]} className="text-base shrink-0" />
               <span className="truncate">{reactor.username}</span>
             </>
           );

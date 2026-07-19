@@ -1,12 +1,21 @@
 import type { ReactionType } from '../features/flipbooks';
 
-export const REACTION_ICON: Record<ReactionType, string> = {
-  like: 'thumb_up',
-  love: 'favorite',
-  haha: 'sentiment_very_satisfied',
-  wow: 'sentiment_excited',
-  sad: 'sentiment_sad',
-  angry: 'mood_bad',
+export const REACTION_EMOJI: Record<ReactionType, string> = {
+  like: '👍',
+  love: '❤', // heart, no variation selector — matches Twemoji's "2764" asset name
+  haha: '😆',
+  wow: '😮',
+  sad: '😢',
+  angry: '😠',
+};
+
+export const REACTION_LABEL: Record<ReactionType, string> = {
+  like: 'Like',
+  love: 'Love',
+  haha: 'Haha',
+  wow: 'Wow',
+  sad: 'Sad',
+  angry: 'Angry',
 };
 
 export const REACTION_TEXT_COLOR: Record<ReactionType, string> = {

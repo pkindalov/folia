@@ -1,5 +1,6 @@
 import Icon from './Icon';
-import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
+import Emoji from './Emoji';
+import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
 
 type AlbumLoveButtonProps = {
   isLoved: boolean;
@@ -35,8 +36,10 @@ export default function AlbumLoveButton({
       >
         {isPending ? (
           <Icon name="progress_activity" className="text-lg animate-spin" />
+        ) : isLoved ? (
+          <Emoji emoji={REACTION_EMOJI.love} className="text-lg" />
         ) : (
-          <Icon name={REACTION_ICON.love} className="text-lg" filled={isLoved} />
+          <Icon name="favorite" className="text-lg" />
         )}
       </button>
       <button

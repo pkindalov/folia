@@ -1,11 +1,9 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../../../components/Icon";
+import Emoji from "../../../components/Emoji";
 import Avatar from "../../../components/Avatar";
-import {
-  REACTION_ICON,
-  REACTION_TEXT_COLOR,
-} from "../../../components/reactionPresentation";
+import { REACTION_EMOJI } from "../../../components/reactionPresentation";
 import type { NotificationItemData } from "./NotificationBell";
 import { REACTION_NOTIFICATION_TYPES } from "../schemas";
 
@@ -47,11 +45,7 @@ function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
   return (
     <>
       reacted{" "}
-      <Icon
-        name={REACTION_ICON[type]}
-        filled
-        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR[type]}`}
-      />
+      <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
       <span className="sr-only">{REACTION_LABELS[type]}</span>{" "}
       to a photo in
     </>
@@ -64,11 +58,7 @@ function AlbumLoveMessageIcon() {
   return (
     <>
       loved{" "}
-      <Icon
-        name={REACTION_ICON.love}
-        filled
-        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR.love}`}
-      />
+      <Emoji emoji={REACTION_EMOJI.love} className="text-sm align-text-bottom" />
     </>
   );
 }
@@ -139,11 +129,7 @@ function CommentReactionMessageIcon({
   return (
     <>
       reacted{" "}
-      <Icon
-        name={REACTION_ICON[type]}
-        filled
-        className={`text-sm align-text-bottom ${REACTION_TEXT_COLOR[type]}`}
-      />
+      <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
       <span className="sr-only">{REACTION_LABELS[type]}</span> to your comment
       {preview ? ` "${preview}"` : ""} on a photo in
     </>

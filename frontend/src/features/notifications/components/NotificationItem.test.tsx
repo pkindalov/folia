@@ -104,9 +104,9 @@ function renderItem(notification: NotificationItemData) {
 
 describe('NotificationItem', () => {
   test('renders the reaction as an icon, not a quoted word', () => {
-    renderItem(reactionNotification);
+    const { container } = renderItem(reactionNotification);
 
-    expect(screen.getByText('favorite')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="2764"]')).toBeInTheDocument();
     expect(screen.queryByText(/"Love"/)).not.toBeInTheDocument();
   });
 
@@ -117,10 +117,10 @@ describe('NotificationItem', () => {
   });
 
   test('renders an album_reaction notification as "loved [heart] AlbumTitle"', () => {
-    renderItem(albumReactionNotification);
+    const { container } = renderItem(albumReactionNotification);
 
     expect(screen.getByText(/loved/)).toBeInTheDocument();
-    expect(screen.getByText('favorite')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="2764"]')).toBeInTheDocument();
     expect(screen.getByText('Summer Trip')).toBeInTheDocument();
   });
 
@@ -168,10 +168,10 @@ describe('NotificationItem', () => {
   });
 
   test('renders a comment_reaction notification as "reacted [icon] to your comment on a photo in AlbumTitle" with a preview', () => {
-    renderItem(commentReactionNotification);
+    const { container } = renderItem(commentReactionNotification);
 
     expect(screen.getByText(/reacted/)).toBeInTheDocument();
-    expect(screen.getByText('sentiment_very_satisfied')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="1f606"]')).toBeInTheDocument();
     expect(screen.getByText(/to your comment/)).toBeInTheDocument();
     expect(screen.getByText(/on a photo in/)).toBeInTheDocument();
     expect(screen.getByText('Summer Trip')).toBeInTheDocument();

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
+import Emoji from './Emoji';
 import useFocusTrap from '../hooks/useFocusTrap';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_ICON, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type ReactionControlProps = {
@@ -160,12 +161,10 @@ export default function ReactionControl({
       >
         {isPending ? (
           <Icon name="progress_activity" className="text-xl animate-spin" />
+        ) : viewerReaction ? (
+          <Emoji emoji={REACTION_EMOJI[viewerReaction]} className="text-xl" />
         ) : (
-          <Icon
-            name={viewerReaction ? REACTION_ICON[viewerReaction] : 'thumb_up'}
-            className="text-xl"
-            filled={viewerReaction !== null}
-          />
+          <Icon name="thumb_up" className="text-xl" />
         )}
       </button>
 
@@ -215,7 +214,7 @@ export default function ReactionControl({
                 viewerReaction === type ? (isLight ? 'bg-surface-container-low scale-110' : 'bg-white/20 scale-110') : ''
               } ${REACTION_TEXT_COLOR[type]}`}
             >
-              <Icon name={REACTION_ICON[type]} className="text-xl" filled />
+              <Emoji emoji={REACTION_EMOJI[type]} className="text-xl" />
             </button>
           ))}
         </div>
