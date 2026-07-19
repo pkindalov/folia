@@ -33,11 +33,23 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'passwordRequired'),
 });
 
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 30;
+export const MIN_PASSWORD_LENGTH = 8;
+export const MAX_PASSWORD_LENGTH = 128;
+
 export const registerSchema = z
   .object({
-    username: z.string().trim().min(3, 'usernameTooShort').max(30, 'usernameTooLong'),
+    username: z
+      .string()
+      .trim()
+      .min(MIN_USERNAME_LENGTH, 'usernameTooShort')
+      .max(MAX_USERNAME_LENGTH, 'usernameTooLong'),
     email: z.string().email('emailInvalid'),
-    password: z.string().min(8, 'passwordTooShort').max(128, 'passwordTooLong'),
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, 'passwordTooShort')
+      .max(MAX_PASSWORD_LENGTH, 'passwordTooLong'),
     confirmPassword: z.string().min(1, 'confirmPasswordRequired'),
   })
   .refine((data) => data.password === data.confirmPassword, {

@@ -54,6 +54,18 @@ describe('RegisterPage', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  test('shows the character limit in the validation error for an over-long username', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+    await user.type(screen.getByLabelText('Username'), 'x'.repeat(31));
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(
+      await screen.findByText('Username must be at most 30 characters')
+    ).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   test('surfaces server-side duplicate errors', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'username already exists' }, 400));
     const user = userEvent.setup();

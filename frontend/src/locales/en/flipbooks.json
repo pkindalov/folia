@@ -21,7 +21,7 @@
   },
   "errors": {
     "titleRequired": "Give this volume a title",
-    "titleTooLong": "Title must be at most 120 characters",
-    "descriptionTooLong": "Description must be at most 2000 characters"
+    "titleTooLong": "Title must be at most {{count}} characters",
+    "descriptionTooLong": "Description must be at most {{count}} characters"
   }
 }

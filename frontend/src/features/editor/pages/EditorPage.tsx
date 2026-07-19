@@ -24,6 +24,8 @@ import {
   useSetCoverPhoto,
   ALLOWED_PHOTO_MIME_TYPES,
   MAX_PHOTO_SIZE_BYTES,
+  MAX_ALBUM_TITLE_LENGTH,
+  MAX_ALBUM_DESCRIPTION_LENGTH,
 } from '../../flipbooks';
 import { translateFieldError } from '../../../lib/translateFieldError';
 import { toast } from '../../../lib/toast';
@@ -289,7 +291,9 @@ export default function EditorPage() {
               />
               {errors.title && (
                 <span id="album-title-error" role="alert" className="text-sm text-error font-ui mt-1">
-                  {translateFieldError(tFlipbooks, errors.title.message)}
+                  {translateFieldError(tFlipbooks, errors.title.message, {
+                    count: MAX_ALBUM_TITLE_LENGTH,
+                  })}
                 </span>
               )}
             </div>
@@ -308,7 +312,9 @@ export default function EditorPage() {
               />
               {errors.description && (
                 <span role="alert" className="text-sm text-error font-ui mt-1">
-                  {translateFieldError(tFlipbooks, errors.description.message)}
+                  {translateFieldError(tFlipbooks, errors.description.message, {
+                    count: MAX_ALBUM_DESCRIPTION_LENGTH,
+                  })}
                 </span>
               )}
             </div>

@@ -151,6 +151,28 @@ describe('ProfilePage', () => {
     expect(calledUrls.some((call) => call.method === 'PUT')).toBe(false);
   });
 
+  test('shows the character limit in the validation error for an over-long username', async () => {
+    mockApi({
+      '/api/users/me': { body: { user: ME } },
+      '/api/circles': { body: EMPTY_CIRCLES },
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const main = within(await findMain());
+    await main.findByText('pan');
+
+    await user.click(main.getByRole('button', { name: 'Edit Profile' }));
+    const usernameInput = main.getByLabelText('Username');
+    await user.clear(usernameInput);
+    await user.type(usernameInput, 'x'.repeat(31));
+    await user.click(main.getByRole('button', { name: 'Save changes' }));
+
+    expect(
+      await main.findByText('Username must be at most 30 characters')
+    ).toBeInTheDocument();
+    expect(calledUrls.some((call) => call.method === 'PUT')).toBe(false);
+  });
+
   test('cancel exits edit mode without saving', async () => {
     mockApi({
       '/api/users/me': { body: { user: ME } },

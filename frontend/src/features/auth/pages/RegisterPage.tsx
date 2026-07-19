@@ -2,7 +2,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { registerSchema, type RegisterInput } from '../schemas';
+import {
+  registerSchema,
+  MIN_USERNAME_LENGTH,
+  MAX_USERNAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  type RegisterInput,
+} from '../schemas';
 import { useRegister } from '../hooks';
 import { translateFieldError } from '../../../lib/translateFieldError';
 import FormField from '../../../components/FormField';
@@ -36,7 +42,12 @@ export default function RegisterPage() {
         <FormField
           label={t('register.usernameLabel')}
           autoComplete="username"
-          error={translateFieldError(t, errors.username?.message)}
+          error={translateFieldError(t, errors.username?.message, {
+            count:
+              errors.username?.message === 'usernameTooLong'
+                ? MAX_USERNAME_LENGTH
+                : MIN_USERNAME_LENGTH,
+          })}
           {...register('username')}
         />
         <FormField
@@ -52,7 +63,7 @@ export default function RegisterPage() {
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          error={translateFieldError(t, errors.password?.message)}
+          error={translateFieldError(t, errors.password?.message, { count: MIN_PASSWORD_LENGTH })}
           {...register('password')}
         />
         <FormField

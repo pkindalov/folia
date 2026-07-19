@@ -57,9 +57,12 @@ export type PaginatedPublicAlbums = z.infer<typeof publicAlbumsResponseSchema>;
 // Form schema — mirrors backend validation. Messages are translation keys
 // (relative to the 'flipbooks' namespace's `errors` object), not display
 // text — see auth/schemas.ts for why.
+export const MAX_ALBUM_TITLE_LENGTH = 120;
+export const MAX_ALBUM_DESCRIPTION_LENGTH = 2000;
+
 export const albumFormSchema = z.object({
-  title: z.string().trim().min(1, 'titleRequired').max(120, 'titleTooLong'),
-  description: z.string().max(2000, 'descriptionTooLong'),
+  title: z.string().trim().min(1, 'titleRequired').max(MAX_ALBUM_TITLE_LENGTH, 'titleTooLong'),
+  description: z.string().max(MAX_ALBUM_DESCRIPTION_LENGTH, 'descriptionTooLong'),
   visibility: z.enum(['private', 'shared', 'public']),
   sharedWithCircle: z.string().nullable().optional(),
 });

@@ -3,8 +3,15 @@ import { z } from 'zod';
 // Form schema — mirrors the backend's PUT /api/users/me validation rules.
 // Messages are translation keys (relative to the 'profile' namespace's
 // `errors` object), not display text — see auth/schemas.ts for why.
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 30;
+
 export const updateProfileSchema = z.object({
-  username: z.string().trim().min(3, 'usernameTooShort').max(30, 'usernameTooLong'),
+  username: z
+    .string()
+    .trim()
+    .min(MIN_USERNAME_LENGTH, 'usernameTooShort')
+    .max(MAX_USERNAME_LENGTH, 'usernameTooLong'),
   email: z.string().email('emailInvalid'),
 });
 

@@ -95,6 +95,16 @@ describe('EditorPage — create', () => {
     expect(calls.some((c) => c.url.includes('/api/albums'))).toBe(false);
   });
 
+  test('shows the character limit in the validation error for an over-long title', async () => {
+    mockApi({ 'GET /api/users/me': { body: ME } });
+    const user = userEvent.setup();
+    renderNew();
+    await user.type(await screen.findByLabelText(/title/i), 'x'.repeat(121));
+    await user.click(screen.getByRole('button', { name: /create volume/i }));
+    expect(await screen.findByText('Title must be at most 120 characters')).toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes('/api/albums'))).toBe(false);
+  });
+
   test('creates an album and stays in the editor with pages unlocked', async () => {
     mockApi({
       'GET /api/users/me': { body: ME },

@@ -3,7 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import FormField from '../../../components/FormField';
 import { useUpdateProfile } from '../hooks';
-import { updateProfileSchema, type UpdateProfileInput } from '../schemas';
+import {
+  updateProfileSchema,
+  MIN_USERNAME_LENGTH,
+  MAX_USERNAME_LENGTH,
+  type UpdateProfileInput,
+} from '../schemas';
 import { translateFieldError } from '../../../lib/translateFieldError';
 import { toast } from '../../../lib/toast';
 import type { User } from '../../auth';
@@ -41,7 +46,12 @@ export default function EditProfileForm({ user, onCancel, onSaved }: EditProfile
       <FormField
         label={t('editForm.usernameLabel')}
         autoComplete="username"
-        error={translateFieldError(t, errors.username?.message)}
+        error={translateFieldError(t, errors.username?.message, {
+          count:
+            errors.username?.message === 'usernameTooLong'
+              ? MAX_USERNAME_LENGTH
+              : MIN_USERNAME_LENGTH,
+        })}
         {...register('username')}
       />
       <FormField

@@ -35,8 +35,8 @@
     "memberCount_other": "{{count}} members"
   },
   "errors": {
-    "usernameTooShort": "Username must be at least 3 characters",
-    "usernameTooLong": "Username must be at most 30 characters",
+    "usernameTooShort": "Username must be at least {{count}} characters",
+    "usernameTooLong": "Username must be at most {{count}} characters",
     "emailInvalid": "Enter a valid email address"
   }
 }
