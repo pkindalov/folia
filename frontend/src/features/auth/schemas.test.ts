@@ -21,9 +21,9 @@ describe('loginSchema', () => {
   });
 
   test.each([
-    ['empty identifier', { identifier: '', password: 'x' }, 'Enter your email or username'],
-    ['empty password', { identifier: 'pan', password: '' }, 'Password is required'],
-  ])('rejects %s with message', (_name, input, message) => {
+    ['empty identifier', { identifier: '', password: 'x' }, 'identifierRequired'],
+    ['empty password', { identifier: 'pan', password: '' }, 'passwordRequired'],
+  ])('rejects %s with message key', (_name, input, message) => {
     const result = loginSchema.safeParse(input);
     expect(result.success).toBe(false);
     expect(result.error!.issues[0].message).toBe(message);
@@ -100,19 +100,19 @@ describe('registerSchema', () => {
     ).toBe(false);
   });
 
-  test('provides human-readable messages', () => {
+  test('provides a translation key for short passwords', () => {
     const result = registerSchema.safeParse({
       ...valid,
       password: 'short',
       confirmPassword: 'short',
     });
-    expect(result.error!.issues[0].message).toBe('Password must be at least 8 characters');
+    expect(result.error!.issues[0].message).toBe('passwordTooShort');
   });
 
   test('rejects mismatched passwords', () => {
     const result = registerSchema.safeParse({ ...valid, confirmPassword: 'different123' });
     expect(result.success).toBe(false);
-    expect(result.error!.issues[0].message).toBe('Passwords do not match');
+    expect(result.error!.issues[0].message).toBe('passwordsDoNotMatch');
   });
 });
 

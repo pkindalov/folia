@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Icon from "./Icon";
 import Avatar from "./Avatar";
 import CommentComposer from "./CommentComposer";
 import CommentReactionControl from "./CommentReactionControl";
 import useEscapeKey from "../hooks/useEscapeKey";
-import { formatRelativeTime } from "../features/notifications/relativeTime";
+import { formatRelativeTime, type RelativeTimeLabels } from "../features/notifications/relativeTime";
 import type { Comment, ReactionType, TopLevelComment } from "../features/flipbooks";
 
 type CommentControlProps = {
@@ -89,6 +90,14 @@ function CommentRow({
   viewerUsername?: string;
   as?: "li" | "div";
 }) {
+  const { t } = useTranslation('social');
+  const { t: tCommon, i18n } = useTranslation('common');
+  const relativeTimeLabels: RelativeTimeLabels = {
+    justNow: tCommon('relativeTime.justNow'),
+    minutesAgo: (count) => tCommon('relativeTime.minutesAgo', { count }),
+    hoursAgo: (count) => tCommon('relativeTime.hoursAgo', { count }),
+    daysAgo: (count) => tCommon('relativeTime.daysAgo', { count }),
+  };
   const Container = as;
   return (
     <Container
@@ -109,7 +118,7 @@ function CommentRow({
           <span
             className={`font-ui text-xs ml-2 ${isLight ? "text-on-surface-variant" : "text-white/50"}`}
           >
-            {formatRelativeTime(comment.createdAt)}
+            {formatRelativeTime(comment.createdAt, relativeTimeLabels, i18n.language)}
           </span>
         </div>
         <p
@@ -136,7 +145,7 @@ function CommentRow({
           onClick={onDelete}
           disabled={isDeletePending}
           aria-label={
-            isOwnComment ? "Delete your comment" : "Delete this comment"
+            isOwnComment ? t('comments.deleteYourComment') : t('comments.deleteComment')
           }
           className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:pointer-events-none transition-colors focus-visible:ring-2 focus-visible:ring-secondary ${
             isLight
@@ -197,6 +206,7 @@ function TopLevelCommentItem({
   isLoadingMoreReplies: boolean;
   loadMoreRepliesError: boolean;
 }) {
+  const { t } = useTranslation('social');
   return (
     <li className="flex flex-col gap-1.5">
       <CommentRow
@@ -221,7 +231,7 @@ function TopLevelCommentItem({
             isLight ? "text-on-surface-variant hover:text-secondary" : "text-white/50 hover:text-white"
           }`}
         >
-          {isReplying ? "Cancel" : "Reply"}
+          {isReplying ? t('comments.cancel') : t('comments.reply')}
         </button>
         {isReplying && (
           <>
@@ -229,7 +239,7 @@ function TopLevelCommentItem({
               onSubmit={onAddReply}
               isPending={isAddPending}
               variant={variant}
-              placeholder="Write a reply…"
+              placeholder={t('comments.replyPlaceholder')}
               autoFocus
             />
             {addError && (
@@ -237,7 +247,7 @@ function TopLevelCommentItem({
                 role="alert"
                 className="bg-error-container text-on-error-container rounded-paper font-ui text-xs px-3 py-2"
               >
-                Couldn&apos;t post your reply. Try again.
+                {t('comments.replyFailed')}
               </p>
             )}
           </>
@@ -267,7 +277,7 @@ function TopLevelCommentItem({
             type="button"
             onClick={onLoadMoreReplies}
             disabled={isLoadingMoreReplies}
-            aria-label={isLoadingMoreReplies ? "Loading more replies" : undefined}
+            aria-label={isLoadingMoreReplies ? t('comments.loadingMoreReplies') : undefined}
             className={`self-start flex items-center gap-1.5 font-ui text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none ${
               loadMoreRepliesError
                 ? "text-error hover:text-error"
@@ -279,9 +289,9 @@ function TopLevelCommentItem({
             {isLoadingMoreReplies ? (
               <Icon name="progress_activity" className="text-sm animate-spin" />
             ) : loadMoreRepliesError ? (
-              "Couldn't load more replies. Try again."
+              t('comments.loadMoreRepliesFailed')
             ) : (
-              "Load more replies"
+              t('comments.loadMoreReplies')
             )}
           </button>
         )}
@@ -317,6 +327,7 @@ export default function CommentControl({
   pendingRepliesCommentId = null,
   erroredRepliesCommentId = null,
 }: CommentControlProps) {
+  const { t } = useTranslation('social');
   const isLight = variant === 'light';
   // null represents the top-level (bottom) composer specifically — see the
   // prop doc above for why undefined ("nothing pending/errored") and null
@@ -411,7 +422,7 @@ export default function CommentControl({
     if (isLoading && comments === undefined) {
       return (
         <p className={`font-body italic text-sm text-center py-6 ${hintTextClass}`}>
-          Loading comments…
+          {t('comments.loadingComments')}
         </p>
       );
     }
@@ -421,14 +432,14 @@ export default function CommentControl({
           role="alert"
           className="bg-error-container text-on-error-container rounded-paper font-ui text-sm px-3 py-2 mx-2 my-2"
         >
-          Couldn&apos;t load comments. Try again.
+          {t('comments.loadCommentsFailed')}
         </p>
       );
     }
     if (comments === undefined || comments.length === 0) {
       return (
         <p className={`font-body italic text-sm text-center py-6 ${hintTextClass}`}>
-          No comments yet.
+          {t('comments.noCommentsYet')}
         </p>
       );
     }
@@ -439,7 +450,7 @@ export default function CommentControl({
             type="button"
             onClick={handleFetchMore}
             disabled={isFetchingMoreComments}
-            aria-label={isFetchingMoreComments ? "Loading earlier comments" : undefined}
+            aria-label={isFetchingMoreComments ? t('comments.loadingEarlierComments') : undefined}
             className={`w-full flex items-center justify-center gap-1.5 py-2 font-ui text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none ${
               hasFetchMoreCommentsError
                 ? "text-error hover:text-error"
@@ -451,9 +462,9 @@ export default function CommentControl({
             {isFetchingMoreComments ? (
               <Icon name="progress_activity" className="text-base animate-spin" />
             ) : hasFetchMoreCommentsError ? (
-              "Couldn't load earlier comments. Try again."
+              t('comments.loadEarlierCommentsFailed')
             ) : (
-              "See earlier comments"
+              t('comments.seeEarlierComments')
             )}
           </button>
         )}
@@ -498,7 +509,7 @@ export default function CommentControl({
         aria-expanded={isOpen}
         aria-controls={panelId}
         aria-label={
-          isOpen ? "Hide comments" : `View comments (${commentCount})`
+          isOpen ? t('comments.hideComments') : t('comments.viewComments', { count: commentCount })
         }
         className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-ui text-sm transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none ${
           isLight
@@ -525,7 +536,7 @@ export default function CommentControl({
         >
           <div className="flex items-center justify-between px-3 py-2">
             <span className={`font-ui text-xs uppercase tracking-wide ${isLight ? "text-on-surface-variant" : "text-white/50"}`}>
-              Comments
+              {t('comments.heading')}
             </span>
             <button
               type="button"
@@ -533,7 +544,7 @@ export default function CommentControl({
               // See useEscapeKey above — closing while a post is in flight
               // would detach that submission's own error callback.
               disabled={isAnyAddPending}
-              aria-label="Collapse comments"
+              aria-label={t('comments.collapseComments')}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-secondary disabled:opacity-40 disabled:pointer-events-none ${
                 isLight
                   ? "text-on-surface-variant hover:bg-surface-container-low hover:text-secondary"
@@ -553,7 +564,7 @@ export default function CommentControl({
               role="alert"
               className="bg-error-container text-on-error-container rounded-paper font-ui text-sm px-3 py-2 mx-2 mt-2"
             >
-              Couldn&apos;t post your comment. Try again.
+              {t('comments.postCommentFailed')}
             </p>
           )}
 

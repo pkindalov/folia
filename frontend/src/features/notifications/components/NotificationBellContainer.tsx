@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import NotificationBell, { type NotificationItemData } from './NotificationBell';
 import {
   useUnreadNotificationCount,
@@ -10,7 +11,7 @@ import {
   useMarkAllNotificationsUnread,
   useDeleteAllNotifications,
 } from '../hooks';
-import { formatRelativeTime } from '../relativeTime';
+import { formatRelativeTime, type RelativeTimeLabels } from '../relativeTime';
 import { toast } from '../../../lib/toast';
 import useClampedPage from '../../../hooks/useClampedPage';
 
@@ -25,6 +26,8 @@ function withoutId(ids: Set<string>, id: string): Set<string> {
 }
 
 export default function NotificationBellContainer({ variant }: { variant: 'sidebar' | 'mobile' }) {
+  const { t, i18n } = useTranslation('notifications');
+  const { t: tCommon } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
@@ -90,8 +93,15 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
   };
 
   const onDeleteAll = () => {
-    if (!window.confirm("Delete all notifications? This can't be undone.")) return;
+    if (!window.confirm(t('bell.deleteAllConfirm'))) return;
     deleteAll.mutate(undefined, { onError: (error) => toast.error(error.message) });
+  };
+
+  const relativeTimeLabels: RelativeTimeLabels = {
+    justNow: tCommon('relativeTime.justNow'),
+    minutesAgo: (count) => tCommon('relativeTime.minutesAgo', { count }),
+    hoursAgo: (count) => tCommon('relativeTime.hoursAgo', { count }),
+    daysAgo: (count) => tCommon('relativeTime.daysAgo', { count }),
   };
 
   const notifications: NotificationItemData[] = (notificationsQuery.data?.notifications ?? []).map(
@@ -108,7 +118,7 @@ export default function NotificationBellContainer({ variant }: { variant: 'sideb
       commentText: notification.commentText ?? null,
       thumbnailUrl: notification.thumbnailUrl,
       read: notification.read,
-      relativeTime: formatRelativeTime(notification.createdAt),
+      relativeTime: formatRelativeTime(notification.createdAt, relativeTimeLabels, i18n.language),
     })
   );
   const total = notificationsQuery.data?.total ?? 0;

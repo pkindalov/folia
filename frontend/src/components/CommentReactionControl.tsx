@@ -1,9 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import Emoji from './Emoji';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_EMOJI, REACTION_LABEL, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_LABEL_KEY, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type CommentReactionControlProps = {
@@ -37,6 +38,7 @@ export default function CommentReactionControl({
   viewerId,
   viewerUsername,
 }: CommentReactionControlProps) {
+  const { t } = useTranslation('social');
   const [isOpen, setIsOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
   const [anchorStyle, setAnchorStyle] = useState<CSSProperties>({});
@@ -81,10 +83,10 @@ export default function CommentReactionControl({
   };
   const isLight = variant === 'light';
 
-  const triggerLabel = viewerReaction ? REACTION_LABEL[viewerReaction] : 'Like';
+  const triggerLabel = viewerReaction ? t(REACTION_LABEL_KEY[viewerReaction]) : t('commentReaction.likeDefault');
   const triggerAriaLabel = viewerReaction
-    ? `You reacted: ${REACTION_LABEL[viewerReaction]}. Tap to change or remove.`
-    : 'React to this comment';
+    ? t('commentReaction.reactedTapToChange', { label: t(REACTION_LABEL_KEY[viewerReaction]) })
+    : t('commentReaction.reactToComment');
 
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -112,7 +114,7 @@ export default function CommentReactionControl({
           type="button"
           onClick={() => setIsReactorsModalOpen(true)}
           aria-haspopup="dialog"
-          aria-label={`See who reacted (${total})`}
+          aria-label={t('seeWhoReacted', { count: total })}
           className={`font-ui text-xs transition-colors ${
             isLight ? 'text-on-surface-variant hover:text-secondary' : 'text-white/50 hover:text-white'
           }`}
@@ -125,7 +127,7 @@ export default function CommentReactionControl({
         <div
           ref={panelRef}
           role="group"
-          aria-label="Choose a reaction"
+          aria-label={t('chooseReaction')}
           style={anchorStyle}
           className={`fixed flex items-center gap-1 rounded-full px-2 py-1.5 z-70 ${
             isLight
@@ -138,9 +140,9 @@ export default function CommentReactionControl({
               key={type}
               type="button"
               onClick={() => handleSelect(type)}
-              aria-label={REACTION_LABEL[type]}
+              aria-label={t(REACTION_LABEL_KEY[type])}
               aria-pressed={viewerReaction === type}
-              title={REACTION_LABEL[type]}
+              title={t(REACTION_LABEL_KEY[type])}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-secondary ${
                 viewerReaction === type ? (isLight ? 'bg-surface-container-low scale-110' : 'bg-white/20 scale-110') : ''
               } ${REACTION_TEXT_COLOR[type]}`}
@@ -154,7 +156,7 @@ export default function CommentReactionControl({
       <ReactorsModal
         isOpen={isReactorsModalOpen}
         onClose={() => setIsReactorsModalOpen(false)}
-        heading="People who reacted"
+        heading={t('peopleWhoReacted')}
         reactors={reactors}
         viewerId={viewerId}
         viewerUsername={viewerUsername}

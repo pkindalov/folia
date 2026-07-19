@@ -3,23 +3,35 @@ const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
 
+export type RelativeTimeLabels = {
+  justNow: string;
+  minutesAgo: (minutes: number) => string;
+  hoursAgo: (hours: number) => string;
+  daysAgo: (days: number) => string;
+};
+
 /** Formats an ISO timestamp as "Just now" / "5m ago" / "3h ago" / "2d ago", or a short date past a week. */
-export function formatRelativeTime(isoDate: string, now: Date = new Date()): string {
+export function formatRelativeTime(
+  isoDate: string,
+  labels: RelativeTimeLabels,
+  locale: string,
+  now: Date = new Date()
+): string {
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return 'Just now';
+  if (Number.isNaN(date.getTime())) return labels.justNow;
 
   // Clock skew between client and server can put a just-created timestamp a
   // few seconds in the future — clamp rather than surface a negative/garbage
   // duration, since createdAt can never legitimately be in the future.
   const diffMs = Math.max(0, now.getTime() - date.getTime());
 
-  if (diffMs < MINUTE_MS) return 'Just now';
-  if (diffMs < HOUR_MS) return `${Math.floor(diffMs / MINUTE_MS)}m ago`;
-  if (diffMs < DAY_MS) return `${Math.floor(diffMs / HOUR_MS)}h ago`;
-  if (diffMs < WEEK_MS) return `${Math.floor(diffMs / DAY_MS)}d ago`;
+  if (diffMs < MINUTE_MS) return labels.justNow;
+  if (diffMs < HOUR_MS) return labels.minutesAgo(Math.floor(diffMs / MINUTE_MS));
+  if (diffMs < DAY_MS) return labels.hoursAgo(Math.floor(diffMs / HOUR_MS));
+  if (diffMs < WEEK_MS) return labels.daysAgo(Math.floor(diffMs / DAY_MS));
 
   const sameYear = date.getFullYear() === now.getFullYear();
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: sameYear ? undefined : 'numeric',

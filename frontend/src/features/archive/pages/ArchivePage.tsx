@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
@@ -14,6 +15,7 @@ const VISIBILITY_ICON: Record<Album['visibility'], string> = {
 };
 
 function ArchivedVolumeCard({ album }: { album: Album }) {
+  const { t } = useTranslation('archive');
   const restoreAlbum = useArchiveAlbum(album._id);
 
   return (
@@ -51,21 +53,21 @@ function ArchivedVolumeCard({ album }: { album: Album }) {
       </Link>
       <div className="mt-6 w-full px-2 flex justify-between items-center">
         <span className="font-ui text-ui-label uppercase text-on-surface-variant">
-          {album.pageCount} pages
+          {t('pageCount', { count: album.pageCount })}
         </span>
         <button
           onClick={() =>
             restoreAlbum.mutate(false, {
-              onSuccess: () => toast.success(`"${album.title}" restored.`),
+              onSuccess: () => toast.success(t('restoredToast', { title: album.title })),
               onError: (error) => toast.error(error.message),
             })
           }
           disabled={restoreAlbum.isPending}
-          aria-label={`Restore ${album.title}`}
+          aria-label={t('restoreAlbum', { title: album.title })}
           className="flex items-center gap-1 font-ui text-ui-label uppercase text-on-surface-variant hover:text-secondary transition-colors disabled:opacity-50"
         >
           <Icon name="unarchive" className="text-base" />
-          {restoreAlbum.isPending ? 'Restoring…' : 'Restore'}
+          {restoreAlbum.isPending ? t('restoringButton') : t('restoreButton')}
         </button>
       </div>
     </div>
@@ -73,6 +75,7 @@ function ArchivedVolumeCard({ album }: { album: Album }) {
 }
 
 export default function ArchivePage() {
+  const { t } = useTranslation('archive');
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useArchivedAlbums(page);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
@@ -86,15 +89,14 @@ export default function ArchivePage() {
       <div className="p-gutter md:p-margin-edge">
         <div className="max-w-6xl mx-auto">
           <div className="mb-12 border-b border-outline-variant pb-6">
-            <h2 className="font-display text-display-lg text-primary mb-2">The Grand Archive</h2>
+            <h2 className="font-display text-display-lg text-primary mb-2">{t('title')}</h2>
             <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-              Completed volumes, sealed and preserved. Restore one to bring it back to your
-              gallery.
+              {t('subtitle')}
             </p>
           </div>
 
           {isLoading && (
-            <p className="font-body italic text-on-surface-variant">Opening the archive…</p>
+            <p className="font-body italic text-on-surface-variant">{t('opening')}</p>
           )}
           {isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -105,7 +107,7 @@ export default function ArchivePage() {
           {data && data.total === 0 && (
             <div className="flex flex-col items-center gap-4 py-24 text-center text-on-surface-variant">
               <Icon name="inventory_2" className="text-5xl" />
-              <p className="font-body italic text-body-text">Nothing has been archived yet.</p>
+              <p className="font-body italic text-body-text">{t('empty')}</p>
             </div>
           )}
 

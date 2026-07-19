@@ -1,0 +1,42 @@
+{
+  "profilePage": {
+    "title": "My Profile",
+    "subtitle": "Your identity across the archive — how contributors and kin see you."
+  },
+  "publicProfilePage": {
+    "loading": "Loading profile…"
+  },
+  "identityCard": {
+    "memberSince": "Member since {{date}}",
+    "editProfile": "Edit Profile"
+  },
+  "editForm": {
+    "usernameLabel": "Username",
+    "emailLabel": "Email",
+    "saveButton": "Save changes",
+    "savingButton": "Saving…",
+    "cancelButton": "Cancel",
+    "updatedToast": "Profile updated."
+  },
+  "avatarUploader": {
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "unsupportedType": "Only JPEG, PNG, WEBP and GIF photos are supported.",
+    "tooLarge": "Photo is too large. Choose one under 10MB.",
+    "removedToast": "Photo removed."
+  },
+  "circlesSummary": {
+    "title": "My Circles",
+    "viewAll": "View All Circles",
+    "gathering": "Gathering your circles…",
+    "emptyState": "You haven't created any circles yet. Start one to organize who sees your shared albums.",
+    "createFirst": "Create your first circle",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members"
+  },
+  "errors": {
+    "usernameTooShort": "Username must be at least 3 characters",
+    "usernameTooLong": "Username must be at most 30 characters",
+    "emailInvalid": "Enter a valid email address"
+  }
+}

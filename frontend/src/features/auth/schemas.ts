@@ -24,28 +24,24 @@ export const meResponseSchema = z.object({
 export type User = z.infer<typeof userSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 
-// Form schemas — mirror the backend's validation rules
+// Form schemas — mirror the backend's validation rules.
+// Messages are translation keys (relative to the 'auth' namespace's `errors`
+// object), not display text — schemas are built at module load, before any
+// i18next context exists. Translate with t(`errors.${key}`) at the display site.
 export const loginSchema = z.object({
-  identifier: z.string().min(1, 'Enter your email or username'),
-  password: z.string().min(1, 'Password is required'),
+  identifier: z.string().min(1, 'identifierRequired'),
+  password: z.string().min(1, 'passwordRequired'),
 });
 
 export const registerSchema = z
   .object({
-    username: z
-      .string()
-      .trim()
-      .min(3, 'Username must be at least 3 characters')
-      .max(30, 'Username must be at most 30 characters'),
-    email: z.string().email('Enter a valid email address'),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .max(128, 'Password is too long'),
-    confirmPassword: z.string().min(1, 'Confirm your password'),
+    username: z.string().trim().min(3, 'usernameTooShort').max(30, 'usernameTooLong'),
+    email: z.string().email('emailInvalid'),
+    password: z.string().min(8, 'passwordTooShort').max(128, 'passwordTooLong'),
+    confirmPassword: z.string().min(1, 'confirmPasswordRequired'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'passwordsDoNotMatch',
     path: ['confirmPassword'],
   });
 

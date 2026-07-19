@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Modal from './Modal';
 import Icon from './Icon';
 import Emoji from './Emoji';
@@ -41,6 +42,7 @@ export default function ReactorsModal({
   viewerUsername,
   onRemoveMyReaction,
 }: ReactorsModalProps) {
+  const { t } = useTranslation('social');
   // A unique id per instance — ReactorsModal can be mounted more than once at
   // once (a photo's ReactionControl and the album-level modal both live on
   // ViewerPage), so a shared static id would leave aria-labelledby pointing
@@ -63,7 +65,7 @@ export default function ReactorsModal({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t('close')}
           className="text-on-surface-variant hover:text-primary transition-colors shrink-0 ml-4"
         >
           <Icon name="close" className="text-2xl" />
@@ -103,8 +105,8 @@ export default function ReactorsModal({
                 <button
                   type="button"
                   onClick={onRemoveMyReaction}
-                  aria-label="Remove your reaction"
-                  title="Remove your reaction"
+                  aria-label={t('removeYourReaction')}
+                  title={t('removeYourReaction')}
                   className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error-container transition-colors"
                 >
                   <Icon name="delete" className="text-lg" />

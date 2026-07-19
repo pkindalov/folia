@@ -1,26 +1,28 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useMe, useLogout } from '../features/auth';
 import { NotificationBellContainer } from '../features/notifications';
 import Avatar from './Avatar';
 import Icon from './Icon';
 
 const NAV_ITEMS = [
-  { to: '/flipbooks', icon: 'auto_stories', label: 'My Flipbooks' },
-  { to: '/explore', icon: 'travel_explore', label: 'Explore' },
-  { to: '/editor', icon: 'edit_note', label: 'Create' },
-  { to: '/circles', icon: 'diversity_3', label: 'Circles' },
-  { to: '/archive', icon: 'inventory_2', label: 'Archives' },
-];
+  { to: '/flipbooks', icon: 'auto_stories', labelKey: 'nav.myFlipbooks' },
+  { to: '/explore', icon: 'travel_explore', labelKey: 'nav.explore' },
+  { to: '/editor', icon: 'edit_note', labelKey: 'nav.create' },
+  { to: '/circles', icon: 'diversity_3', labelKey: 'nav.circles' },
+  { to: '/archive', icon: 'inventory_2', labelKey: 'nav.archives' },
+] as const;
 
 export default function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('common');
   const { data: user, isLoading, isError } = useMe();
   const logout = useLogout();
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center font-body italic text-on-surface-variant">
-        Loading…
+        {t('shell.loading')}
       </div>
     );
   }
@@ -28,12 +30,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (isError || !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
-        <p className="font-body text-body-text">Session expired.</p>
+        <p className="font-body text-body-text">{t('shell.sessionExpired')}</p>
         <button
           onClick={logout}
           className="font-ui text-ui-label uppercase border border-outline px-6 py-3 rounded-paper hover:border-secondary hover:text-secondary transition-colors"
         >
-          Back to login
+          {t('shell.backToLogin')}
         </button>
       </div>
     );
@@ -52,7 +54,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Link
             to="/settings"
             className="text-on-surface-variant hover:text-secondary transition-colors"
-            aria-label="Settings"
+            aria-label={t('nav.settings')}
           >
             <Icon name="settings" className="text-xl" />
           </Link>
@@ -60,7 +62,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <button
             onClick={logout}
             className="text-on-surface-variant hover:text-secondary transition-colors"
-            aria-label="Sign out"
+            aria-label={t('nav.signOut')}
           >
             <Icon name="logout" className="text-xl" />
           </button>
@@ -87,7 +89,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }
             >
               <Icon name={item.icon} className="text-lg" />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -95,13 +97,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <NotificationBellContainer variant="sidebar" />
           <Link
             to="/profile"
-            aria-label="View profile"
+            aria-label={t('shell.viewProfile')}
             className="flex items-center gap-3 px-4 hover:opacity-80 transition-opacity"
           >
             <Avatar username={user.username} avatarUrl={user.avatarUrl} size="sm" />
             <p className="font-body text-sm text-on-surface-variant">
-              Signed in as <strong>{user.username}</strong> ({user.email})
-              {user.roles.includes('Admin') && ' — Admin'}
+              {t('shell.signedInAs')} <strong>{user.username}</strong> ({user.email})
+              {user.roles.includes('Admin') && t('shell.admin')}
             </p>
           </Link>
           <Link
@@ -109,14 +111,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
             className="flex items-center gap-4 px-4 py-3 font-body text-sm tracking-wide uppercase text-on-surface-variant hover:bg-surface-container-low rounded-paper transition-colors"
           >
             <Icon name="settings" className="text-lg" />
-            Settings
+            {t('nav.settings')}
           </Link>
           <button
             onClick={logout}
             className="flex items-center gap-4 px-4 py-3 font-body text-sm tracking-wide uppercase text-on-surface-variant hover:bg-surface-container-low rounded-paper transition-colors text-left"
           >
             <Icon name="logout" className="text-lg" />
-            Sign out
+            {t('nav.signOut')}
           </button>
         </div>
       </aside>
@@ -138,7 +140,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }
             >
               <Icon name={item.icon} />
-              <span className="font-ui text-[10px]">{item.label}</span>
+              <span className="font-ui text-[10px]">{t(item.labelKey)}</span>
             </NavLink>
           ))}
         </div>

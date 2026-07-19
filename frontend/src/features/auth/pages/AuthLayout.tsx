@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /** Shared "open album" frame for the auth pages (from the Login/Register design). */
 export default function AuthLayout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('auth');
+
   return (
     <div className="min-h-screen bg-surface-dim flex items-center justify-center p-6 md:p-12">
       <main className="relative max-w-4xl w-full flex flex-col md:flex-row bg-surface paper-depth rounded-card overflow-hidden">
@@ -17,13 +20,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               />
             </div>
             <p className="mt-6 text-center font-body italic text-on-surface-variant">
-              Capture the soul of the moment.
+              {t('layout.tagline')}
             </p>
           </div>
           <div className="mt-16 text-center">
             <h1 className="font-display text-display-lg text-primary italic">Folia</h1>
             <p className="font-ui text-ui-label uppercase tracking-[0.2em] text-on-surface-variant/60 mt-2">
-              Preserving Legacy
+              {t('layout.brandSubtitle')}
             </p>
           </div>
         </section>

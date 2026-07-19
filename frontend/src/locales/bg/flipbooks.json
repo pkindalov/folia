@@ -1,0 +1,27 @@
+{
+  "myFlipbooksPage": {
+    "title": "Галерията",
+    "subtitle": "Подбрана колекция от споделените ви истории, подвързани в цифров плат и кожа. Изберете том, за да продължите разказа.",
+    "filterAll": "Всички томове",
+    "filterPublic": "Публични",
+    "filterShared": "Споделени",
+    "filterPrivate": "Лични",
+    "opening": "Отваряне на шкафа…",
+    "startNewVolume": "Започнете нов том",
+    "emptyCanvas": "Празно платно, готово за спомени",
+    "pageCount_one": "{{count}} страница",
+    "pageCount_other": "{{count}} страници",
+    "visibilityPrivate": "лично",
+    "visibilityPublic": "публично",
+    "visibilityShared": "споделено",
+    "editAlbum": "Редактиране на {{title}}",
+    "editButton": "Редактиране",
+    "emptyStateAll": "Рафтът ви е празен. Започнете първия си том и дайте дом на спомените си.",
+    "emptyStateFiltered": "Все още няма {{filter}} томове."
+  },
+  "errors": {
+    "titleRequired": "Дайте заглавие на този том",
+    "titleTooLong": "Заглавието трябва да е най-много 120 символа",
+    "descriptionTooLong": "Описанието трябва да е най-много 2000 символа"
+  }
+}

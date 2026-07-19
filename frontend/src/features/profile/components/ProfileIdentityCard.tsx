@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import AvatarUploader from './AvatarUploader';
 import EditProfileForm from './EditProfileForm';
 import type { User } from '../../auth';
 import { formatMemberSince } from '../formatMemberSince';
 
 export default function ProfileIdentityCard({ user }: { user: User }) {
+  const { t, i18n } = useTranslation('profile');
   const [isEditing, setIsEditing] = useState(false);
-  const memberSince = formatMemberSince(user.createdAt);
+  const memberSince = formatMemberSince(user.createdAt, i18n.language);
 
   return (
     <section className="bg-surface-container-lowest rounded-card p-8 border border-outline-variant/40 paper-depth flex flex-col items-center text-center">
@@ -40,7 +42,7 @@ export default function ProfileIdentityCard({ user }: { user: User }) {
 
           {memberSince && (
             <p className="font-ui text-ui-label text-on-surface-variant/70 mt-4">
-              Member since {memberSince}
+              {t('identityCard.memberSince', { date: memberSince })}
             </p>
           )}
 
@@ -49,7 +51,7 @@ export default function ProfileIdentityCard({ user }: { user: User }) {
             onClick={() => setIsEditing(true)}
             className="w-full mt-8 py-2 rounded-paper border border-primary text-primary font-ui text-ui-label uppercase tracking-widest hover:bg-primary hover:text-on-primary transition-colors"
           >
-            Edit Profile
+            {t('identityCard.editProfile')}
           </button>
         </>
       )}

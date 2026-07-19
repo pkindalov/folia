@@ -1,0 +1,11 @@
+{
+  "title": "The Community Table",
+  "subtitle": "Volumes shared publicly by other archivists, laid out for browsing.",
+  "sharedWithYou": "Shared With You",
+  "gatheringShared": "Gathering what's been shared…",
+  "settingTable": "Setting the table…",
+  "byUsername": "by {{username}}",
+  "pageCount_one": "{{count}} page",
+  "pageCount_other": "{{count}} pages",
+  "emptyState": "There are no public volumes yet. When someone shares an album with the community, it will appear here."
+}

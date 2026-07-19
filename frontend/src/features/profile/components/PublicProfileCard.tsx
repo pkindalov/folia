@@ -1,10 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import Avatar from '../../../components/Avatar';
 import { formatMemberSince } from '../formatMemberSince';
 import type { PublicUser } from '../schemas';
 
 /** Read-only view of another user's identity — no edit form, no avatar upload. */
 export default function PublicProfileCard({ user }: { user: PublicUser }) {
-  const memberSince = formatMemberSince(user.createdAt);
+  const { t, i18n } = useTranslation('profile');
+  const memberSince = formatMemberSince(user.createdAt, i18n.language);
 
   return (
     <section className="bg-surface-container-lowest rounded-card p-8 border border-outline-variant/40 paper-depth flex flex-col items-center text-center">
@@ -26,7 +28,7 @@ export default function PublicProfileCard({ user }: { user: PublicUser }) {
 
       {memberSince && (
         <p className="font-ui text-ui-label text-on-surface-variant/70 mt-4">
-          Member since {memberSince}
+          {t('identityCard.memberSince', { date: memberSince })}
         </p>
       )}
     </section>

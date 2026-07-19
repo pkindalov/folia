@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
@@ -7,8 +8,15 @@ import useClampedPage from '../../../hooks/useClampedPage';
 import { useAlbums, coverColor } from '../hooks';
 import type { Album } from '../schemas';
 
-const FILTERS = ['All Volumes', 'Public', 'Shared', 'Private'] as const;
-type Filter = (typeof FILTERS)[number];
+const FILTER_KEYS = ['all', 'public', 'shared', 'private'] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
+
+const FILTER_LABEL_KEY = {
+  all: 'myFlipbooksPage.filterAll',
+  public: 'myFlipbooksPage.filterPublic',
+  shared: 'myFlipbooksPage.filterShared',
+  private: 'myFlipbooksPage.filterPrivate',
+} as const satisfies Record<FilterKey, string>;
 
 const VISIBILITY_ICON: Record<Album['visibility'], string> = {
   private: 'lock',
@@ -16,19 +24,26 @@ const VISIBILITY_ICON: Record<Album['visibility'], string> = {
   shared: 'group',
 };
 
-function visibilityForFilter(filter: Filter): Album['visibility'] | undefined {
-  if (filter === 'All Volumes') return undefined;
-  return filter.toLowerCase() as Album['visibility'];
+const VISIBILITY_LABEL_KEY = {
+  private: 'myFlipbooksPage.visibilityPrivate',
+  public: 'myFlipbooksPage.visibilityPublic',
+  shared: 'myFlipbooksPage.visibilityShared',
+} as const satisfies Record<Album['visibility'], string>;
+
+function visibilityForFilter(filter: FilterKey): Album['visibility'] | undefined {
+  if (filter === 'all') return undefined;
+  return filter;
 }
 
 export default function MyFlipbooksPage() {
-  const [filter, setFilter] = useState<Filter>('All Volumes');
+  const { t } = useTranslation('flipbooks');
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useAlbums(page, visibilityForFilter(filter));
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
 
-  const onFilterChange = (nextFilter: Filter) => {
+  const onFilterChange = (nextFilter: FilterKey) => {
     setFilter(nextFilter);
     setPage(1);
   };
@@ -45,31 +60,32 @@ export default function MyFlipbooksPage() {
           {/* Header */}
           <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-6">
             <div>
-              <h2 className="font-display text-display-lg text-primary mb-2">The Gallery</h2>
+              <h2 className="font-display text-display-lg text-primary mb-2">
+                {t('myFlipbooksPage.title')}
+              </h2>
               <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-                A curated collection of your shared histories, bound in digital cloth and leather.
-                Select a volume to continue the narrative.
+                {t('myFlipbooksPage.subtitle')}
               </p>
             </div>
             <div className="mt-6 md:mt-0 flex gap-4">
-              {FILTERS.map((f) => (
+              {FILTER_KEYS.map((key) => (
                 <button
-                  key={f}
-                  onClick={() => onFilterChange(f)}
+                  key={key}
+                  onClick={() => onFilterChange(key)}
                   className={`font-ui text-ui-label uppercase pb-1 transition-colors ${
-                    filter === f
+                    filter === key
                       ? 'text-primary border-b border-primary'
                       : 'text-on-surface-variant hover:text-primary'
                   }`}
                 >
-                  {f}
+                  {t(FILTER_LABEL_KEY[key])}
                 </button>
               ))}
             </div>
           </div>
 
           {isLoading && (
-            <p className="font-body italic text-on-surface-variant">Opening the cabinet…</p>
+            <p className="font-body italic text-on-surface-variant">{t('myFlipbooksPage.opening')}</p>
           )}
           {isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -93,9 +109,11 @@ export default function MyFlipbooksPage() {
                     <div className="absolute left-5 top-0 bottom-0 w-px bg-surface-container-lowest opacity-50" />
                   </div>
                   <div className="mt-6 w-full px-2">
-                    <h3 className="font-display text-primary text-xl">Start a New Volume</h3>
+                    <h3 className="font-display text-primary text-xl">
+                      {t('myFlipbooksPage.startNewVolume')}
+                    </h3>
                     <p className="font-body italic text-on-surface-variant mt-1">
-                      Empty canvas, ready for memories
+                      {t('myFlipbooksPage.emptyCanvas')}
                     </p>
                   </div>
                 </button>
@@ -139,15 +157,16 @@ export default function MyFlipbooksPage() {
                   </Link>
                   <div className="mt-6 w-full px-2 flex justify-between items-center">
                     <span className="font-ui text-ui-label uppercase text-on-surface-variant">
-                      {album.pageCount} pages · {album.visibility}
+                      {t('myFlipbooksPage.pageCount', { count: album.pageCount })} ·{' '}
+                      {t(VISIBILITY_LABEL_KEY[album.visibility])}
                     </span>
                     <button
                       onClick={() => navigate(`/editor/${album._id}`)}
-                      aria-label={`Edit ${album.title}`}
+                      aria-label={t('myFlipbooksPage.editAlbum', { title: album.title })}
                       className="flex items-center gap-1 font-ui text-ui-label uppercase text-on-surface-variant hover:text-secondary transition-colors"
                     >
                       <Icon name="edit" className="text-base" />
-                      Edit
+                      {t('myFlipbooksPage.editButton')}
                     </button>
                   </div>
                 </div>
@@ -156,9 +175,11 @@ export default function MyFlipbooksPage() {
               {data.total === 0 && (
                 <div className="col-span-full sm:col-span-1 lg:col-span-2 flex items-center">
                   <p className="font-body italic text-on-surface-variant text-body-text">
-                    {filter === 'All Volumes'
-                      ? 'Your shelf is empty. Start your first volume and give your memories a home.'
-                      : `No ${filter.toLowerCase()} volumes yet.`}
+                    {filter === 'all'
+                      ? t('myFlipbooksPage.emptyStateAll')
+                      : t('myFlipbooksPage.emptyStateFiltered', {
+                          filter: t(VISIBILITY_LABEL_KEY[filter]),
+                        })}
                   </p>
                 </div>
               )}

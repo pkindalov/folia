@@ -1,0 +1,73 @@
+{
+  "reactionLabels": {
+    "like": "Харесва ми",
+    "love": "Любов",
+    "haha": "Хаха",
+    "wow": "Уау",
+    "sad": "Тъжно",
+    "angry": "Гневно"
+  },
+  "chooseReaction": "Изберете реакция",
+  "peopleWhoReacted": "Хора, които реагираха",
+  "seeWhoReacted": "Вижте кой реагира ({{count}})",
+  "close": "Затваряне",
+  "removeYourReaction": "Премахване на вашата реакция",
+  "albumLove": {
+    "loved": "Харесахте този албум — докоснете, за да премахнете",
+    "love": "Харесване на този албум",
+    "seeWhoLoved": "Вижте кой хареса този албум ({{count}})"
+  },
+  "photoReaction": {
+    "reactedTapToChange": "Реагирахте с: {{label}}. Докоснете, за да промените или премахнете.",
+    "reactToPhoto": "Реагирайте на тази снимка"
+  },
+  "commentReaction": {
+    "reactedTapToChange": "Реагирахте с: {{label}}. Докоснете, за да промените или премахнете.",
+    "reactToComment": "Реагирайте на този коментар",
+    "likeDefault": "Харесва ми"
+  },
+  "comments": {
+    "cancel": "Отказ",
+    "reply": "Отговор",
+    "replyPlaceholder": "Напишете отговор…",
+    "replyFailed": "Отговорът не можа да бъде публикуван. Опитайте отново.",
+    "deleteYourComment": "Изтриване на вашия коментар",
+    "deleteComment": "Изтриване на този коментар",
+    "loadingMoreReplies": "Зареждане на още отговори",
+    "loadMoreRepliesFailed": "Още отговори не можаха да бъдат заредени. Опитайте отново.",
+    "loadMoreReplies": "Още отговори",
+    "loadingComments": "Зареждане на коментари…",
+    "loadCommentsFailed": "Коментарите не можаха да бъдат заредени. Опитайте отново.",
+    "noCommentsYet": "Все още няма коментари.",
+    "loadingEarlierComments": "Зареждане на по-стари коментари",
+    "loadEarlierCommentsFailed": "По-старите коментари не можаха да бъдат заредени. Опитайте отново.",
+    "seeEarlierComments": "Вижте по-стари коментари",
+    "hideComments": "Скриване на коментарите",
+    "viewComments": "Преглед на коментарите ({{count}})",
+    "heading": "Коментари",
+    "collapseComments": "Свиване на коментарите",
+    "postCommentFailed": "Коментарът не можа да бъде публикуван. Опитайте отново.",
+    "addCommentPlaceholder": "Добавете коментар…",
+    "commentTextLabel": "Текст на коментара",
+    "postComment": "Публикуване на коментар",
+    "charactersLeft": "остават {{count}}"
+  },
+  "lightbox": {
+    "photoViewer": "Преглед на снимка",
+    "closePhotoViewer": "Затваряне на прегледа на снимката",
+    "previousPhoto": "Предишна снимка",
+    "nextPhoto": "Следваща снимка",
+    "backToFirstPhoto": "Обратно към първата снимка",
+    "photoAlt": "Снимка",
+    "photoOf": "Снимка {{current}} от {{total}}"
+  },
+  "shortcuts": {
+    "keyboardShortcuts": "Клавишни комбинации",
+    "title": "Комбинации за този том",
+    "close": "Затваряне на комбинациите",
+    "navigate": "Преминаване към предишната или следващата снимка",
+    "openPicker": "Отваряне на избора на реакция",
+    "pickReaction": "Изберете реакция — Харесва ми, Любов, Хаха, Уау, Тъжно, Гневно",
+    "playPause": "Пускане или пауза на слайдшоуто"
+  }
+}

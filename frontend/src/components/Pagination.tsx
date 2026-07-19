@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 
 type PaginationProps = {
@@ -27,17 +28,18 @@ function buildPageItems(page: number, totalPages: number): PageItem[] {
 }
 
 export default function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useTranslation('common');
   if (totalPages <= 1) return null;
 
   const pageItems = buildPageItems(page, totalPages);
 
   return (
-    <nav aria-label="Pagination" className="mt-16 flex items-center justify-center gap-2">
+    <nav aria-label={t('pagination.nav')} className="mt-16 flex items-center justify-center gap-2">
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        aria-label="Previous page"
+        aria-label={t('pagination.previous')}
         className="w-10 h-10 rounded-full border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >
         <Icon name="chevron_left" />
@@ -57,7 +59,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
             key={item}
             type="button"
             onClick={() => onPageChange(item)}
-            aria-label={`Page ${item}`}
+            aria-label={t('pagination.page', { page: item })}
             aria-current={item === page ? 'page' : undefined}
             className={`w-10 h-10 rounded-full font-ui text-ui-label flex items-center justify-center transition-colors ${
               item === page
@@ -74,7 +76,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        aria-label="Next page"
+        aria-label={t('pagination.next')}
         className="w-10 h-10 rounded-full border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:border-secondary hover:text-secondary transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >
         <Icon name="chevron_right" />

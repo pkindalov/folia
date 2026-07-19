@@ -1,9 +1,11 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../../components/Modal';
 import Icon from '../../../components/Icon';
 import { useCreateCircle } from '../hooks';
 import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
+import { translateFieldError } from '../../../lib/translateFieldError';
 import { toast } from '../../../lib/toast';
 
 type CreateCircleModalProps = {
@@ -12,6 +14,7 @@ type CreateCircleModalProps = {
 };
 
 export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModalProps) {
+  const { t } = useTranslation('circles');
   const createCircle = useCreateCircle();
 
   const {
@@ -40,7 +43,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
   const onSubmit = (data: CircleFormInput) => {
     createCircle.mutate(data, {
       onSuccess: () => {
-        toast.success('Circle created.');
+        toast.success(t('createModal.createdToast'));
         close();
       },
       onError: (error) => toast.error(error.message),
@@ -52,16 +55,14 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
       <div className="flex justify-between items-start mb-8">
         <div>
           <h2 id="create-circle-title" className="font-display text-headline-md text-primary mb-2">
-            New Circle
+            {t('createModal.title')}
           </h2>
-          <p className="font-body italic text-on-surface-variant">
-            Define the boundaries of this collection.
-          </p>
+          <p className="font-body italic text-on-surface-variant">{t('createModal.subtitle')}</p>
         </div>
         <button
           type="button"
           onClick={close}
-          aria-label="Close"
+          aria-label={t('createModal.closeLabel')}
           className="text-on-surface-variant hover:text-primary transition-colors"
         >
           <Icon name="close" className="text-2xl" />
@@ -74,19 +75,19 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             className="font-ui text-ui-label uppercase text-on-surface-variant"
             htmlFor="circle-name"
           >
-            Circle name
+            {t('form.nameLabel')}
           </label>
           <input
             id="circle-name"
             className="line-input w-full py-2 text-headline-md font-display"
-            placeholder="e.g., The Sterling Family"
+            placeholder={t('form.namePlaceholder')}
             aria-invalid={errors.name !== undefined}
             aria-describedby={errors.name !== undefined ? 'circle-name-error' : undefined}
             {...register('name')}
           />
           {errors.name && (
             <span id="circle-name-error" role="alert" className="text-sm text-error font-ui mt-1">
-              {errors.name.message}
+              {translateFieldError(t, errors.name.message)}
             </span>
           )}
         </div>
@@ -96,13 +97,13 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
             className="font-ui text-ui-label uppercase text-on-surface-variant"
             htmlFor="circle-description"
           >
-            Description
+            {t('form.descriptionLabel')}
           </label>
           <textarea
             id="circle-description"
             rows={3}
             className="line-input w-full py-2 text-body-text resize-none"
-            placeholder="What's this circle for?"
+            placeholder={t('form.descriptionPlaceholder')}
             aria-invalid={errors.description !== undefined}
             aria-describedby={errors.description !== undefined ? 'circle-description-error' : undefined}
             {...register('description')}
@@ -110,7 +111,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
           <div className="flex justify-between items-start mt-1">
             {errors.description ? (
               <span id="circle-description-error" role="alert" className="text-sm text-error font-ui">
-                {errors.description.message}
+                {translateFieldError(t, errors.description.message)}
               </span>
             ) : (
               <span />
@@ -132,7 +133,7 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
           disabled={createCircle.isPending}
           className="w-full bg-primary text-on-primary py-4 px-8 rounded-paper font-ui text-ui-button uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-60"
         >
-          {createCircle.isPending ? 'Creating…' : 'Create Circle'}
+          {createCircle.isPending ? t('createModal.creatingButton') : t('createModal.createButton')}
         </button>
       </form>
     </Modal>

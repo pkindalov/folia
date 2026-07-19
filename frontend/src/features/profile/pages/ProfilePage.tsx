@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import { useMe } from '../../auth';
 import ProfileIdentityCard from '../components/ProfileIdentityCard';
 import CirclesSummary from '../components/CirclesSummary';
 
 export default function ProfilePage() {
+  const { t } = useTranslation('profile');
   const { data: user } = useMe();
 
   return (
@@ -11,9 +13,11 @@ export default function ProfilePage() {
       <div className="p-gutter md:p-margin-edge">
         <div className="max-w-6xl mx-auto">
           <div className="mb-12 border-b border-outline-variant pb-6">
-            <h2 className="font-display text-display-lg text-primary mb-2">My Profile</h2>
+            <h2 className="font-display text-display-lg text-primary mb-2">
+              {t('profilePage.title')}
+            </h2>
             <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-              Your identity across the archive — how contributors and kin see you.
+              {t('profilePage.subtitle')}
             </p>
           </div>
 

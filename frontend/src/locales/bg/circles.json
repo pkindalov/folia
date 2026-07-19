@@ -1,0 +1,69 @@
+{
+  "form": {
+    "nameLabel": "Име на кръга",
+    "namePlaceholder": "напр. Семейство Стерлинг",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "За какво е този кръг?",
+    "saveButton": "Запазване на промените",
+    "savingButton": "Запазване…",
+    "cancelButton": "Отказ"
+  },
+  "circlesPage": {
+    "title": "Управление на моите кръгове",
+    "subtitle": "Организирайте своите сътрудници в кръгове, за да подредите споделената история на семейството, колегите и приятелите си за цял живот.",
+    "invitationsHeading": "Покани за кръгове",
+    "gathering": "Събиране на вашите кръгове…",
+    "createNewCircle": "Създаване на нов кръг",
+    "initializeArchive": "Инициализиране на нов архив",
+    "emptyState": "Все още нямате създадени кръгове. Създайте такъв, за да организирате кой вижда споделените ви албуми.",
+    "manageCircle": "Управление на кръга",
+    "memberCount_one": "{{count}} член",
+    "memberCount_other": "{{count}} члена",
+    "invitedCount": "{{count}} поканени",
+    "invitedBy": "Поканени от {{username}}",
+    "acceptButton": "Приемане",
+    "acceptingButton": "Приемане…",
+    "declineButton": "Отказване",
+    "decliningButton": "Отказване…",
+    "joinedToast": "Присъединихте се към {{name}}.",
+    "declinedToast": "Отказахте {{name}}."
+  },
+  "circleDetail": {
+    "opening": "Отваряне на кръга…",
+    "editCircle": "Редактиране на кръга",
+    "ownedBy": "Собственик: {{username}}",
+    "inviteMember": "Поканете член",
+    "inviteMemberHint": "Ще трябва да приемат поканата, преди да виждат каквото и да е споделено с този кръг.",
+    "searchPlaceholder": "Търсене по потребителско име…",
+    "invitedLabel": "Поканен",
+    "inviteButton": "Покана",
+    "noUsersFound": "Няма намерени потребители.",
+    "memberHeading_one": "{{count}} член",
+    "memberHeading_other": "{{count}} члена",
+    "noMembersYet": "Все още няма членове — потърсете отгоре, за да поканите първия.",
+    "pending": "В изчакване",
+    "cancelInvite": "Отмяна на поканата до {{username}}",
+    "removeMember": "Премахване на {{username}}",
+    "cancelledInviteToast": "Поканата до {{username}} е отменена.",
+    "removedMemberToast": "{{username}} е премахнат(а).",
+    "deleteCircleButton": "Изтриване на кръга",
+    "deletingButton": "Изтриване…",
+    "deleteConfirm": "Да изтрия ли този кръг? Членовете ще загубят достъп до всичко споделено с него.",
+    "updatedToast": "Кръгът е обновен.",
+    "deletedToast": "Кръгът е изтрит.",
+    "invitedToast": "{{username}} е поканен(а)."
+  },
+  "createModal": {
+    "title": "Нов кръг",
+    "subtitle": "Определете границите на тази колекция.",
+    "closeLabel": "Затваряне",
+    "creatingButton": "Създаване…",
+    "createButton": "Създаване на кръг",
+    "createdToast": "Кръгът е създаден."
+  },
+  "errors": {
+    "nameRequired": "Дайте име на този кръг",
+    "nameTooLong": "Името трябва да е най-много 80 символа",
+    "descriptionTooLong": "Описанието трябва да е най-много 300 символа"
+  }
+}

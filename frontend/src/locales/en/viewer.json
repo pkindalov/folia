@@ -1,0 +1,22 @@
+{
+  "backToGallery": "The Gallery",
+  "pageCount_one": "{{count}} page",
+  "pageCount_other": "{{count}} pages",
+  "pauseSlideshow": "Pause slideshow",
+  "playSlideshow": "Play slideshow",
+  "pauseSlideshowShortcut": "Pause slideshow (Space)",
+  "playSlideshowShortcut": "Play slideshow (Space)",
+  "closeVolume": "Close volume",
+  "opening": "Opening the volume…",
+  "peopleWhoLoved": "People who loved this album",
+  "goBackTo": "Go back to {{name}}",
+  "previousPhotoFallback": "previous photo",
+  "viewPhotoFullSize": "View {{name}} full size",
+  "photoFallback": "this photo",
+  "previousPhoto": "Previous photo",
+  "nextPhoto": "Next photo",
+  "backToFirstPhoto": "Back to first photo",
+  "photoOf": "Photo {{current}} of {{total}}",
+  "noPagesYet": "This volume has no pages yet.",
+  "addMemoriesInEditor": "Add memories in the editor"
+}

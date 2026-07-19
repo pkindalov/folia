@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
@@ -22,6 +23,7 @@ import {
 } from '../../flipbooks';
 
 export default function ViewerPage() {
+  const { t } = useTranslation('viewer');
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const deepLinkedPhotoId = searchParams.get('photo');
@@ -277,7 +279,7 @@ export default function ViewerPage() {
                 className="font-ui text-ui-label uppercase text-on-surface-variant hover:text-secondary transition-colors flex items-center gap-2"
               >
                 <Icon name="arrow_back" className="text-lg" />
-                The Gallery
+                {t('backToGallery')}
               </Link>
               {album && (
                 <h2 className="font-display text-headline-md text-primary mt-2 italic">
@@ -288,7 +290,7 @@ export default function ViewerPage() {
             <div className="flex items-center gap-6">
               {album && (
                 <span className="font-body italic text-on-surface-variant text-sm">
-                  {album.pageCount} pages
+                  {t('pageCount', { count: album.pageCount })}
                 </span>
               )}
               {album && (
@@ -304,8 +306,8 @@ export default function ViewerPage() {
                 <button
                   type="button"
                   onClick={() => setIsAutoPlaying((playing) => !playing)}
-                  aria-label={isAutoPlaying ? 'Pause slideshow' : 'Play slideshow'}
-                  title={isAutoPlaying ? 'Pause slideshow (Space)' : 'Play slideshow (Space)'}
+                  aria-label={isAutoPlaying ? t('pauseSlideshow') : t('playSlideshow')}
+                  title={isAutoPlaying ? t('pauseSlideshowShortcut') : t('playSlideshowShortcut')}
                   className="shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
                 >
                   <Icon name={isAutoPlaying ? 'pause' : 'play_arrow'} />
@@ -313,7 +315,7 @@ export default function ViewerPage() {
               )}
               <Link
                 to="/flipbooks"
-                aria-label="Close volume"
+                aria-label={t('closeVolume')}
                 className="shrink-0 w-12 h-12 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-primary hover:border-secondary hover:text-secondary transition-colors"
               >
                 <Icon name="close" />
@@ -322,7 +324,7 @@ export default function ViewerPage() {
           </div>
 
           {isLoading && (
-            <p className="font-body italic text-on-surface-variant">Opening the volume…</p>
+            <p className="font-body italic text-on-surface-variant">{t('opening')}</p>
           )}
           {isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -410,7 +412,7 @@ export default function ViewerPage() {
         <ReactorsModal
           isOpen={isReactorsModalOpen}
           onClose={() => setIsReactorsModalOpen(false)}
-          heading="People who loved this album"
+          heading={t('peopleWhoLoved')}
           reactors={album.reactions.reactors.map((username) => ({ username, type: 'love' as const }))}
           viewerUsername={me?.username}
           onRemoveMyReaction={

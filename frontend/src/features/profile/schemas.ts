@@ -1,13 +1,11 @@
 import { z } from 'zod';
 
-// Form schema — mirrors the backend's PUT /api/users/me validation rules
+// Form schema — mirrors the backend's PUT /api/users/me validation rules.
+// Messages are translation keys (relative to the 'profile' namespace's
+// `errors` object), not display text — see auth/schemas.ts for why.
 export const updateProfileSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(3, 'Username must be at least 3 characters')
-    .max(30, 'Username must be at most 30 characters'),
-  email: z.string().email('Enter a valid email address'),
+  username: z.string().trim().min(3, 'usernameTooShort').max(30, 'usernameTooLong'),
+  email: z.string().email('emailInvalid'),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

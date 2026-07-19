@@ -1,0 +1,27 @@
+{
+  "myFlipbooksPage": {
+    "title": "The Gallery",
+    "subtitle": "A curated collection of your shared histories, bound in digital cloth and leather. Select a volume to continue the narrative.",
+    "filterAll": "All Volumes",
+    "filterPublic": "Public",
+    "filterShared": "Shared",
+    "filterPrivate": "Private",
+    "opening": "Opening the cabinet…",
+    "startNewVolume": "Start a New Volume",
+    "emptyCanvas": "Empty canvas, ready for memories",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "visibilityPrivate": "private",
+    "visibilityPublic": "public",
+    "visibilityShared": "shared",
+    "editAlbum": "Edit {{title}}",
+    "editButton": "Edit",
+    "emptyStateAll": "Your shelf is empty. Start your first volume and give your memories a home.",
+    "emptyStateFiltered": "No {{filter}} volumes yet."
+  },
+  "errors": {
+    "titleRequired": "Give this volume a title",
+    "titleTooLong": "Title must be at most 120 characters",
+    "descriptionTooLong": "Description must be at most 2000 characters"
+  }
+}

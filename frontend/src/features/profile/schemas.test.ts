@@ -40,9 +40,9 @@ describe('updateProfileSchema', () => {
     expect(updateProfileSchema.safeParse({ username: valid.username }).success).toBe(false);
   });
 
-  test('provides human-readable messages', () => {
+  test('provides a translation key for a short username', () => {
     const result = updateProfileSchema.safeParse({ ...valid, username: 'ab' });
-    expect(result.error!.issues[0].message).toBe('Username must be at least 3 characters');
+    expect(result.error!.issues[0].message).toBe('usernameTooShort');
   });
 });
 

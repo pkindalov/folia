@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import PagesPanel from '../components/PagesPanel';
@@ -23,12 +25,13 @@ import {
   ALLOWED_PHOTO_MIME_TYPES,
   MAX_PHOTO_SIZE_BYTES,
 } from '../../flipbooks';
+import { translateFieldError } from '../../../lib/translateFieldError';
 import { toast } from '../../../lib/toast';
 
 const VISIBILITY_OPTIONS = [
-  ['private', 'lock', 'Private — only you'],
-  ['shared', 'group', 'Shared — signed-in users, or a circle'],
-  ['public', 'public', 'Public — community table'],
+  ['private', 'lock', 'visibility.private'],
+  ['shared', 'group', 'visibility.shared'],
+  ['public', 'public', 'visibility.public'],
 ] as const;
 
 type Rejection = { filename: string; reason: 'type' | 'size' };
@@ -47,30 +50,30 @@ function withoutId(ids: Set<string>, id: string): Set<string> {
   return next;
 }
 
-function describeRejections(rejected: Rejection[]): string[] {
+function describeRejections(rejected: Rejection[], t: TFunction<'editor'>): string[] {
   if (rejected.length === 0) return [];
 
   if (rejected.length <= 3) {
     return rejected.map(({ filename, reason }) =>
       reason === 'type'
-        ? `"${filename}" wasn't added — only JPEG, PNG, WEBP, or GIF photos are supported.`
-        : `"${filename}" wasn't added — photos must be 10MB or smaller.`
+        ? t('rejections.wrongType', { filename })
+        : t('rejections.tooLarge', { filename })
     );
   }
 
   const tooLarge = rejected.filter((r) => r.reason === 'size').length;
   const wrongType = rejected.filter((r) => r.reason === 'type').length;
   const parts: string[] = [];
-  if (tooLarge > 0) parts.push(`${tooLarge} were too large (max 10MB)`);
-  if (wrongType > 0) {
-    parts.push(
-      `${wrongType} ${wrongType === 1 ? 'has' : 'have'} an unsupported format (only JPEG, PNG, WEBP, GIF)`
-    );
-  }
-  return [`${rejected.length} photos weren't added: ${parts.join(', ')}.`];
+  if (tooLarge > 0) parts.push(t('rejections.tooLargeCount', { count: tooLarge }));
+  if (wrongType > 0) parts.push(t('rejections.wrongTypeCount', { count: wrongType }));
+  return [t('rejections.summary', { count: rejected.length, details: parts.join(', ') })];
 }
 
 export default function EditorPage() {
+  const { t } = useTranslation('editor');
+  // albumFormSchema (owned by the flipbooks feature) stores its validation
+  // messages as keys under 'flipbooks:errors' — see auth/schemas.ts for why.
+  const { t: tFlipbooks } = useTranslation('flipbooks');
   const { id } = useParams();
   const isEdit = id !== undefined;
 
@@ -174,9 +177,9 @@ export default function EditorPage() {
 
   const onDelete = () => {
     if (!id) return;
-    if (window.confirm('Delete this volume? Its pages and photos are removed permanently.')) {
+    if (window.confirm(t('deleteConfirm'))) {
       deleteAlbum.mutate(id, {
-        onSuccess: () => toast.success('Volume deleted.'),
+        onSuccess: () => toast.success(t('volumeDeletedToast')),
         onError: (error) => toast.error(error.message),
       });
     }
@@ -185,7 +188,8 @@ export default function EditorPage() {
   const onToggleArchived = () => {
     const nextArchived = !albumQuery.data?.archived;
     archiveAlbum.mutate(nextArchived, {
-      onSuccess: () => toast.success(nextArchived ? 'Volume archived.' : 'Volume restored.'),
+      onSuccess: () =>
+        toast.success(nextArchived ? t('volumeArchivedToast') : t('volumeRestoredToast')),
       onError: (error) => toast.error(error.message),
     });
   };
@@ -204,21 +208,20 @@ export default function EditorPage() {
       }
     }
 
-    setRejections(describeRejections(rejected));
+    setRejections(describeRejections(rejected, t));
     if (accepted.length > 0) {
       uploadPages.mutate(accepted, {
-        onSuccess: () =>
-          toast.success(`Added ${accepted.length} photo${accepted.length === 1 ? '' : 's'}.`),
+        onSuccess: () => toast.success(t('addedPhotos', { count: accepted.length })),
         onError: (error) => toast.error(error.message),
       });
     }
   };
 
   const onRemovePhoto = (photoId: string) => {
-    if (!window.confirm("Remove this photo from the volume? This can't be undone.")) return;
+    if (!window.confirm(t('removePhotoConfirm'))) return;
     setDeletingPhotoIds((prev) => withId(prev, photoId));
     deletePage.mutate(photoId, {
-      onSuccess: () => toast.success('Photo removed.'),
+      onSuccess: () => toast.success(t('photoRemovedToast')),
       onError: (error) => toast.error(error.message),
       onSettled: () => setDeletingPhotoIds((prev) => withoutId(prev, photoId)),
     });
@@ -238,7 +241,7 @@ export default function EditorPage() {
   const onSetCoverPhoto = (photoId: string) => {
     setSettingCoverPhotoIds((prev) => withId(prev, photoId));
     setCoverPhoto.mutate(photoId, {
-      onSuccess: () => toast.success('Cover photo updated.'),
+      onSuccess: () => toast.success(t('coverPhotoUpdatedToast')),
       onError: (error) => toast.error(error.message),
       onSettled: () => setSettingCoverPhotoIds((prev) => withoutId(prev, photoId)),
     });
@@ -250,11 +253,11 @@ export default function EditorPage() {
         {/* Settings panel */}
         <aside className="lg:w-80 shrink-0 p-gutter lg:p-10 bg-surface-container-low border-b lg:border-b-0 lg:border-r border-outline-variant/40">
           <h2 className="font-display text-headline-md text-on-surface mb-8 border-b border-outline-variant pb-4">
-            {isEdit ? 'Album Settings' : 'New Volume'}
+            {isEdit ? t('albumSettings') : t('newVolume')}
           </h2>
 
           {isEdit && albumQuery.isLoading && (
-            <p className="font-body italic text-on-surface-variant">Fetching the volume…</p>
+            <p className="font-body italic text-on-surface-variant">{t('fetchingVolume')}</p>
           )}
           {isEdit && albumQuery.isError && (
             <p className="mb-6 px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm">
@@ -265,7 +268,8 @@ export default function EditorPage() {
             id="album-form"
             onSubmit={handleSubmit((data) =>
               mutation.mutate(data, {
-                onSuccess: () => toast.success(isEdit ? 'Changes saved.' : 'Volume created.'),
+                onSuccess: () =>
+                  toast.success(isEdit ? t('changesSavedToast') : t('volumeCreatedToast')),
                 onError: (error) => toast.error(error.message),
               })
             )}
@@ -273,48 +277,48 @@ export default function EditorPage() {
           >
             <div className="flex flex-col gap-1 mb-8">
               <label className="font-ui text-ui-label uppercase text-on-surface-variant" htmlFor="album-title">
-                Volume title
+                {t('volumeTitleLabel')}
               </label>
               <input
                 id="album-title"
                 className="line-input w-full py-2 text-body-text"
-                placeholder="Name this volume…"
+                placeholder={t('volumeTitlePlaceholder')}
                 aria-invalid={errors.title !== undefined}
                 aria-describedby={errors.title !== undefined ? 'album-title-error' : undefined}
                 {...register('title')}
               />
               {errors.title && (
                 <span id="album-title-error" role="alert" className="text-sm text-error font-ui mt-1">
-                  {errors.title.message}
+                  {translateFieldError(tFlipbooks, errors.title.message)}
                 </span>
               )}
             </div>
 
             <div className="flex flex-col gap-1 mb-10">
               <label className="font-ui text-ui-label uppercase text-on-surface-variant" htmlFor="album-desc">
-                Description
+                {t('descriptionLabel')}
               </label>
               <textarea
                 id="album-desc"
                 rows={3}
                 className="line-input w-full py-2 text-body-text resize-none"
-                placeholder="A few words about this story…"
+                placeholder={t('descriptionPlaceholder')}
                 aria-invalid={errors.description !== undefined}
                 {...register('description')}
               />
               {errors.description && (
                 <span role="alert" className="text-sm text-error font-ui mt-1">
-                  {errors.description.message}
+                  {translateFieldError(tFlipbooks, errors.description.message)}
                 </span>
               )}
             </div>
 
             <fieldset className="mb-10">
               <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
-                Privacy
+                {t('privacyLegend')}
               </legend>
               <div className="flex flex-col gap-3">
-                {VISIBILITY_OPTIONS.map(([value, icon, label]) => (
+                {VISIBILITY_OPTIONS.map(([value, icon, labelKey]) => (
                   <label
                     key={value}
                     className={`flex items-center gap-3 px-4 py-3 rounded-paper border cursor-pointer transition-colors font-body text-sm ${
@@ -325,7 +329,7 @@ export default function EditorPage() {
                   >
                     <input type="radio" value={value} className="sr-only" {...register('visibility')} />
                     <Icon name={icon} className="text-lg" />
-                    {label}
+                    {t(labelKey)}
                   </label>
                 ))}
               </div>
@@ -334,15 +338,15 @@ export default function EditorPage() {
             {visibility === 'shared' && (
               <fieldset className="mb-10">
                 <legend className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
-                  Share with circle
+                  {t('shareWithCircleLegend')}
                 </legend>
                 {circleOptions.length === 0 ? (
                   <p className="font-body italic text-sm text-on-surface-variant">
-                    You don't have any circles yet.{' '}
+                    {t('noCirclesYet')}{' '}
                     <Link to="/circles" className="underline hover:text-secondary">
-                      Create one
+                      {t('createOne')}
                     </Link>{' '}
-                    to restrict who can see this album.
+                    {t('toRestrictAccess')}
                   </p>
                 ) : (
                   <>
@@ -352,7 +356,7 @@ export default function EditorPage() {
                         setValueAs: (value) => (value === '' ? null : value),
                       })}
                     >
-                      <option value="">Open to any signed-in user</option>
+                      <option value="">{t('openToAnySignedInUser')}</option>
                       {circleOptions.map((circle) => (
                         <option key={circle._id} value={circle._id}>
                           {circle.name}
@@ -366,7 +370,7 @@ export default function EditorPage() {
                         disabled={circlesQuery.isFetchingNextPage}
                         className="mt-2 font-ui text-ui-label uppercase text-xs text-secondary hover:text-primary disabled:opacity-50 transition-colors"
                       >
-                        {circlesQuery.isFetchingNextPage ? 'Loading…' : 'Load more circles'}
+                        {circlesQuery.isFetchingNextPage ? t('loadingButton') : t('loadMoreCircles')}
                       </button>
                     )}
                   </>
@@ -384,10 +388,10 @@ export default function EditorPage() {
               >
                 <Icon name={albumQuery.data?.archived ? 'unarchive' : 'archive'} className="text-lg" />
                 {archiveAlbum.isPending
-                  ? 'Saving…'
+                  ? t('savingButton')
                   : albumQuery.data?.archived
-                    ? 'Restore from archive'
-                    : 'Archive volume'}
+                    ? t('restoreFromArchive')
+                    : t('archiveVolume')}
               </button>
               <button
                 onClick={onDelete}
@@ -395,7 +399,7 @@ export default function EditorPage() {
                 className="w-full flex items-center justify-center gap-2 font-ui text-ui-label uppercase text-error border border-error/40 px-4 py-3 rounded-paper hover:bg-error-container/40 transition-colors disabled:opacity-50"
               >
                 <Icon name="delete" className="text-lg" />
-                {deleteAlbum.isPending ? 'Deleting…' : 'Delete volume'}
+                {deleteAlbum.isPending ? t('deletingButton') : t('deleteVolume')}
               </button>
             </div>
           )}
@@ -420,7 +424,7 @@ export default function EditorPage() {
                 <div
                   className={`relative text-center max-w-xs ${albumQuery.data?.coverImage ? 'text-white' : 'text-primary'}`}
                 >
-                  <h3 className="font-display text-2xl italic">{watch('title') || 'Untitled Volume'}</h3>
+                  <h3 className="font-display text-2xl italic">{watch('title') || t('untitledVolume')}</h3>
                   {watch('description') && (
                     <p
                       className={`font-body italic mt-4 ${albumQuery.data?.coverImage ? 'text-white/80' : 'text-on-surface-variant'}`}
@@ -430,14 +434,14 @@ export default function EditorPage() {
                   )}
                   {!albumQuery.data?.coverImage && (
                     <p className="font-ui text-ui-label uppercase text-on-surface-variant/60 mt-8">
-                      Cover preview
+                      {t('coverPreview')}
                     </p>
                   )}
                 </div>
                 <span
                   className={`absolute bottom-4 left-8 font-body italic text-xs ${albumQuery.data?.coverImage ? 'text-white/70' : 'text-on-surface-variant/60'}`}
                 >
-                  cover
+                  {t('coverLabel')}
                 </span>
               </div>
 
@@ -478,10 +482,10 @@ export default function EditorPage() {
               >
                 <Icon name="save" />
                 {mutation.isPending
-                  ? 'Saving…'
+                  ? t('savingButton')
                   : isEdit
-                    ? 'Save changes'
-                    : 'Create volume'}
+                    ? t('saveChangesButton')
+                    : t('createVolumeButton')}
               </button>
             </div>
           </div>

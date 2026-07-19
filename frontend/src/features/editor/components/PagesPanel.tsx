@@ -1,4 +1,5 @@
 import { useState, type DragEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/Icon';
 import PhotoLightbox from '../../../components/PhotoLightbox';
 import PageThumbnail from './PageThumbnail';
@@ -53,6 +54,7 @@ export default function PagesPanel({
   onDismissRejections,
   onCaptionChange,
 }: PagesPanelProps) {
+  const { t } = useTranslation('editor');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   // Tracked by photo id, not array index — a raw index would go stale (and
   // could silently point at an unrelated photo) once the currently-open
@@ -78,14 +80,16 @@ export default function PagesPanel({
   if (locked) {
     return (
       <div className="w-full h-full flex flex-col gap-4">
-        <span className="font-ui text-ui-label uppercase text-on-surface-variant">Pages</span>
+        <span className="font-ui text-ui-label uppercase text-on-surface-variant">
+          {t('pagesPanel.pagesLabel')}
+        </span>
         <div className="w-full h-full min-h-70 border border-outline-variant/40 bg-surface-container-low rounded-card flex flex-col items-center justify-center gap-4">
           <Icon name="add_photo_alternate" className="text-5xl text-on-surface-variant/50" />
           <p className="font-body italic text-on-surface-variant">
-            Save this volume first to add its pages.
+            {t('pagesPanel.saveFirst')}
           </p>
           <p className="font-ui text-ui-label uppercase text-xs text-on-surface-variant/50">
-            Pages unlock after saving.
+            {t('pagesPanel.unlockHint')}
           </p>
         </div>
       </div>
@@ -98,10 +102,12 @@ export default function PagesPanel({
   return (
     <div className="w-full h-full flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="font-ui text-ui-label uppercase text-on-surface-variant">Pages</span>
+        <span className="font-ui text-ui-label uppercase text-on-surface-variant">
+          {t('pagesPanel.pagesLabel')}
+        </span>
         {hasPhotos && (
           <span className="font-ui text-ui-label uppercase text-on-surface-variant/60">
-            {photos.length} pages
+            {t('pagesPanel.pageCount', { count: photos.length })}
           </span>
         )}
       </div>
@@ -130,24 +136,24 @@ export default function PagesPanel({
           <>
             <Icon name="progress_activity" className="animate-spin text-2xl text-secondary" />
             <span className="font-ui text-ui-label uppercase text-sm text-on-surface-variant">
-              Uploading photos…
+              {t('pagesPanel.uploading')}
             </span>
           </>
         ) : hasPhotos ? (
           <>
             <Icon name="add_photo_alternate" className="text-2xl" />
             <div className="flex flex-col">
-              <span className="font-ui text-ui-label uppercase text-sm">Add more pages</span>
-              <span className="text-xs text-on-surface-variant/70">or drag photos here</span>
+              <span className="font-ui text-ui-label uppercase text-sm">{t('pagesPanel.addMorePages')}</span>
+              <span className="text-xs text-on-surface-variant/70">{t('pagesPanel.orDragPhotos')}</span>
             </div>
           </>
         ) : (
           <>
             <Icon name="add_photo_alternate" className="text-5xl" />
-            <p className="font-body italic">Drop the first pages of this volume here.</p>
-            <p className="font-ui text-ui-label uppercase text-xs">or click to choose photos</p>
+            <p className="font-body italic">{t('pagesPanel.dropFirstPages')}</p>
+            <p className="font-ui text-ui-label uppercase text-xs">{t('pagesPanel.orClickToChoose')}</p>
             <p className="text-xs text-on-surface-variant/70">
-              JPEG, PNG, WEBP, or GIF · up to 10MB each
+              {t('pagesPanel.fileHint')}
             </p>
           </>
         )}
@@ -161,7 +167,7 @@ export default function PagesPanel({
           <button
             type="button"
             onClick={onDismissRejections}
-            aria-label="Dismiss"
+            aria-label={t('pagesPanel.dismiss')}
             className="absolute top-2 right-2 text-on-error-container/70 hover:text-on-error-container"
           >
             <Icon name="close" className="text-base" />

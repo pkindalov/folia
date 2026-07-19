@@ -1,0 +1,73 @@
+{
+  "reactionLabels": {
+    "like": "Like",
+    "love": "Love",
+    "haha": "Haha",
+    "wow": "Wow",
+    "sad": "Sad",
+    "angry": "Angry"
+  },
+  "chooseReaction": "Choose a reaction",
+  "peopleWhoReacted": "People who reacted",
+  "seeWhoReacted": "See who reacted ({{count}})",
+  "close": "Close",
+  "removeYourReaction": "Remove your reaction",
+  "albumLove": {
+    "loved": "You loved this album — tap to remove",
+    "love": "Love this album",
+    "seeWhoLoved": "See who loved this album ({{count}})"
+  },
+  "photoReaction": {
+    "reactedTapToChange": "You reacted: {{label}}. Tap to change or remove.",
+    "reactToPhoto": "React to this photo"
+  },
+  "commentReaction": {
+    "reactedTapToChange": "You reacted: {{label}}. Tap to change or remove.",
+    "reactToComment": "React to this comment",
+    "likeDefault": "Like"
+  },
+  "comments": {
+    "cancel": "Cancel",
+    "reply": "Reply",
+    "replyPlaceholder": "Write a reply…",
+    "replyFailed": "Couldn't post your reply. Try again.",
+    "deleteYourComment": "Delete your comment",
+    "deleteComment": "Delete this comment",
+    "loadingMoreReplies": "Loading more replies",
+    "loadMoreRepliesFailed": "Couldn't load more replies. Try again.",
+    "loadMoreReplies": "Load more replies",
+    "loadingComments": "Loading comments…",
+    "loadCommentsFailed": "Couldn't load comments. Try again.",
+    "noCommentsYet": "No comments yet.",
+    "loadingEarlierComments": "Loading earlier comments",
+    "loadEarlierCommentsFailed": "Couldn't load earlier comments. Try again.",
+    "seeEarlierComments": "See earlier comments",
+    "hideComments": "Hide comments",
+    "viewComments": "View comments ({{count}})",
+    "heading": "Comments",
+    "collapseComments": "Collapse comments",
+    "postCommentFailed": "Couldn't post your comment. Try again.",
+    "addCommentPlaceholder": "Add a comment…",
+    "commentTextLabel": "Comment text",
+    "postComment": "Post comment",
+    "charactersLeft": "{{count}} left"
+  },
+  "lightbox": {
+    "photoViewer": "Photo viewer",
+    "closePhotoViewer": "Close photo viewer",
+    "previousPhoto": "Previous photo",
+    "nextPhoto": "Next photo",
+    "backToFirstPhoto": "Back to first photo",
+    "photoAlt": "Photo",
+    "photoOf": "Photo {{current}} of {{total}}"
+  },
+  "shortcuts": {
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "title": "Shortcuts for this volume",
+    "close": "Close shortcuts",
+    "navigate": "Turn to the previous or next photo",
+    "openPicker": "Open the reaction picker",
+    "pickReaction": "Pick a reaction — Like, Love, Haha, Wow, Sad, Angry",
+    "playPause": "Play or pause the slideshow"
+  }
+}

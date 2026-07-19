@@ -54,14 +54,12 @@ export const publicAlbumsResponseSchema = z.object({
 export type PublicAlbum = z.infer<typeof publicAlbumSchema>;
 export type PaginatedPublicAlbums = z.infer<typeof publicAlbumsResponseSchema>;
 
-// Form schema — mirrors backend validation
+// Form schema — mirrors backend validation. Messages are translation keys
+// (relative to the 'flipbooks' namespace's `errors` object), not display
+// text — see auth/schemas.ts for why.
 export const albumFormSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, 'Give this volume a title')
-    .max(120, 'Title must be at most 120 characters'),
-  description: z.string().max(2000, 'Description must be at most 2000 characters'),
+  title: z.string().trim().min(1, 'titleRequired').max(120, 'titleTooLong'),
+  description: z.string().max(2000, 'descriptionTooLong'),
   visibility: z.enum(['private', 'shared', 'public']),
   sharedWithCircle: z.string().nullable().optional(),
 });

@@ -1,0 +1,22 @@
+{
+  "backToGallery": "Галерията",
+  "pageCount_one": "{{count}} страница",
+  "pageCount_other": "{{count}} страници",
+  "pauseSlideshow": "Пауза на слайдшоуто",
+  "playSlideshow": "Пускане на слайдшоуто",
+  "pauseSlideshowShortcut": "Пауза на слайдшоуто (Space)",
+  "playSlideshowShortcut": "Пускане на слайдшоуто (Space)",
+  "closeVolume": "Затваряне на тома",
+  "opening": "Отваряне на тома…",
+  "peopleWhoLoved": "Хора, които харесаха този албум",
+  "goBackTo": "Обратно към {{name}}",
+  "previousPhotoFallback": "предишната снимка",
+  "viewPhotoFullSize": "Преглед на {{name}} в пълен размер",
+  "photoFallback": "тази снимка",
+  "previousPhoto": "Предишна снимка",
+  "nextPhoto": "Следваща снимка",
+  "backToFirstPhoto": "Обратно към първата снимка",
+  "photoOf": "Снимка {{current}} от {{total}}",
+  "noPagesYet": "Този том все още няма страници.",
+  "addMemoriesInEditor": "Добавете спомени в редактора"
+}

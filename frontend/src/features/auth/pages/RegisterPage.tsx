@@ -1,13 +1,16 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { registerSchema, type RegisterInput } from '../schemas';
 import { useRegister } from '../hooks';
+import { translateFieldError } from '../../../lib/translateFieldError';
 import FormField from '../../../components/FormField';
 import AuthLayout from './AuthLayout';
 import { toast } from '../../../lib/toast';
 
 export default function RegisterPage() {
+  const { t } = useTranslation('auth');
   const registerMutation = useRegister();
   const {
     register,
@@ -18,9 +21,9 @@ export default function RegisterPage() {
   return (
     <AuthLayout>
       <header className="mb-12">
-        <h2 className="font-display text-headline-md text-primary">Begin your archive</h2>
+        <h2 className="font-display text-headline-md text-primary">{t('register.heading')}</h2>
         <p className="font-body text-body-text text-on-surface-variant mt-2">
-          Create an account to start preserving memories.
+          {t('register.subheading')}
         </p>
       </header>
 
@@ -31,33 +34,33 @@ export default function RegisterPage() {
         noValidate
       >
         <FormField
-          label="Username"
+          label={t('register.usernameLabel')}
           autoComplete="username"
-          error={errors.username?.message}
+          error={translateFieldError(t, errors.username?.message)}
           {...register('username')}
         />
         <FormField
-          label="Email"
+          label={t('register.emailLabel')}
           type="email"
           autoComplete="email"
           placeholder="name@legacy.com"
-          error={errors.email?.message}
+          error={translateFieldError(t, errors.email?.message)}
           {...register('email')}
         />
         <FormField
-          label="Password"
+          label={t('register.passwordLabel')}
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          error={errors.password?.message}
+          error={translateFieldError(t, errors.password?.message)}
           {...register('password')}
         />
         <FormField
-          label="Confirm password"
+          label={t('register.confirmPasswordLabel')}
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          error={errors.confirmPassword?.message}
+          error={translateFieldError(t, errors.confirmPassword?.message)}
           {...register('confirmPassword')}
         />
         <div className="pt-4">
@@ -66,20 +69,20 @@ export default function RegisterPage() {
             type="submit"
             disabled={registerMutation.isPending}
           >
-            {registerMutation.isPending ? 'Creating…' : 'Create account'}
+            {registerMutation.isPending ? t('register.creatingButton') : t('register.createAccountButton')}
           </button>
         </div>
       </form>
 
       <footer className="mt-12 pt-8 border-t border-outline-variant/30 flex flex-col items-center gap-4">
         <p className="font-ui text-ui-label uppercase text-on-surface-variant">
-          Already have an account?
+          {t('register.alreadyHaveAccount')}
         </p>
         <Link
           to="/login"
           className="font-ui text-ui-button uppercase text-primary border border-primary px-8 py-3 rounded-paper hover:bg-surface-variant transition-colors"
         >
-          Sign in
+          {t('register.signInLink')}
         </Link>
       </footer>
     </AuthLayout>

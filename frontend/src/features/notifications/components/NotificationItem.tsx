@@ -1,9 +1,10 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Icon from "../../../components/Icon";
 import Emoji from "../../../components/Emoji";
 import Avatar from "../../../components/Avatar";
-import { REACTION_EMOJI, REACTION_LABEL } from "../../../components/reactionPresentation";
+import { REACTION_EMOJI, REACTION_LABEL_KEY } from "../../../components/reactionPresentation";
 import type { NotificationItemData } from "./NotificationBell";
 import { REACTION_NOTIFICATION_TYPES } from "../schemas";
 
@@ -33,12 +34,14 @@ type MessageParts = { leading: ReactNode; subject: string; trailing?: string };
 // a photo in") — the sr-only label keeps the reaction type announced to
 // screen readers even though the icon itself is decorative.
 function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
+  const { t: tSocial } = useTranslation('social');
+  const { t } = useTranslation('notifications');
   return (
     <>
-      reacted{" "}
+      {t('item.reacted')}{" "}
       <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
-      <span className="sr-only">{REACTION_LABEL[type]}</span>{" "}
-      to a photo in
+      <span className="sr-only">{tSocial(REACTION_LABEL_KEY[type])}</span>{" "}
+      {t('item.toAPhotoIn')}
     </>
   );
 }
@@ -46,9 +49,10 @@ function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
 // Rendered inline for album_reaction — always the love icon, since an album
 // (unlike a photo) can only be loved, not reacted to with the full picker.
 function AlbumLoveMessageIcon() {
+  const { t } = useTranslation('notifications');
   return (
     <>
-      loved{" "}
+      {t('item.loved')}{" "}
       <Emoji emoji={REACTION_EMOJI.love} className="text-sm align-text-bottom" />
     </>
   );
@@ -72,17 +76,18 @@ function truncateCommentPreview(commentText: string | null): string | null {
 }
 
 function CommentMessageIcon({ commentText }: { commentText: string | null }) {
+  const { t } = useTranslation('notifications');
   const preview = truncateCommentPreview(commentText);
 
   return (
     <>
-      commented{" "}
+      {t('item.commented')}{" "}
       <Icon
         name="mode_comment"
         filled
         className="text-sm align-text-bottom text-secondary"
       />
-      {preview ? ` "${preview}"` : ""} on a photo in
+      {preview ? ` "${preview}"` : ""} {t('item.onAPhotoIn')}
     </>
   );
 }
@@ -92,16 +97,17 @@ function CommentMessageIcon({ commentText }: { commentText: string | null }) {
 // distinctly from "commented on your photo" (this is "replied to your
 // comment", a different relationship to the viewer).
 function ReplyMessageIcon({ commentText }: { commentText: string | null }) {
+  const { t } = useTranslation('notifications');
   const preview = truncateCommentPreview(commentText);
 
   return (
     <>
-      replied{" "}
+      {t('item.replied')}{" "}
       <Icon
         name="reply"
         className="text-sm align-text-bottom text-secondary"
       />
-      {preview ? ` "${preview}"` : ""} to your comment on a photo in
+      {preview ? ` "${preview}"` : ""} {t('item.toYourCommentOnAPhotoIn')}
     </>
   );
 }
@@ -117,94 +123,98 @@ function CommentReactionMessageIcon({
   type: ReactionNotificationType;
   commentText: string | null;
 }) {
+  const { t: tSocial } = useTranslation('social');
+  const { t } = useTranslation('notifications');
   const preview = truncateCommentPreview(commentText);
 
   return (
     <>
-      reacted{" "}
+      {t('item.reacted')}{" "}
       <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
-      <span className="sr-only">{REACTION_LABEL[type]}</span> to your comment
-      {preview ? ` "${preview}"` : ""} on a photo in
+      <span className="sr-only">{tSocial(REACTION_LABEL_KEY[type])}</span> {t('item.toYourComment')}
+      {preview ? ` "${preview}"` : ""} {t('item.onAPhotoIn')}
     </>
   );
 }
 
+type NotificationsTFunction = ReturnType<typeof useTranslation<'notifications'>>['t'];
+
 const MESSAGE_PARTS_BY_TYPE: Record<
   NotificationItemData["type"],
-  (notification: NotificationItemData) => MessageParts
+  (notification: NotificationItemData, t: NotificationsTFunction) => MessageParts
 > = {
-  circle_invite: ({ circleName }) => ({
-    leading: "invited you to",
-    subject: circleName ?? "a circle",
+  circle_invite: ({ circleName }, t) => ({
+    leading: t('item.circleInvite'),
+    subject: circleName ?? t('item.circleFallback'),
   }),
-  circle_invite_accepted: ({ circleName }) => ({
-    leading: "accepted your invite to",
-    subject: circleName ?? "a circle",
+  circle_invite_accepted: ({ circleName }, t) => ({
+    leading: t('item.circleInviteAccepted'),
+    subject: circleName ?? t('item.circleFallback'),
   }),
-  circle_invite_declined: ({ circleName }) => ({
-    leading: "declined your invite to",
-    subject: circleName ?? "a circle",
+  circle_invite_declined: ({ circleName }, t) => ({
+    leading: t('item.circleInviteDeclined'),
+    subject: circleName ?? t('item.circleFallback'),
   }),
-  circle_deleted: ({ circleName }) => ({
-    leading: "deleted the circle",
-    subject: circleName ?? "a circle",
+  circle_deleted: ({ circleName }, t) => ({
+    leading: t('item.circleDeleted'),
+    subject: circleName ?? t('item.circleFallback'),
   }),
-  album_shared: ({ albumTitle, circleName }) => ({
-    leading: "shared a new album",
-    subject: albumTitle ?? "an album",
-    trailing: `with ${circleName}`,
+  album_shared: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumShared'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.sharedWith', { circleName }),
   }),
-  album_updated: ({ albumTitle, circleName }) => ({
-    leading: "updated the album",
-    subject: albumTitle ?? "an album",
-    trailing: `shared with ${circleName}`,
+  album_updated: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumUpdated'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.sharedWithTrailing', { circleName }),
   }),
-  album_deleted: ({ albumTitle, circleName }) => ({
-    leading: "deleted the album",
-    subject: albumTitle ?? "an album",
-    trailing: `shared with ${circleName}`,
+  album_deleted: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumDeleted'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.sharedWithTrailing', { circleName }),
   }),
-  album_photos_added: ({ albumTitle, circleName }) => ({
-    leading: "added new photos to",
-    subject: albumTitle ?? "an album",
-    trailing: `in ${circleName}`,
+  album_photos_added: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumPhotosAdded'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.inCircle', { circleName }),
   }),
-  album_photo_removed: ({ albumTitle, circleName }) => ({
-    leading: "removed a photo from",
-    subject: albumTitle ?? "an album",
-    trailing: `in ${circleName}`,
+  album_photo_removed: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumPhotoRemoved'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.inCircle', { circleName }),
   }),
-  album_photo_caption_updated: ({ albumTitle, circleName }) => ({
-    leading: "updated a photo's caption in",
-    subject: albumTitle ?? "an album",
-    trailing: `shared with ${circleName}`,
+  album_photo_caption_updated: ({ albumTitle, circleName }, t) => ({
+    leading: t('item.albumPhotoCaptionUpdated'),
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: t('item.sharedWithTrailing', { circleName }),
   }),
-  page_reaction: ({ albumTitle, circleName, reactionType }) => ({
+  page_reaction: ({ albumTitle, circleName, reactionType }, t) => ({
     leading: <ReactionMessageIcon type={reactionType ?? "like"} />,
-    subject: albumTitle ?? "an album",
-    trailing: circleName ? `shared with ${circleName}` : undefined,
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: circleName ? t('item.sharedWithTrailing', { circleName }) : undefined,
   }),
-  album_reaction: ({ albumTitle, circleName }) => ({
+  album_reaction: ({ albumTitle, circleName }, t) => ({
     leading: <AlbumLoveMessageIcon />,
-    subject: albumTitle ?? "an album",
-    trailing: circleName ? `shared with ${circleName}` : undefined,
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: circleName ? t('item.sharedWithTrailing', { circleName }) : undefined,
   }),
-  page_comment: ({ albumTitle, circleName, commentText }) => ({
+  page_comment: ({ albumTitle, circleName, commentText }, t) => ({
     leading: <CommentMessageIcon commentText={commentText} />,
-    subject: albumTitle ?? "an album",
-    trailing: circleName ? `shared with ${circleName}` : undefined,
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: circleName ? t('item.sharedWithTrailing', { circleName }) : undefined,
   }),
-  comment_reply: ({ albumTitle, circleName, commentText }) => ({
+  comment_reply: ({ albumTitle, circleName, commentText }, t) => ({
     leading: <ReplyMessageIcon commentText={commentText} />,
-    subject: albumTitle ?? "an album",
-    trailing: circleName ? `shared with ${circleName}` : undefined,
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: circleName ? t('item.sharedWithTrailing', { circleName }) : undefined,
   }),
-  comment_reaction: ({ albumTitle, circleName, reactionType, commentText }) => ({
+  comment_reaction: ({ albumTitle, circleName, reactionType, commentText }, t) => ({
     leading: (
       <CommentReactionMessageIcon type={reactionType ?? "like"} commentText={commentText} />
     ),
-    subject: albumTitle ?? "an album",
-    trailing: circleName ? `shared with ${circleName}` : undefined,
+    subject: albumTitle ?? t('item.albumFallback'),
+    trailing: circleName ? t('item.sharedWithTrailing', { circleName }) : undefined,
   }),
 };
 
@@ -285,6 +295,7 @@ export default function NotificationItem({
   onToggleRead,
   isTogglingRead,
 }: NotificationItemProps) {
+  const { t } = useTranslation('notifications');
   const {
     _id,
     actorUsername,
@@ -294,7 +305,7 @@ export default function NotificationItem({
     relativeTime,
   } = notification;
   const { leading, subject, trailing } =
-    MESSAGE_PARTS_BY_TYPE[notification.type](notification);
+    MESSAGE_PARTS_BY_TYPE[notification.type](notification, t);
   const linkTo = LINK_TO_BY_TYPE[notification.type](notification);
 
   const onDismissClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -364,8 +375,8 @@ export default function NotificationItem({
           disabled={isTogglingRead}
           aria-label={
             read
-              ? `Mark notification from ${actorUsername} as unread`
-              : `Mark notification from ${actorUsername} as read`
+              ? t('item.markAsUnread', { username: actorUsername })
+              : t('item.markAsRead', { username: actorUsername })
           }
           className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
@@ -378,7 +389,7 @@ export default function NotificationItem({
           type="button"
           onClick={onDismissClick}
           disabled={isDismissing}
-          aria-label={`Dismiss notification from ${actorUsername}`}
+          aria-label={t('item.dismiss', { username: actorUsername })}
           className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Icon name="close" className="text-base" />

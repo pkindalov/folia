@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/Icon';
 import { MAX_CAPTION_LENGTH } from '../../flipbooks';
 
@@ -36,6 +37,7 @@ export default function PageThumbnail({
   onOpenPhoto,
   onCaptionChange,
 }: PageThumbnailProps) {
+  const { t } = useTranslation('editor');
   const rotationClass = ROTATION_CLASSES[index % ROTATION_CLASSES.length];
   const [caption, setCaption] = useState(photo.caption ?? '');
 
@@ -68,12 +70,12 @@ export default function PageThumbnail({
       <button
         type="button"
         onClick={onOpenPhoto}
-        aria-label={`View ${photo.filename || 'this photo'} full size`}
+        aria-label={t('pageThumbnail.viewFullSize', { name: photo.filename || t('pageThumbnail.photoFallback') })}
         className="block w-full cursor-zoom-in"
       >
         <img
           src={photo.url}
-          alt={photo.filename || 'Volume page photo'}
+          alt={photo.filename || t('pageThumbnail.volumePagePhotoAlt')}
           className="aspect-square object-cover w-full rounded-[1px]"
         />
       </button>
@@ -81,8 +83,12 @@ export default function PageThumbnail({
         type="button"
         onClick={onSetCover}
         disabled={isCover || isSettingCover}
-        aria-label={isCover ? 'This is the cover photo' : `Set ${photo.filename || 'this photo'} as the cover`}
-        title={isCover ? 'Cover photo' : 'Set as cover'}
+        aria-label={
+          isCover
+            ? t('pageThumbnail.thisIsCover')
+            : t('pageThumbnail.setAsCover', { name: photo.filename || t('pageThumbnail.photoFallback') })
+        }
+        title={isCover ? t('pageThumbnail.coverPhoto') : t('pageThumbnail.setAsCoverTitle')}
         className={`absolute -top-2 -left-2 w-7 h-7 rounded-full bg-surface-container-lowest border shadow-md flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
           isCover
             ? 'border-secondary text-secondary'
@@ -100,8 +106,8 @@ export default function PageThumbnail({
         onChange={(event) => setCaption(event.target.value)}
         rows={2}
         maxLength={MAX_CAPTION_LENGTH}
-        placeholder="Tell its story…"
-        aria-label={`Caption for ${photo.filename || 'this photo'}`}
+        placeholder={t('pageThumbnail.captionPlaceholder')}
+        aria-label={t('pageThumbnail.captionLabel', { name: photo.filename || t('pageThumbnail.photoFallback') })}
         className="mt-1.5 w-full px-1 py-0.5 font-body italic text-xs text-on-surface-variant text-center bg-transparent border-none resize-none focus:outline-none focus-visible:ring-1 focus-visible:ring-secondary/50 rounded-xs"
       />
       {hasUnsavedCaption && (
@@ -109,7 +115,7 @@ export default function PageThumbnail({
           type="button"
           onClick={handleSaveCaption}
           disabled={isSavingCaption}
-          aria-label={`Save caption for ${photo.filename || 'this photo'}`}
+          aria-label={t('pageThumbnail.saveCaptionAria', { name: photo.filename || t('pageThumbnail.photoFallback') })}
           className="mt-0.5 w-full flex items-center justify-center gap-1 font-ui text-[10px] uppercase tracking-wide text-secondary hover:text-primary disabled:opacity-50 transition-colors"
         >
           {isSavingCaption ? (
@@ -117,14 +123,14 @@ export default function PageThumbnail({
           ) : (
             <Icon name="save" className="text-xs" />
           )}
-          {isSavingCaption ? 'Saving…' : 'Save caption'}
+          {isSavingCaption ? t('pageThumbnail.savingCaption') : t('pageThumbnail.saveCaption')}
         </button>
       )}
       <button
         type="button"
         onClick={onRemove}
         disabled={isDeleting}
-        aria-label={`Remove ${photo.filename || 'this photo'}`}
+        aria-label={t('pageThumbnail.removePhoto', { name: photo.filename || t('pageThumbnail.photoFallback') })}
         className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-surface-container-lowest border border-outline-variant/50 shadow-md flex items-center justify-center text-on-surface-variant hover:text-error hover:border-error/50 transition-colors focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2"
       >
         {isDeleting ? (

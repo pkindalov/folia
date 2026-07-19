@@ -1,0 +1,42 @@
+{
+  "bell": {
+    "notifications": "Notifications",
+    "notificationsUnread": "Notifications, {{count}} unread",
+    "bulkActionsLabel": "Bulk notification actions",
+    "markAllRead": "Mark all notifications as read",
+    "markAllUnread": "Mark all notifications as unread",
+    "deleteAll": "Delete all notifications",
+    "deleteAllConfirm": "Delete all notifications? This can't be undone.",
+    "fetching": "Fetching your notifications…",
+    "empty": "No notifications yet.",
+    "emptyHint": "You'll see updates here when someone invites you to a circle."
+  },
+  "item": {
+    "markAsUnread": "Mark notification from {{username}} as unread",
+    "markAsRead": "Mark notification from {{username}} as read",
+    "dismiss": "Dismiss notification from {{username}}",
+    "circleFallback": "a circle",
+    "albumFallback": "an album",
+    "circleInvite": "invited you to",
+    "circleInviteAccepted": "accepted your invite to",
+    "circleInviteDeclined": "declined your invite to",
+    "circleDeleted": "deleted the circle",
+    "albumShared": "shared a new album",
+    "albumUpdated": "updated the album",
+    "albumDeleted": "deleted the album",
+    "albumPhotosAdded": "added new photos to",
+    "albumPhotoRemoved": "removed a photo from",
+    "albumPhotoCaptionUpdated": "updated a photo's caption in",
+    "sharedWith": "with {{circleName}}",
+    "sharedWithTrailing": "shared with {{circleName}}",
+    "inCircle": "in {{circleName}}",
+    "reacted": "reacted",
+    "loved": "loved",
+    "commented": "commented",
+    "replied": "replied",
+    "toAPhotoIn": "to a photo in",
+    "onAPhotoIn": "on a photo in",
+    "toYourComment": "to your comment",
+    "toYourCommentOnAPhotoIn": "to your comment on a photo in"
+  }
+}

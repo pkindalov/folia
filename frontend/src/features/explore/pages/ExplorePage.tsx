@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Pagination from '../../../components/Pagination';
 import useClampedPage from '../../../hooks/useClampedPage';
 import { usePublicAlbums, useSharedWithMeAlbums, coverColor, type PublicAlbum } from '../../flipbooks';
 
 function AlbumGrid({ albums }: { albums: PublicAlbum[] }) {
+  const { t } = useTranslation('explore');
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16">
       {albums.map((album, i) => (
@@ -30,13 +32,13 @@ function AlbumGrid({ albums }: { albums: PublicAlbum[] }) {
                 {album.title}
               </h3>
               <p className="font-body italic text-surface/80 text-sm mt-1">
-                by {album.ownerUsername}
+                {t('byUsername', { username: album.ownerUsername })}
               </p>
             </div>
             <div className="absolute left-3 top-0 bottom-0 w-px bg-white/20" />
           </Link>
           <div className="mt-4 px-1 font-ui text-ui-label uppercase text-on-surface-variant">
-            {album.pageCount} pages
+            {t('pageCount', { count: album.pageCount })}
           </div>
         </div>
       ))}
@@ -45,6 +47,7 @@ function AlbumGrid({ albums }: { albums: PublicAlbum[] }) {
 }
 
 function SharedWithYouSection() {
+  const { t } = useTranslation('explore');
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useSharedWithMeAlbums(page);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 0;
@@ -59,11 +62,11 @@ function SharedWithYouSection() {
   return (
     <div className="mb-16">
       <h3 className="font-ui text-ui-label uppercase text-on-surface-variant mb-6">
-        Shared With You
+        {t('sharedWithYou')}
       </h3>
 
       {isLoading && (
-        <p className="font-body italic text-on-surface-variant">Gathering what's been shared…</p>
+        <p className="font-body italic text-on-surface-variant">{t('gatheringShared')}</p>
       )}
       {isError && (
         <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -79,6 +82,7 @@ function SharedWithYouSection() {
 }
 
 export default function ExplorePage() {
+  const { t } = useTranslation('explore');
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = usePublicAlbums(page);
   const albums = data?.albums;
@@ -94,16 +98,16 @@ export default function ExplorePage() {
       <div className="p-gutter md:p-margin-edge">
         <div className="max-w-6xl mx-auto">
           <div className="mb-12 border-b border-outline-variant pb-6">
-            <h2 className="font-display text-display-lg text-primary mb-2">The Community Table</h2>
+            <h2 className="font-display text-display-lg text-primary mb-2">{t('title')}</h2>
             <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-              Volumes shared publicly by other archivists, laid out for browsing.
+              {t('subtitle')}
             </p>
           </div>
 
           <SharedWithYouSection />
 
           {isLoading && (
-            <p className="font-body italic text-on-surface-variant">Setting the table…</p>
+            <p className="font-body italic text-on-surface-variant">{t('settingTable')}</p>
           )}
           {isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -113,8 +117,7 @@ export default function ExplorePage() {
 
           {albums && albums.length === 0 && (
             <p className="font-body italic text-on-surface-variant text-body-text">
-              There are no public volumes yet. When someone shares an album with the community, it
-              will appear here.
+              {t('emptyState')}
             </p>
           )}
 

@@ -1,0 +1,15 @@
+{
+  "title": "Settings",
+  "description": "Manage your account.",
+  "language": {
+    "title": "Language",
+    "description": "Choose the language used across Folia."
+  },
+  "dangerZone": {
+    "title": "Danger zone",
+    "description": "Deleting your account permanently removes your volumes, the circles you own, and everything shared through them. This cannot be undone.",
+    "confirm": "Delete your account? This permanently removes your volumes, the circles you own, and everything shared through them. This cannot be undone.",
+    "deleteButton": "Delete my account",
+    "deletingButton": "Deleting…"
+  }
+}

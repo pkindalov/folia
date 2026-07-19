@@ -1,0 +1,34 @@
+{
+  "app": {
+    "turningPage": "Turning the page…"
+  },
+  "nav": {
+    "myFlipbooks": "My Flipbooks",
+    "explore": "Explore",
+    "create": "Create",
+    "circles": "Circles",
+    "archives": "Archives",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "shell": {
+    "loading": "Loading…",
+    "sessionExpired": "Session expired.",
+    "backToLogin": "Back to login",
+    "viewProfile": "View profile",
+    "signedInAs": "Signed in as",
+    "admin": " — Admin"
+  },
+  "pagination": {
+    "nav": "Pagination",
+    "previous": "Previous page",
+    "next": "Next page",
+    "page": "Page {{page}}"
+  },
+  "relativeTime": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  }
+}

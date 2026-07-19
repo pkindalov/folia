@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import ReactionControl from './ReactionControl';
 import CommentControl from './CommentControl';
@@ -103,6 +104,7 @@ export default function PhotoLightbox({
   autoPlayStartedAt,
   onAutoPlayingChange,
 }: PhotoLightboxProps) {
+  const { t } = useTranslation('social');
   const photo = photos[index];
   const hasPrevious = index > 0;
   const hasNext = index < photos.length - 1;
@@ -151,7 +153,7 @@ export default function PhotoLightbox({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Photo viewer"
+      aria-label={t('lightbox.photoViewer')}
       className="fixed inset-0 z-100 bg-black/90 flex flex-col items-center justify-center p-6"
       onClick={() => {
         if (!isCommentsPanelOpen) onClose();
@@ -161,7 +163,7 @@ export default function PhotoLightbox({
         type="button"
         onClick={onClose}
         disabled={isCommentsPanelOpen}
-        aria-label="Close photo viewer"
+        aria-label={t('lightbox.closePhotoViewer')}
         className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
       >
         <Icon name="close" className="text-2xl" />
@@ -181,7 +183,7 @@ export default function PhotoLightbox({
             // this, clicking Previous/Next while a comment is half-typed would
             // silently navigate and discard the draft.
             disabled={!hasPrevious || isCommentsPanelOpen}
-            aria-label="Previous photo"
+            aria-label={t('lightbox.previousPhoto')}
             className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
           >
             <Icon name="chevron_left" className="text-2xl" />
@@ -213,7 +215,7 @@ export default function PhotoLightbox({
             )}
             <img
               src={photo.url}
-              alt={photo.filename || 'Photo'}
+              alt={photo.filename || t('lightbox.photoAlt')}
               className="max-w-full max-h-[75vh] object-contain rounded-paper"
             />
           </div>
@@ -224,7 +226,7 @@ export default function PhotoLightbox({
           )}
           {photos.length > 1 && (
             <span className="font-body italic text-white/60 text-sm">
-              Photo {index + 1} of {photos.length}
+              {t('lightbox.photoOf', { current: index + 1, total: photos.length })}
             </span>
           )}
           {((onReact && photo.reactions) ||
@@ -292,8 +294,8 @@ export default function PhotoLightbox({
             type="button"
             onClick={() => navigate(hasNext ? index + 1 : 0)}
             disabled={isCommentsPanelOpen}
-            aria-label={hasNext ? 'Next photo' : 'Back to first photo'}
-            title={hasNext ? undefined : 'Back to first photo'}
+            aria-label={hasNext ? t('lightbox.nextPhoto') : t('lightbox.backToFirstPhoto')}
+            title={hasNext ? undefined : t('lightbox.backToFirstPhoto')}
             className="shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors disabled:opacity-20 disabled:pointer-events-none"
           >
             <Icon name={hasNext ? 'chevron_right' : 'replay'} className="text-2xl" />

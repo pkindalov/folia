@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
@@ -37,6 +38,7 @@ function MemberAvatars({ members }: { members: Circle['members'] }) {
 }
 
 function CircleCard({ circle }: { circle: Circle }) {
+  const { t } = useTranslation('circles');
   const navigate = useNavigate();
   const acceptedMembers = circle.members.filter((member) => member.status === 'accepted');
   const pendingCount = circle.members.length - acceptedMembers.length;
@@ -59,11 +61,11 @@ function CircleCard({ circle }: { circle: Circle }) {
         <MemberAvatars members={acceptedMembers} />
         <div className="text-right">
           <span className="font-ui text-ui-label text-on-surface-variant block">
-            {acceptedMembers.length} {acceptedMembers.length === 1 ? 'member' : 'members'}
+            {t('circlesPage.memberCount', { count: acceptedMembers.length })}
           </span>
           {pendingCount > 0 && (
             <span className="font-ui text-[10px] text-on-surface-variant/70 uppercase tracking-wider">
-              {pendingCount} invited
+              {t('circlesPage.invitedCount', { count: pendingCount })}
             </span>
           )}
         </div>
@@ -72,13 +74,14 @@ function CircleCard({ circle }: { circle: Circle }) {
         onClick={() => navigate(`/circles/${circle._id}`)}
         className="w-full py-2 rounded-paper border border-primary text-primary font-ui text-ui-label uppercase tracking-widest hover:bg-primary hover:text-on-primary transition-colors"
       >
-        Manage Circle
+        {t('circlesPage.manageCircle')}
       </button>
     </div>
   );
 }
 
 function InviteCard({ invite }: { invite: CircleInvite }) {
+  const { t } = useTranslation('circles');
   const { data: me } = useMe();
   const acceptInvite = useAcceptInvite();
   const declineInvite = useDeclineInvite();
@@ -89,7 +92,7 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
     acceptInvite.mutate(
       { circleId: invite._id, userId: me._id },
       {
-        onSuccess: () => toast.success(`Joined ${invite.name}.`),
+        onSuccess: () => toast.success(t('circlesPage.joinedToast', { name: invite.name })),
         onError: (error) => toast.error(error.message),
       }
     );
@@ -99,7 +102,7 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
     declineInvite.mutate(
       { circleId: invite._id, userId: me._id },
       {
-        onSuccess: () => toast.success(`Declined ${invite.name}.`),
+        onSuccess: () => toast.success(t('circlesPage.declinedToast', { name: invite.name })),
         onError: (error) => toast.error(error.message),
       }
     );
@@ -115,7 +118,7 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
           </p>
         )}
         <p className="font-body text-sm text-on-surface-variant mt-1">
-          Invited by {invite.ownerUsername}
+          {t('circlesPage.invitedBy', { username: invite.ownerUsername })}
         </p>
       </div>
       <div className="flex gap-3">
@@ -124,14 +127,14 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
           disabled={busy}
           className="bg-primary text-on-primary px-5 py-2 rounded-paper font-ui text-ui-label uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-60"
         >
-          {acceptInvite.isPending ? 'Accepting…' : 'Accept'}
+          {acceptInvite.isPending ? t('circlesPage.acceptingButton') : t('circlesPage.acceptButton')}
         </button>
         <button
           onClick={onDecline}
           disabled={busy}
           className="px-5 py-2 rounded-paper border border-outline-variant/50 font-ui text-ui-label uppercase tracking-widest hover:bg-surface-container-low transition-colors disabled:opacity-60"
         >
-          {declineInvite.isPending ? 'Declining…' : 'Decline'}
+          {declineInvite.isPending ? t('circlesPage.decliningButton') : t('circlesPage.declineButton')}
         </button>
       </div>
     </div>
@@ -139,6 +142,7 @@ function InviteCard({ invite }: { invite: CircleInvite }) {
 }
 
 export default function CirclesPage() {
+  const { t } = useTranslation('circles');
   const [page, setPage] = useState(1);
   const [invitesPage, setInvitesPage] = useState(1);
   const [isCreateOpen, setCreateOpen] = useState(false);
@@ -162,17 +166,18 @@ export default function CirclesPage() {
       <div className="p-gutter md:p-margin-edge">
         <div className="max-w-6xl mx-auto">
           <div className="mb-12 border-b border-outline-variant pb-6">
-            <h2 className="font-display text-display-lg text-primary mb-2">Manage My Circles</h2>
+            <h2 className="font-display text-display-lg text-primary mb-2">
+              {t('circlesPage.title')}
+            </h2>
             <p className="font-body text-body-text text-on-surface-variant max-w-2xl">
-              Organize your contributors into intimate circles to curate the shared history of
-              your family, colleagues, and lifelong friends.
+              {t('circlesPage.subtitle')}
             </p>
           </div>
 
           {invitesQuery.data && invitesQuery.data.total > 0 && (
             <div className="mb-12">
               <h3 className="font-ui text-ui-label uppercase text-on-surface-variant mb-4">
-                Circle Invitations
+                {t('circlesPage.invitationsHeading')}
               </h3>
               <div className="flex flex-col gap-4">
                 {invitesQuery.data.invites.map((invite) => (
@@ -188,7 +193,7 @@ export default function CirclesPage() {
           )}
 
           {isLoading && (
-            <p className="font-body italic text-on-surface-variant">Gathering your circles…</p>
+            <p className="font-body italic text-on-surface-variant">{t('circlesPage.gathering')}</p>
           )}
           {isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -208,10 +213,10 @@ export default function CirclesPage() {
                   </div>
                   <div>
                     <h3 className="font-display text-headline-md text-primary">
-                      Create New Circle
+                      {t('circlesPage.createNewCircle')}
                     </h3>
                     <p className="font-ui text-[11px] text-on-surface-variant uppercase tracking-widest mt-2">
-                      Initialize a new archive
+                      {t('circlesPage.initializeArchive')}
                     </p>
                   </div>
                 </button>
@@ -224,8 +229,7 @@ export default function CirclesPage() {
               {data.total === 0 && page === 1 && (
                 <div className="col-span-full sm:col-span-1 lg:col-span-2 flex items-center">
                   <p className="font-body italic text-on-surface-variant text-body-text">
-                    You haven't created any circles yet. Start one to organize who sees your
-                    shared albums.
+                    {t('circlesPage.emptyState')}
                   </p>
                 </div>
               )}

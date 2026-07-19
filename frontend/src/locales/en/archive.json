@@ -1,0 +1,12 @@
+{
+  "title": "The Grand Archive",
+  "subtitle": "Completed volumes, sealed and preserved. Restore one to bring it back to your gallery.",
+  "opening": "Opening the archive…",
+  "empty": "Nothing has been archived yet.",
+  "pageCount_one": "{{count}} page",
+  "pageCount_other": "{{count}} pages",
+  "restoredToast": "\"{{title}}\" restored.",
+  "restoreAlbum": "Restore {{title}}",
+  "restoringButton": "Restoring…",
+  "restoreButton": "Restore"
+}

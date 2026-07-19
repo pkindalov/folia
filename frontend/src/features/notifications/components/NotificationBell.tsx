@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/Icon';
 import Pagination from '../../../components/Pagination';
 import useFocusTrap from '../../../hooks/useFocusTrap';
@@ -118,6 +119,7 @@ export default function NotificationBell({
   onDeleteAll,
   isBulkActionPending,
 }: NotificationBellProps) {
+  const { t } = useTranslation('notifications');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [anchorStyle, setAnchorStyle] = useState<CSSProperties>({});
@@ -156,7 +158,8 @@ export default function NotificationBell({
     onClose();
   };
 
-  const ariaLabel = unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications';
+  const ariaLabel =
+    unreadCount > 0 ? t('bell.notificationsUnread', { count: unreadCount }) : t('bell.notifications');
   // Both the sidebar and mobile bells are always mounted at once (toggled
   // only via CSS per breakpoint), so the panel id must be per-variant —
   // otherwise two elements could share the same id if both were opened
@@ -180,7 +183,7 @@ export default function NotificationBell({
             <Icon name="notifications" filled={unreadCount > 0} className="text-lg" />
             <NotificationBadge unreadCount={unreadCount} variant={variant} />
           </span>
-          Notifications
+          {t('bell.notifications')}
         </button>
       ) : (
         <button
@@ -204,7 +207,7 @@ export default function NotificationBell({
         <div
           ref={panelRef}
           id={panelId}
-          aria-label="Notifications"
+          aria-label={t('bell.notifications')}
           style={anchorStyle}
           className={`fixed z-60 flex flex-col bg-surface-container-lowest rounded-panel paper-depth border border-outline-variant/40 overflow-hidden ${
             variant === 'sidebar'
@@ -213,19 +216,19 @@ export default function NotificationBell({
           }`}
         >
           <div className="shrink-0 px-5 py-4 border-b border-outline-variant/40 font-ui text-ui-label uppercase text-on-surface-variant">
-            Notifications
+            {t('bell.notifications')}
           </div>
 
           <div
             role="group"
-            aria-label="Bulk notification actions"
+            aria-label={t('bell.bulkActionsLabel')}
             className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-outline-variant/40"
           >
             <button
               type="button"
               onClick={onMarkAllRead}
               disabled={isBulkActionPending || unreadCount === 0}
-              aria-label="Mark all notifications as read"
+              aria-label={t('bell.markAllRead')}
               className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Icon name="done_all" className="text-base" />
@@ -234,7 +237,7 @@ export default function NotificationBell({
               type="button"
               onClick={onMarkAllUnread}
               disabled={isBulkActionPending || totalCount - unreadCount === 0}
-              aria-label="Mark all notifications as unread"
+              aria-label={t('bell.markAllUnread')}
               className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Icon name="mark_email_unread" className="text-base" />
@@ -245,7 +248,7 @@ export default function NotificationBell({
               type="button"
               onClick={onDeleteAll}
               disabled={isBulkActionPending || totalCount === 0}
-              aria-label="Delete all notifications"
+              aria-label={t('bell.deleteAll')}
               className="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error-container/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Icon name="delete_sweep" className="text-base" />
@@ -255,7 +258,7 @@ export default function NotificationBell({
           <div className="flex-1 min-h-0 overflow-y-auto">
             {isLoading && (
               <p className="py-16 text-center font-body italic text-on-surface-variant text-sm">
-                Fetching your notifications…
+                {t('bell.fetching')}
               </p>
             )}
 
@@ -270,9 +273,9 @@ export default function NotificationBell({
 
             {!isLoading && errorMessage === null && notifications.length === 0 && (
               <div className="py-16 px-6 text-center">
-                <p className="font-body italic text-on-surface-variant text-sm">No notifications yet.</p>
+                <p className="font-body italic text-on-surface-variant text-sm">{t('bell.empty')}</p>
                 <p className="font-body text-on-surface-variant text-sm">
-                  You'll see updates here when someone invites you to a circle.
+                  {t('bell.emptyHint')}
                 </p>
               </div>
             )}

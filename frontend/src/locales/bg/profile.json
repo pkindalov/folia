@@ -1,0 +1,42 @@
+{
+  "profilePage": {
+    "title": "Моят профил",
+    "subtitle": "Вашата самоличност в архива — как ви виждат сътрудниците и близките."
+  },
+  "publicProfilePage": {
+    "loading": "Зареждане на профила…"
+  },
+  "identityCard": {
+    "memberSince": "Член от {{date}}",
+    "editProfile": "Редактиране на профила"
+  },
+  "editForm": {
+    "usernameLabel": "Потребителско име",
+    "emailLabel": "Имейл",
+    "saveButton": "Запазване на промените",
+    "savingButton": "Запазване…",
+    "cancelButton": "Отказ",
+    "updatedToast": "Профилът е обновен."
+  },
+  "avatarUploader": {
+    "changePhoto": "Смяна на снимката",
+    "removePhoto": "Премахване на снимката",
+    "unsupportedType": "Поддържат се само снимки JPEG, PNG, WEBP и GIF.",
+    "tooLarge": "Снимката е твърде голяма. Изберете такава под 10MB.",
+    "removedToast": "Снимката е премахната."
+  },
+  "circlesSummary": {
+    "title": "Моите кръгове",
+    "viewAll": "Всички кръгове",
+    "gathering": "Събиране на вашите кръгове…",
+    "emptyState": "Все още нямате създадени кръгове. Създайте такъв, за да организирате кой вижда споделените ви албуми.",
+    "createFirst": "Създайте своя първи кръг",
+    "memberCount_one": "{{count}} член",
+    "memberCount_other": "{{count}} члена"
+  },
+  "errors": {
+    "usernameTooShort": "Потребителското име трябва да е поне 3 символа",
+    "usernameTooLong": "Потребителското име трябва да е най-много 30 символа",
+    "emailInvalid": "Въведете валиден имейл адрес"
+  }
+}

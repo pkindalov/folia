@@ -1,0 +1,61 @@
+{
+  "nav": {
+    "signIn": "Sign In",
+    "startForFree": "Start for Free"
+  },
+  "hero": {
+    "headlinePrefix": "Preserve Your Legacy in a ",
+    "headlineItalic": "Tactile",
+    "headlineSuffix": " Digital World.",
+    "subheading": "More than a gallery. A digital heirloom crafted with the soul of a physical album. Capture social reflections and curate community archives that stand the test of time.",
+    "beginAlbum": "Begin Your Album",
+    "viewSample": "View Sample Legacy",
+    "socialProof": "Join 12,000+ families preserving their story.",
+    "imageAlt": "A handcrafted leather-bound album in warm afternoon light"
+  },
+  "values": {
+    "heading": "The Craft of Memory",
+    "tactileAlbums": {
+      "title": "Tactile Digital Albums",
+      "text": "Experience the \"friction\" of discovery. Our interface uses spatial memory and physical metaphors—like paper grain and depth of field—to make browsing feel intentional."
+    },
+    "socialReflections": {
+      "title": "Social Reflections",
+      "text": "Photos are just the beginning. Invite loved ones to leave hand-ruled notes, voice memos, and stories, turning a single image into a multi-generational dialogue."
+    },
+    "communityArchives": {
+      "title": "Community Archives",
+      "text": "Preserve local history or family branches in collective vaults. High-fidelity archival standards ensure your stories remain accessible for the next century."
+    }
+  },
+  "showcase": {
+    "eyebrow": "The Archive Experience",
+    "heading": "Curated by you, crafted for them.",
+    "quote": "\"We didn't want another cloud folder. We wanted a place that felt like my grandmother's attic—full of surprises and weight.\"",
+    "museumScanning": {
+      "title": "Museum-Grade Scanning",
+      "text": "Digitize physical artifacts with our curated partner network."
+    },
+    "privateCircles": {
+      "title": "Private Family Circles",
+      "text": "Your legacy is yours. No ads, no tracking, just preservation."
+    },
+    "image1Alt": "A 1940s family gathering",
+    "image2Alt": "A handwritten letter on aged parchment",
+    "image3Alt": "Grandmother and child browsing a digital album",
+    "image4Alt": "Vintage memorabilia flat-lay"
+  },
+  "invitation": {
+    "heading": "Receive our 'Curation Guide'",
+    "subheading": "Join our quarterly newsletter on archival standards, legacy storytelling, and the art of the physical-digital bridge.",
+    "emailLabel": "Your email",
+    "emailPlaceholder": "name@archive.com",
+    "requestInvite": "Request Invite"
+  },
+  "footer": {
+    "copyright": "© 2026 Folia. Preservation through tactile storytelling.",
+    "legacyPolicy": "Legacy Policy",
+    "archivalStandards": "Archival Standards",
+    "curationGuide": "Curation Guide"
+  }
+}

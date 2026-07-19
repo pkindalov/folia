@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import Emoji from './Emoji';
 import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
@@ -18,6 +19,7 @@ export default function AlbumLoveButton({
   onCountClick,
   isPending,
 }: AlbumLoveButtonProps) {
+  const { t } = useTranslation('social');
   return (
     <div
       className={`flex items-center rounded-full bg-surface-container-lowest border shadow-md font-ui transition-colors ${
@@ -31,7 +33,7 @@ export default function AlbumLoveButton({
         onClick={onToggle}
         disabled={isPending}
         aria-pressed={isLoved}
-        aria-label={isLoved ? 'You loved this album — tap to remove' : 'Love this album'}
+        aria-label={isLoved ? t('albumLove.loved') : t('albumLove.love')}
         className="flex items-center pl-3 pr-1.5 py-1.5 rounded-l-full transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none hover:text-secondary"
       >
         {isPending ? (
@@ -47,7 +49,7 @@ export default function AlbumLoveButton({
         onClick={onCountClick}
         disabled={count === 0}
         aria-haspopup="dialog"
-        aria-label={`See who loved this album (${count})`}
+        aria-label={t('albumLove.seeWhoLoved', { count })}
         className="pr-3 pl-1.5 py-1.5 rounded-r-full font-ui text-sm transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
       >
         {count}

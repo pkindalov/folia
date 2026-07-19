@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import { MAX_COMMENT_LENGTH } from '../features/flipbooks';
 
@@ -20,10 +21,12 @@ export default function CommentComposer({
   onSubmit,
   isPending,
   variant = 'dark',
-  placeholder = 'Add a comment…',
+  placeholder,
   autoFocus = false,
 }: CommentComposerProps) {
+  const { t } = useTranslation('social');
   const isLight = variant === 'light';
+  const resolvedPlaceholder = placeholder ?? t('comments.addCommentPlaceholder');
   const [draftText, setDraftText] = useState('');
 
   // This composer's own in-flight submission, tracked directly off the
@@ -81,8 +84,8 @@ export default function CommentComposer({
           onKeyDown={onTextareaKeyDown}
           rows={2}
           maxLength={MAX_COMMENT_LENGTH}
-          placeholder={placeholder}
-          aria-label="Comment text"
+          placeholder={resolvedPlaceholder}
+          aria-label={t('comments.commentTextLabel')}
           disabled={disabled}
           autoFocus={autoFocus}
           className={`flex-1 rounded-panel px-3 py-2 font-body text-sm border border-transparent focus:outline-none focus-visible:border-secondary resize-none disabled:opacity-60 ${
@@ -95,7 +98,7 @@ export default function CommentComposer({
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          aria-label="Post comment"
+          aria-label={t('comments.postComment')}
           className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-secondary transition-colors ${
             isLight
               ? 'text-on-surface-variant hover:bg-surface-container-low hover:text-secondary'
@@ -111,7 +114,7 @@ export default function CommentComposer({
       </div>
       {showRemainingCharacters && (
         <p className={`font-ui text-[11px] text-right mt-1 ${remainingCharactersColor}`}>
-          {remainingCharacters} left
+          {t('comments.charactersLeft', { count: remainingCharacters })}
         </p>
       )}
     </div>

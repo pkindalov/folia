@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/Icon';
 import ReactionControl from '../../../components/ReactionControl';
 import CommentControl from '../../../components/CommentControl';
@@ -138,6 +139,7 @@ export default function AlbumSpread({
   pendingRepliesCommentId,
   erroredRepliesCommentId,
 }: AlbumSpreadProps) {
+  const { t } = useTranslation('viewer');
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
   const previousPhoto = currentIndex > 0 ? pages[currentIndex - 1] : undefined;
@@ -255,7 +257,7 @@ export default function AlbumSpread({
             <button
               type="button"
               onClick={goToPrevious}
-              aria-label={`Go back to ${previousPhoto.filename || 'previous photo'}`}
+              aria-label={t('goBackTo', { name: previousPhoto.filename || t('previousPhotoFallback') })}
               className="group relative page-curl-hover bg-white p-3 pb-4 stuck-photo max-w-sm w-full cursor-pointer"
             >
               <img
@@ -298,7 +300,7 @@ export default function AlbumSpread({
                 <button
                   type="button"
                   onClick={onOpenLightbox}
-                  aria-label={`View ${currentPhoto.filename || 'this photo'} full size`}
+                  aria-label={t('viewPhotoFullSize', { name: currentPhoto.filename || t('photoFallback') })}
                   className="block w-full cursor-zoom-in"
                 >
                   <img
@@ -319,7 +321,7 @@ export default function AlbumSpread({
                       // reasoning as PhotoLightbox's Previous/Next — paging
                       // away would silently discard it.
                       disabled={currentIndex === 0 || isCommentsPanelOpen}
-                      aria-label="Previous photo"
+                      aria-label={t('previousPhoto')}
                       className="absolute top-1/2 left-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-0 disabled:pointer-events-none"
                     >
                       <Icon name="chevron_left" />
@@ -327,8 +329,8 @@ export default function AlbumSpread({
                     <button
                       onClick={goToNext}
                       disabled={isCommentsPanelOpen}
-                      aria-label={hasNextPhoto ? 'Next photo' : 'Back to first photo'}
-                      title={hasNextPhoto ? undefined : 'Back to first photo'}
+                      aria-label={hasNextPhoto ? t('nextPhoto') : t('backToFirstPhoto')}
+                      title={hasNextPhoto ? undefined : t('backToFirstPhoto')}
                       className="absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 shadow-md flex items-center justify-center text-on-surface hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <Icon name={hasNextPhoto ? 'chevron_right' : 'replay'} />
@@ -402,7 +404,7 @@ export default function AlbumSpread({
                 <div className="flex items-center gap-2">
                   {pages.length > 1 && (
                     <span className="font-body italic text-on-surface-variant text-xs">
-                      Photo {currentIndex + 1} of {pages.length}
+                      {t('photoOf', { current: currentIndex + 1, total: pages.length })}
                     </span>
                   )}
                   {!isKeyboardNavDisabled && (
@@ -414,13 +416,13 @@ export default function AlbumSpread({
           ) : (
             <div className="text-center flex flex-col items-center gap-4 text-on-surface-variant">
               <Icon name="auto_stories" className="text-5xl" />
-              <p className="font-body italic">This volume has no pages yet.</p>
+              <p className="font-body italic">{t('noPagesYet')}</p>
               <Link
                 to={`/editor/${album._id}`}
                 className="font-ui text-ui-label uppercase text-secondary hover:underline flex items-center gap-2"
               >
                 <Icon name="edit" className="text-base" />
-                Add memories in the editor
+                {t('addMemoriesInEditor')}
               </Link>
             </div>
           )}

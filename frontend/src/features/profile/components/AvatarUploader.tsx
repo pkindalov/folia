@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import Avatar from '../../../components/Avatar';
 import Icon from '../../../components/Icon';
 import { useUploadAvatar, useRemoveAvatar } from '../hooks';
@@ -17,6 +18,7 @@ type AvatarUploaderProps = {
 };
 
 export default function AvatarUploader({ username, avatarUrl }: AvatarUploaderProps) {
+  const { t } = useTranslation('profile');
   const uploadAvatar = useUploadAvatar();
   const removeAvatar = useRemoveAvatar();
   const isBusy = uploadAvatar.isPending || removeAvatar.isPending;
@@ -27,11 +29,11 @@ export default function AvatarUploader({ username, avatarUrl }: AvatarUploaderPr
     if (!file) return;
 
     if (!isAllowedPhotoType(file.type)) {
-      toast.error('Only JPEG, PNG, WEBP and GIF photos are supported.');
+      toast.error(t('avatarUploader.unsupportedType'));
       return;
     }
     if (file.size > MAX_PHOTO_SIZE_BYTES) {
-      toast.error('Photo is too large. Choose one under 10MB.');
+      toast.error(t('avatarUploader.tooLarge'));
       return;
     }
 
@@ -42,7 +44,7 @@ export default function AvatarUploader({ username, avatarUrl }: AvatarUploaderPr
 
   const onRemove = () => {
     removeAvatar.mutate(undefined, {
-      onSuccess: () => toast.success('Photo removed.'),
+      onSuccess: () => toast.success(t('avatarUploader.removedToast')),
       onError: (error) => toast.error(error.message),
     });
   };
@@ -59,7 +61,7 @@ export default function AvatarUploader({ username, avatarUrl }: AvatarUploaderPr
       </div>
       <div className="flex items-center gap-4">
         <label className="font-ui text-ui-label uppercase text-secondary cursor-pointer hover:opacity-80 transition-opacity">
-          Change photo
+          {t('avatarUploader.changePhoto')}
           <input
             type="file"
             accept={ACCEPTED_FILE_TYPES}
@@ -75,7 +77,7 @@ export default function AvatarUploader({ username, avatarUrl }: AvatarUploaderPr
             disabled={isBusy}
             className="font-ui text-ui-label uppercase text-on-surface-variant hover:text-error transition-colors disabled:opacity-40"
           >
-            Remove photo
+            {t('avatarUploader.removePhoto')}
           </button>
         )}
       </div>

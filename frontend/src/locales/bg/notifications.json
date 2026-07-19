@@ -1,0 +1,42 @@
+{
+  "bell": {
+    "notifications": "Известия",
+    "notificationsUnread": "Известия, {{count}} непрочетени",
+    "bulkActionsLabel": "Групови действия за известия",
+    "markAllRead": "Маркиране на всички известия като прочетени",
+    "markAllUnread": "Маркиране на всички известия като непрочетени",
+    "deleteAll": "Изтриване на всички известия",
+    "deleteAllConfirm": "Да изтрия ли всички известия? Това действие е необратимо.",
+    "fetching": "Извличане на вашите известия…",
+    "empty": "Все още няма известия.",
+    "emptyHint": "Тук ще виждате новости, когато някой ви покани в кръг."
+  },
+  "item": {
+    "markAsUnread": "Маркиране на известието от {{username}} като непрочетено",
+    "markAsRead": "Маркиране на известието от {{username}} като прочетено",
+    "dismiss": "Отхвърляне на известието от {{username}}",
+    "circleFallback": "кръг",
+    "albumFallback": "албум",
+    "circleInvite": "ви покани в",
+    "circleInviteAccepted": "прие поканата ви за",
+    "circleInviteDeclined": "отказа поканата ви за",
+    "circleDeleted": "изтри кръга",
+    "albumShared": "сподели нов албум",
+    "albumUpdated": "обнови албума",
+    "albumDeleted": "изтри албума",
+    "albumPhotosAdded": "добави нови снимки в",
+    "albumPhotoRemoved": "премахна снимка от",
+    "albumPhotoCaptionUpdated": "обнови надписа на снимка в",
+    "sharedWith": "с {{circleName}}",
+    "sharedWithTrailing": "споделен с {{circleName}}",
+    "inCircle": "в {{circleName}}",
+    "reacted": "реагира",
+    "loved": "хареса",
+    "commented": "коментира",
+    "replied": "отговори",
+    "toAPhotoIn": "на снимка в",
+    "onAPhotoIn": "на снимка в",
+    "toYourComment": "на вашия коментар",
+    "toYourCommentOnAPhotoIn": "на вашия коментар на снимка в"
+  }
+}

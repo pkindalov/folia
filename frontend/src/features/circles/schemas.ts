@@ -35,20 +35,12 @@ export type Circle = z.infer<typeof circleSchema>;
 export type CircleMember = z.infer<typeof circleMemberSchema>;
 export type PaginatedCircles = z.infer<typeof circlesResponseSchema>;
 
-// Form schema — mirrors backend validation
+// Form schema — mirrors backend validation. Messages are translation keys
+// (relative to the 'circles' namespace's `errors` object), not display text
+// — see auth/schemas.ts for why.
 export const circleFormSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Give this circle a name')
-    .max(80, 'Name must be at most 80 characters'),
-  description: z
-    .string()
-    .trim()
-    .max(
-      MAX_CIRCLE_DESCRIPTION_LENGTH,
-      `Description must be at most ${MAX_CIRCLE_DESCRIPTION_LENGTH} characters`
-    ),
+  name: z.string().trim().min(1, 'nameRequired').max(80, 'nameTooLong'),
+  description: z.string().trim().max(MAX_CIRCLE_DESCRIPTION_LENGTH, 'descriptionTooLong'),
 });
 
 export type CircleFormInput = z.infer<typeof circleFormSchema>;

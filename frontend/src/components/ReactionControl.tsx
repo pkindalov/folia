@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import Emoji from './Emoji';
 import useFocusTrap from '../hooks/useFocusTrap';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_EMOJI, REACTION_LABEL, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_LABEL_KEY, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type ReactionControlProps = {
@@ -53,6 +54,7 @@ export default function ReactionControl({
   viewerUsername,
   onReactorsModalOpenChange,
 }: ReactionControlProps) {
+  const { t } = useTranslation('social');
   const [isOpen, setIsOpen] = useState(false);
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
   useEffect(() => onReactorsModalOpenChange?.(isReactorsModalOpen), [isReactorsModalOpen, onReactorsModalOpenChange]);
@@ -131,8 +133,8 @@ export default function ReactionControl({
     .slice(0, MAX_SUMMARY_ICONS);
 
   const triggerAriaLabel = viewerReaction
-    ? `You reacted: ${REACTION_LABEL[viewerReaction]}. Tap to change or remove.`
-    : 'React to this photo';
+    ? t('photoReaction.reactedTapToChange', { label: t(REACTION_LABEL_KEY[viewerReaction]) })
+    : t('photoReaction.reactToPhoto');
 
   return (
     <div className="relative inline-flex items-center gap-1">
@@ -167,9 +169,9 @@ export default function ReactionControl({
           type="button"
           onClick={() => setIsReactorsModalOpen(true)}
           aria-haspopup="dialog"
-          aria-label={`See who reacted (${total})`}
+          aria-label={t('seeWhoReacted', { count: total })}
           title={topReactionTypes
-            .map((type) => `${REACTION_LABEL[type]}: ${counts[type]}`)
+            .map((type) => `${t(REACTION_LABEL_KEY[type])}: ${counts[type]}`)
             .join(' · ')}
           className={`rounded-full px-2 py-1.5 font-ui text-sm transition-colors focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 ${
             isLight
@@ -185,7 +187,7 @@ export default function ReactionControl({
         <div
           ref={panelRef}
           role="group"
-          aria-label="Choose a reaction"
+          aria-label={t('chooseReaction')}
           className={`absolute bottom-full left-0 mb-2 flex items-center gap-1 rounded-full px-2 py-1.5 z-20 ${
             isLight
               ? 'bg-surface-container-lowest paper-depth border border-outline-variant/40'
@@ -197,12 +199,12 @@ export default function ReactionControl({
               key={type}
               type="button"
               onClick={() => handleSelect(type)}
-              aria-label={REACTION_LABEL[type]}
+              aria-label={t(REACTION_LABEL_KEY[type])}
               aria-pressed={viewerReaction === type}
               title={
                 isKeyboardShortcutsDisabled
-                  ? REACTION_LABEL[type]
-                  : `${REACTION_LABEL[type]} (${REACTION_SHORTCUT_KEYS[type]})`
+                  ? t(REACTION_LABEL_KEY[type])
+                  : `${t(REACTION_LABEL_KEY[type])} (${REACTION_SHORTCUT_KEYS[type]})`
               }
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-secondary ${
                 viewerReaction === type ? (isLight ? 'bg-surface-container-low scale-110' : 'bg-white/20 scale-110') : ''
@@ -217,7 +219,7 @@ export default function ReactionControl({
       <ReactorsModal
         isOpen={isReactorsModalOpen}
         onClose={() => setIsReactorsModalOpen(false)}
-        heading="People who reacted"
+        heading={t('peopleWhoReacted')}
         reactors={reactors}
         viewerId={viewerId}
         viewerUsername={viewerUsername}

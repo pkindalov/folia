@@ -1,0 +1,34 @@
+{
+  "app": {
+    "turningPage": "Прелистване на страницата…"
+  },
+  "nav": {
+    "myFlipbooks": "Моите книги",
+    "explore": "Разглеждане",
+    "create": "Създаване",
+    "circles": "Кръгове",
+    "archives": "Архиви",
+    "settings": "Настройки",
+    "signOut": "Изход"
+  },
+  "shell": {
+    "loading": "Зареждане…",
+    "sessionExpired": "Сесията е изтекла.",
+    "backToLogin": "Обратно към вход",
+    "viewProfile": "Преглед на профила",
+    "signedInAs": "Влезли сте като",
+    "admin": " — Администратор"
+  },
+  "pagination": {
+    "nav": "Странициране",
+    "previous": "Предишна страница",
+    "next": "Следваща страница",
+    "page": "Страница {{page}}"
+  },
+  "relativeTime": {
+    "justNow": "Току-що",
+    "minutesAgo": "преди {{count}}м",
+    "hoursAgo": "преди {{count}}ч",
+    "daysAgo": "преди {{count}}д"
+  }
+}

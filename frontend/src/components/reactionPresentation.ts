@@ -9,14 +9,16 @@ export const REACTION_EMOJI: Record<ReactionType, string> = {
   angry: '😠',
 };
 
-export const REACTION_LABEL: Record<ReactionType, string> = {
-  like: 'Like',
-  love: 'Love',
-  haha: 'Haha',
-  wow: 'Wow',
-  sad: 'Sad',
-  angry: 'Angry',
-};
+// Translation-key lookup (not display text) — the caller resolves this
+// through t() from the 'social' namespace.
+export const REACTION_LABEL_KEY = {
+  like: 'reactionLabels.like',
+  love: 'reactionLabels.love',
+  haha: 'reactionLabels.haha',
+  wow: 'reactionLabels.wow',
+  sad: 'reactionLabels.sad',
+  angry: 'reactionLabels.angry',
+} as const satisfies Record<ReactionType, string>;
 
 export const REACTION_TEXT_COLOR: Record<ReactionType, string> = {
   like: 'text-reaction-like',

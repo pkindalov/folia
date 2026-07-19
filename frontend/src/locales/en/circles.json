@@ -1,0 +1,69 @@
+{
+  "form": {
+    "nameLabel": "Circle name",
+    "namePlaceholder": "e.g., The Sterling Family",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What's this circle for?",
+    "saveButton": "Save changes",
+    "savingButton": "Saving…",
+    "cancelButton": "Cancel"
+  },
+  "circlesPage": {
+    "title": "Manage My Circles",
+    "subtitle": "Organize your contributors into intimate circles to curate the shared history of your family, colleagues, and lifelong friends.",
+    "invitationsHeading": "Circle Invitations",
+    "gathering": "Gathering your circles…",
+    "createNewCircle": "Create New Circle",
+    "initializeArchive": "Initialize a new archive",
+    "emptyState": "You haven't created any circles yet. Start one to organize who sees your shared albums.",
+    "manageCircle": "Manage Circle",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "invitedCount": "{{count}} invited",
+    "invitedBy": "Invited by {{username}}",
+    "acceptButton": "Accept",
+    "acceptingButton": "Accepting…",
+    "declineButton": "Decline",
+    "decliningButton": "Declining…",
+    "joinedToast": "Joined {{name}}.",
+    "declinedToast": "Declined {{name}}."
+  },
+  "circleDetail": {
+    "opening": "Opening the circle…",
+    "editCircle": "Edit circle",
+    "ownedBy": "Owned by {{username}}",
+    "inviteMember": "Invite a member",
+    "inviteMemberHint": "They'll need to accept before they can see anything shared with this circle.",
+    "searchPlaceholder": "Search by username…",
+    "invitedLabel": "Invited",
+    "inviteButton": "Invite",
+    "noUsersFound": "No users found.",
+    "memberHeading_one": "{{count}} Member",
+    "memberHeading_other": "{{count}} Members",
+    "noMembersYet": "No members yet — search above to invite your first one.",
+    "pending": "Pending",
+    "cancelInvite": "Cancel invite to {{username}}",
+    "removeMember": "Remove {{username}}",
+    "cancelledInviteToast": "Cancelled invite to {{username}}.",
+    "removedMemberToast": "Removed {{username}}.",
+    "deleteCircleButton": "Delete circle",
+    "deletingButton": "Deleting…",
+    "deleteConfirm": "Delete this circle? Members will lose access to anything shared with it.",
+    "updatedToast": "Circle updated.",
+    "deletedToast": "Circle deleted.",
+    "invitedToast": "Invited {{username}}."
+  },
+  "createModal": {
+    "title": "New Circle",
+    "subtitle": "Define the boundaries of this collection.",
+    "closeLabel": "Close",
+    "creatingButton": "Creating…",
+    "createButton": "Create Circle",
+    "createdToast": "Circle created."
+  },
+  "errors": {
+    "nameRequired": "Give this circle a name",
+    "nameTooLong": "Name must be at most 80 characters",
+    "descriptionTooLong": "Description must be at most 300 characters"
+  }
+}

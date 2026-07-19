@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AppShell from '../../../components/AppShell';
 import Icon from '../../../components/Icon';
 import { useMe } from '../../auth';
@@ -14,9 +15,11 @@ import {
   useSearchUsers,
 } from '../hooks';
 import { circleFormSchema, MAX_CIRCLE_DESCRIPTION_LENGTH, type CircleFormInput } from '../schemas';
+import { translateFieldError } from '../../../lib/translateFieldError';
 import { toast } from '../../../lib/toast';
 
 export default function CircleDetailPage() {
+  const { t } = useTranslation('circles');
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: me } = useMe();
@@ -68,7 +71,7 @@ export default function CircleDetailPage() {
   const onAddMember = (userId: string, username: string) => {
     addMember.mutate(userId, {
       onSuccess: () => {
-        toast.success(`Invited ${username}.`);
+        toast.success(t('circleDetail.invitedToast', { username }));
         setSearch('');
         setDebouncedSearch('');
       },
@@ -79,7 +82,7 @@ export default function CircleDetailPage() {
   const onSaveEdit = (data: CircleFormInput) => {
     updateCircle.mutate(data, {
       onSuccess: () => {
-        toast.success('Circle updated.');
+        toast.success(t('circleDetail.updatedToast'));
         setIsEditing(false);
       },
       onError: (error) => toast.error(error.message),
@@ -89,19 +92,21 @@ export default function CircleDetailPage() {
   const onRemoveMember = (userId: string, username: string, isPendingInvite: boolean) => {
     removeMember.mutate(userId, {
       onSuccess: () =>
-        toast.success(isPendingInvite ? `Cancelled invite to ${username}.` : `Removed ${username}.`),
+        toast.success(
+          isPendingInvite
+            ? t('circleDetail.cancelledInviteToast', { username })
+            : t('circleDetail.removedMemberToast', { username })
+        ),
       onError: (error) => toast.error(error.message),
     });
   };
 
   const onDelete = () => {
     if (!id) return;
-    if (
-      window.confirm('Delete this circle? Members will lose access to anything shared with it.')
-    ) {
+    if (window.confirm(t('circleDetail.deleteConfirm'))) {
       deleteCircle.mutate(id, {
         onSuccess: () => {
-          toast.success('Circle deleted.');
+          toast.success(t('circleDetail.deletedToast'));
           navigate('/circles');
         },
         onError: (error) => toast.error(error.message),
@@ -114,7 +119,7 @@ export default function CircleDetailPage() {
       <div className="p-gutter md:p-margin-edge">
         <div className="max-w-3xl mx-auto">
           {circleQuery.isLoading && (
-            <p className="font-body italic text-on-surface-variant">Opening the circle…</p>
+            <p className="font-body italic text-on-surface-variant">{t('circleDetail.opening')}</p>
           )}
           {circleQuery.isError && (
             <p className="px-4 py-3 bg-error-container text-on-error-container rounded-paper font-ui text-sm inline-block">
@@ -132,7 +137,7 @@ export default function CircleDetailPage() {
                         className="font-ui text-ui-label uppercase text-on-surface-variant"
                         htmlFor="edit-circle-name"
                       >
-                        Circle name
+                        {t('form.nameLabel')}
                       </label>
                       <input
                         id="edit-circle-name"
@@ -142,7 +147,7 @@ export default function CircleDetailPage() {
                       />
                       {editErrors.name && (
                         <span role="alert" className="text-sm text-error font-ui mt-1">
-                          {editErrors.name.message}
+                          {translateFieldError(t, editErrors.name.message)}
                         </span>
                       )}
                     </div>
@@ -152,20 +157,20 @@ export default function CircleDetailPage() {
                         className="font-ui text-ui-label uppercase text-on-surface-variant"
                         htmlFor="edit-circle-description"
                       >
-                        Description
+                        {t('form.descriptionLabel')}
                       </label>
                       <textarea
                         id="edit-circle-description"
                         rows={3}
                         className="line-input w-full py-2 text-body-text resize-none"
-                        placeholder="What's this circle for?"
+                        placeholder={t('form.descriptionPlaceholder')}
                         aria-invalid={editErrors.description !== undefined}
                         {...registerEdit('description')}
                       />
                       <div className="flex justify-between items-start mt-1">
                         {editErrors.description ? (
                           <span role="alert" className="text-sm text-error font-ui">
-                            {editErrors.description.message}
+                            {translateFieldError(t, editErrors.description.message)}
                           </span>
                         ) : (
                           <span />
@@ -188,14 +193,14 @@ export default function CircleDetailPage() {
                         disabled={updateCircle.isPending}
                         className="bg-primary text-on-primary py-2 px-6 rounded-paper font-ui text-ui-label uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-60"
                       >
-                        {updateCircle.isPending ? 'Saving…' : 'Save changes'}
+                        {updateCircle.isPending ? t('form.savingButton') : t('form.saveButton')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsEditing(false)}
                         className="py-2 px-6 rounded-paper border border-outline-variant/50 font-ui text-ui-label uppercase tracking-widest hover:bg-surface-container-low transition-colors"
                       >
-                        Cancel
+                        {t('form.cancelButton')}
                       </button>
                     </div>
                   </form>
@@ -206,7 +211,7 @@ export default function CircleDetailPage() {
                       {canManage && (
                         <button
                           onClick={() => setIsEditing(true)}
-                          aria-label="Edit circle"
+                          aria-label={t('circleDetail.editCircle')}
                           className="text-on-surface-variant hover:text-secondary transition-colors"
                         >
                           <Icon name="edit" className="text-lg" />
@@ -214,7 +219,7 @@ export default function CircleDetailPage() {
                       )}
                     </div>
                     <p className="font-body text-body-text text-on-surface-variant mt-2">
-                      Owned by {circle.ownerUsername}
+                      {t('circleDetail.ownedBy', { username: circle.ownerUsername })}
                     </p>
                     {circle.description && (
                       <p className="font-body text-body-text text-on-surface-variant mt-2">
@@ -228,15 +233,15 @@ export default function CircleDetailPage() {
               {canManage && (
                 <div className="mb-10">
                   <h3 className="font-ui text-ui-label uppercase text-on-surface-variant mb-3">
-                    Invite a member
+                    {t('circleDetail.inviteMember')}
                   </h3>
                   <p className="font-body italic text-sm text-on-surface-variant mb-3">
-                    They'll need to accept before they can see anything shared with this circle.
+                    {t('circleDetail.inviteMemberHint')}
                   </p>
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by username…"
+                    placeholder={t('circleDetail.searchPlaceholder')}
                     className="line-input w-full py-2 text-body-text"
                   />
                   {searchQuery.data && searchQuery.data.length > 0 && (
@@ -254,7 +259,9 @@ export default function CircleDetailPage() {
                               disabled={alreadyInvited || addMember.isPending}
                               className="font-ui text-ui-label uppercase text-secondary hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                              {alreadyInvited ? 'Invited' : 'Invite'}
+                              {alreadyInvited
+                                ? t('circleDetail.invitedLabel')
+                                : t('circleDetail.inviteButton')}
                             </button>
                           </li>
                         );
@@ -263,7 +270,7 @@ export default function CircleDetailPage() {
                   )}
                   {debouncedSearch.trim().length >= 2 && searchQuery.data?.length === 0 && (
                     <p className="mt-3 font-body italic text-on-surface-variant text-sm">
-                      No users found.
+                      {t('circleDetail.noUsersFound')}
                     </p>
                   )}
                 </div>
@@ -271,11 +278,11 @@ export default function CircleDetailPage() {
 
               <div className="mb-10">
                 <h3 className="font-ui text-ui-label uppercase text-on-surface-variant mb-3">
-                  {circle.members.length} {circle.members.length === 1 ? 'Member' : 'Members'}
+                  {t('circleDetail.memberHeading', { count: circle.members.length })}
                 </h3>
                 {circle.members.length === 0 ? (
                   <p className="font-body italic text-on-surface-variant">
-                    No members yet — search above to invite your first one.
+                    {t('circleDetail.noMembersYet')}
                   </p>
                 ) : (
                   <ul className="border border-outline-variant/40 rounded-paper divide-y divide-outline-variant/40">
@@ -294,7 +301,7 @@ export default function CircleDetailPage() {
                             <span className="font-body">{member.username}</span>
                             {isPending && (
                               <span className="font-ui text-[10px] uppercase tracking-wider text-on-surface-variant/70 border border-outline-variant/50 rounded-paper px-2 py-0.5">
-                                Pending
+                                {t('circleDetail.pending')}
                               </span>
                             )}
                           </div>
@@ -303,7 +310,9 @@ export default function CircleDetailPage() {
                               onClick={() => onRemoveMember(member.user, member.username, isPending)}
                               disabled={removeMember.isPending}
                               aria-label={
-                                isPending ? `Cancel invite to ${member.username}` : `Remove ${member.username}`
+                                isPending
+                                  ? t('circleDetail.cancelInvite', { username: member.username })
+                                  : t('circleDetail.removeMember', { username: member.username })
                               }
                               className="text-on-surface-variant hover:text-error transition-colors disabled:opacity-40"
                             >
@@ -325,7 +334,9 @@ export default function CircleDetailPage() {
                     className="flex items-center gap-2 font-ui text-ui-label uppercase text-error border border-error/40 px-4 py-3 rounded-paper hover:bg-error-container/40 transition-colors disabled:opacity-50"
                   >
                     <Icon name="delete" className="text-lg" />
-                    {deleteCircle.isPending ? 'Deleting…' : 'Delete circle'}
+                    {deleteCircle.isPending
+                      ? t('circleDetail.deletingButton')
+                      : t('circleDetail.deleteCircleButton')}
                   </button>
                 </div>
               )}

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LoginPage, RegisterPage, ProtectedRoute, isAuthenticated } from '../features/auth';
 
 const LandingPage = lazy(() => import('../features/landing/pages/LandingPage'));
@@ -19,15 +20,18 @@ function Root() {
   return isAuthenticated() ? <Navigate to="/flipbooks" replace /> : <LandingPage />;
 }
 
-const fallback = (
-  <div className="min-h-screen flex items-center justify-center font-body italic text-on-surface-variant">
-    Turning the page…
-  </div>
-);
+function SuspenseFallback() {
+  const { t } = useTranslation('common');
+  return (
+    <div className="min-h-screen flex items-center justify-center font-body italic text-on-surface-variant">
+      {t('app.turningPage')}
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <Suspense fallback={fallback}>
+    <Suspense fallback={<SuspenseFallback />}>
       <Routes>
         <Route path="/" element={<Root />} />
         <Route path="/login" element={<LoginPage />} />
