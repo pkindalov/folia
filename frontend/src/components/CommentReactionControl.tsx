@@ -3,7 +3,7 @@ import Emoji from './Emoji';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_LABEL, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type CommentReactionControlProps = {
@@ -13,15 +13,6 @@ type CommentReactionControlProps = {
   /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
   variant: 'light' | 'dark';
   viewerUsername?: string;
-};
-
-const REACTION_LABEL: Record<ReactionType, string> = {
-  like: 'Like',
-  love: 'Love',
-  haha: 'Haha',
-  wow: 'Wow',
-  sad: 'Sad',
-  angry: 'Angry',
 };
 
 // Vertical gap between the trigger and the picker it anchors to.

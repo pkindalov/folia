@@ -63,8 +63,10 @@ function withActorAvatarUrls(notifications) {
 // re-run against every referenced album here, the same gate every other
 // photo-serving path in this codebase goes through, so a since-revoked album
 // degrades to no thumbnail instead of quietly leaking photo content the
-// recipient can no longer otherwise reach. Returns a Map from notification
-// id (string) to thumbnail url or null.
+// recipient can no longer otherwise reach. Returns a Map from notification id
+// (string) to { thumbnailUrl, accessRevoked } — accessRevoked also drives
+// withNotificationExtras redacting commentText for the same notification,
+// since a since-revoked album shouldn't keep leaking the comment text either.
 function resolveThumbnailUrls(notifications, user) {
   const coverNotifications = notifications.filter(
     (notification) => COVER_THUMBNAIL_TYPES.includes(notification.type) && notification.album
@@ -98,7 +100,7 @@ function resolveThumbnailUrls(notifications, user) {
             notifications.map((notification) => {
               if (COVER_THUMBNAIL_TYPES.includes(notification.type) && notification.album) {
                 const thumbnailUrl = coverImageByAlbumId.get(notification.album.toString()) ?? null;
-                return [notification._id.toString(), thumbnailUrl];
+                return [notification._id.toString(), { thumbnailUrl, accessRevoked: false }];
               }
 
               if (PAGE_THUMBNAIL_TYPES.includes(notification.type) && notification.page && notification.album) {
@@ -108,12 +110,14 @@ function resolveThumbnailUrls(notifications, user) {
                 // album, same defensive check resolveCoverImages already
                 // makes for an explicit coverPage.
                 const belongsToAlbum = page && page.album.toString() === notification.album.toString();
-                const thumbnailUrl =
-                  album && belongsToAlbum ? storage.photoUrl(album.owner, notification.album, page.filename) : null;
-                return [notification._id.toString(), thumbnailUrl];
+                const accessible = Boolean(album && belongsToAlbum);
+                const thumbnailUrl = accessible
+                  ? storage.photoUrl(album.owner, notification.album, page.filename)
+                  : null;
+                return [notification._id.toString(), { thumbnailUrl, accessRevoked: !accessible }];
               }
 
-              return [notification._id.toString(), null];
+              return [notification._id.toString(), { thumbnailUrl: null, accessRevoked: false }];
             })
           );
         });
@@ -125,11 +129,19 @@ function resolveThumbnailUrls(notifications, user) {
 // the two resolvers above, keeping each resolver single-purpose.
 function withNotificationExtras(notifications, user) {
   return Promise.all([withActorAvatarUrls(notifications), resolveThumbnailUrls(notifications, user)]).then(
-    ([withAvatars, thumbnailUrlById]) =>
-      withAvatars.map((notification) => ({
-        ...notification,
-        thumbnailUrl: thumbnailUrlById.get(notification._id.toString()) ?? null,
-      }))
+    ([withAvatars, extrasById]) =>
+      withAvatars.map((notification) => {
+        const extras = extrasById.get(notification._id.toString());
+        const withThumbnail = { ...notification, thumbnailUrl: extras?.thumbnailUrl ?? null };
+        // Same reasoning as the thumbnail redaction above: a since-revoked
+        // album shouldn't leave the comment text readable either. Deleted
+        // (not nulled) so the field goes fully absent, matching the schema's
+        // optional (not nullable) commentText.
+        if (extras?.accessRevoked && withThumbnail.commentText !== undefined) {
+          delete withThumbnail.commentText;
+        }
+        return withThumbnail;
+      })
   );
 }
 

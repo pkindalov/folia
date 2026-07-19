@@ -5,7 +5,7 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import useOutsideClick from '../hooks/useOutsideClick';
 import useEscapeKey from '../hooks/useEscapeKey';
 import { REACTION_TYPES, type ReactionSummary, type ReactionType } from '../features/flipbooks';
-import { REACTION_EMOJI, REACTION_TEXT_COLOR } from './reactionPresentation';
+import { REACTION_EMOJI, REACTION_LABEL, REACTION_TEXT_COLOR } from './reactionPresentation';
 import ReactorsModal from './ReactorsModal';
 
 type ReactionControlProps = {
@@ -35,15 +35,6 @@ const REACTION_SHORTCUT_KEYS: Record<ReactionType, string> = {
   wow: '4',
   sad: '5',
   angry: '6',
-};
-
-const REACTION_LABEL: Record<ReactionType, string> = {
-  like: 'Like',
-  love: 'Love',
-  haha: 'Haha',
-  wow: 'Wow',
-  sad: 'Sad',
-  angry: 'Angry',
 };
 
 const MAX_SUMMARY_ICONS = 3;

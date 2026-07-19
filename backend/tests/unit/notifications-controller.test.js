@@ -386,6 +386,34 @@ describe('notifications-controller', () => {
       );
     });
 
+    // Same revoked-access scenario as the thumbnailUrl test above, but for
+    // the comment text itself — a since-revoked album shouldn't leave the
+    // comment readable any more than it leaves the photo viewable.
+    test('omits commentText (not just thumbnailUrl) when a page_comment notification\'s recipient can no longer read the album', async () => {
+      jest.spyOn(Notification, 'find').mockReturnValue(
+        mockNotificationQuery([
+          fakeNotification({
+            type: 'page_comment',
+            album: ALBUM_ID,
+            page: PAGE_ID,
+            commentText: 'Lovely!',
+          }),
+        ])
+      );
+      jest.spyOn(Notification, 'countDocuments').mockResolvedValue(1);
+      jest
+        .spyOn(Album, 'find')
+        .mockResolvedValue([{ _id: ALBUM_ID, owner: OWNER_ID, visibility: 'private' }]);
+      jest.spyOn(Page, 'find').mockResolvedValue([{ _id: PAGE_ID, album: ALBUM_ID, filename: 'photo.jpg' }]);
+      const res = mockRes();
+
+      controller.list({ user, query: {} }, res);
+      await flush();
+
+      const [{ notifications }] = res.json.mock.calls[0];
+      expect(notifications[0]).not.toHaveProperty('commentText');
+    });
+
     test('falls back to null thumbnailUrl when the referenced album no longer exists', async () => {
       jest
         .spyOn(Notification, 'find')

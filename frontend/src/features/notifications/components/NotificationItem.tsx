@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "../../../components/Icon";
 import Emoji from "../../../components/Emoji";
 import Avatar from "../../../components/Avatar";
-import { REACTION_EMOJI } from "../../../components/reactionPresentation";
+import { REACTION_EMOJI, REACTION_LABEL } from "../../../components/reactionPresentation";
 import type { NotificationItemData } from "./NotificationBell";
 import { REACTION_NOTIFICATION_TYPES } from "../schemas";
 
@@ -29,15 +29,6 @@ type NotificationItemProps = {
 // not a silent runtime gap.
 type MessageParts = { leading: ReactNode; subject: string; trailing?: string };
 
-const REACTION_LABELS: Record<ReactionNotificationType, string> = {
-  like: "Like",
-  love: "Love",
-  haha: "Haha",
-  wow: "Wow",
-  sad: "Sad",
-  angry: "Angry",
-};
-
 // Rendered inline in place of the reaction name (e.g. "reacted [heart icon] to
 // a photo in") — the sr-only label keeps the reaction type announced to
 // screen readers even though the icon itself is decorative.
@@ -46,7 +37,7 @@ function ReactionMessageIcon({ type }: { type: ReactionNotificationType }) {
     <>
       reacted{" "}
       <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
-      <span className="sr-only">{REACTION_LABELS[type]}</span>{" "}
+      <span className="sr-only">{REACTION_LABEL[type]}</span>{" "}
       to a photo in
     </>
   );
@@ -69,11 +60,19 @@ function AlbumLoveMessageIcon() {
 // hint of the content.
 const COMMENT_PREVIEW_MAX_LENGTH = 40;
 
+// Truncates by Unicode code point (via the spread operator), not UTF-16 code
+// unit — a plain string.slice can cut a surrogate pair in half and corrupt
+// the trailing character, which comment text (arbitrary user input,
+// including emoji) can easily contain.
+function truncateCommentPreview(commentText: string | null): string | null {
+  if (!commentText) return commentText;
+  const codePoints = [...commentText];
+  if (codePoints.length <= COMMENT_PREVIEW_MAX_LENGTH) return commentText;
+  return `${codePoints.slice(0, COMMENT_PREVIEW_MAX_LENGTH).join("").trimEnd()}…`;
+}
+
 function CommentMessageIcon({ commentText }: { commentText: string | null }) {
-  const preview =
-    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
-      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
-      : commentText;
+  const preview = truncateCommentPreview(commentText);
 
   return (
     <>
@@ -93,10 +92,7 @@ function CommentMessageIcon({ commentText }: { commentText: string | null }) {
 // distinctly from "commented on your photo" (this is "replied to your
 // comment", a different relationship to the viewer).
 function ReplyMessageIcon({ commentText }: { commentText: string | null }) {
-  const preview =
-    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
-      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
-      : commentText;
+  const preview = truncateCommentPreview(commentText);
 
   return (
     <>
@@ -121,16 +117,13 @@ function CommentReactionMessageIcon({
   type: ReactionNotificationType;
   commentText: string | null;
 }) {
-  const preview =
-    commentText && commentText.length > COMMENT_PREVIEW_MAX_LENGTH
-      ? `${commentText.slice(0, COMMENT_PREVIEW_MAX_LENGTH).trimEnd()}…`
-      : commentText;
+  const preview = truncateCommentPreview(commentText);
 
   return (
     <>
       reacted{" "}
       <Emoji emoji={REACTION_EMOJI[type]} className="text-sm align-text-bottom" />
-      <span className="sr-only">{REACTION_LABELS[type]}</span> to your comment
+      <span className="sr-only">{REACTION_LABEL[type]}</span> to your comment
       {preview ? ` "${preview}"` : ""} on a photo in
     </>
   );

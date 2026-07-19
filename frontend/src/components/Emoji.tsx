@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 // Pinned so the rendered glyphs never change out from under us — bump
 // deliberately, after checking the new version still serves the same
 // codepoint filenames used below.
@@ -14,6 +16,19 @@ type EmojiProps = {
 
 /** Twemoji SVG for a single emoji character (decorative by default), sized to match the surrounding font-size. */
 export default function Emoji({ emoji, className = '' }: EmojiProps) {
+  const [failedToLoad, setFailedToLoad] = useState(false);
+
+  // The CDN being unreachable (blocked, offline, outage) shouldn't leave
+  // reaction icons invisible everywhere — falling back to the platform's own
+  // emoji font at least keeps something recognizable on screen.
+  if (failedToLoad) {
+    return (
+      <span aria-hidden="true" className={`inline-block ${className}`}>
+        {emoji}
+      </span>
+    );
+  }
+
   return (
     <img
       src={`https://cdn.jsdelivr.net/gh/jdecked/twemoji@${TWEMOJI_VERSION}/assets/svg/${toCodepoint(emoji)}.svg`}
@@ -21,6 +36,7 @@ export default function Emoji({ emoji, className = '' }: EmojiProps) {
       aria-hidden="true"
       draggable={false}
       className={`inline-block w-[1em] h-[1em] ${className}`}
+      onError={() => setFailedToLoad(true)}
     />
   );
 }
