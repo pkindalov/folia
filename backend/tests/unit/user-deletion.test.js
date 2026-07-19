@@ -45,6 +45,7 @@ beforeEach(() => {
   jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
+  jest.spyOn(Comment, 'find').mockResolvedValue([]);
   jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
   jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
   jest.spyOn(Album, 'deleteMany').mockResolvedValue({});
@@ -191,6 +192,7 @@ describe('deleteUser', () => {
     const pageDeleteMany = jest.spyOn(Page, 'deleteMany');
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
     const albumReactionDeleteMany = jest.spyOn(AlbumReaction, 'deleteMany');
+    const commentFind = jest.spyOn(Comment, 'find').mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
     const commentReactionDeleteMany = jest.spyOn(CommentReaction, 'deleteMany');
 
@@ -203,11 +205,14 @@ describe('deleteUser', () => {
     expect(albumReactionDeleteMany).toHaveBeenCalledWith({
       $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
     });
-    expect(commentDeleteMany).toHaveBeenCalledWith({
-      $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
-    });
+    expect(commentFind).toHaveBeenNthCalledWith(
+      1,
+      { $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }] },
+      '_id'
+    );
+    expect(commentDeleteMany).toHaveBeenCalledWith({ _id: { $in: [] } });
     expect(commentReactionDeleteMany).toHaveBeenCalledWith({
-      $or: [{ album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
+      $or: [{ comment: { $in: [] } }, { album: { $in: [ALBUM_ID, OTHER_ALBUM_ID] } }, { user: USER_ID }],
     });
   });
 
@@ -215,14 +220,44 @@ describe('deleteUser', () => {
     jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
     jest.spyOn(Album, 'find').mockResolvedValue([]);
     const reactionDeleteMany = jest.spyOn(Reaction, 'deleteMany');
+    jest.spyOn(Comment, 'find').mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
     const commentReactionDeleteMany = jest.spyOn(CommentReaction, 'deleteMany');
 
     await deleteUser(USER_ID);
 
     expect(reactionDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
-    expect(commentDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
-    expect(commentReactionDeleteMany).toHaveBeenCalledWith({ $or: [{ album: { $in: [] } }, { user: USER_ID }] });
+    expect(commentDeleteMany).toHaveBeenCalledWith({ _id: { $in: [] } });
+    expect(commentReactionDeleteMany).toHaveBeenCalledWith({
+      $or: [{ comment: { $in: [] } }, { album: { $in: [] } }, { user: USER_ID }],
+    });
+  });
+
+  test('cascades to replies and reactions from other users on a comment this user posted on someone else\'s album', async () => {
+    jest.spyOn(User, 'findById').mockResolvedValue(fakeUser());
+    jest.spyOn(Album, 'find').mockResolvedValue([]);
+    const OWN_COMMENT_ID = '507f1f77bcf86cd799439055';
+    const OTHER_USER_REPLY_ID = '507f1f77bcf86cd799439066';
+    const commentFind = jest
+      .spyOn(Comment, 'find')
+      .mockResolvedValueOnce([{ _id: OWN_COMMENT_ID }])
+      .mockResolvedValueOnce([{ _id: OTHER_USER_REPLY_ID }]);
+    const commentDeleteMany = jest.spyOn(Comment, 'deleteMany');
+    const commentReactionDeleteMany = jest.spyOn(CommentReaction, 'deleteMany');
+
+    await deleteUser(USER_ID);
+
+    expect(commentFind).toHaveBeenNthCalledWith(2, { parentComment: { $in: [OWN_COMMENT_ID] } }, '_id');
+    expect(commentDeleteMany).toHaveBeenCalledWith({
+      _id: { $in: [OWN_COMMENT_ID, OTHER_USER_REPLY_ID] },
+    });
+    expect(commentReactionDeleteMany).toHaveBeenCalledWith({
+      $or: [
+        { comment: { $in: [OWN_COMMENT_ID, OTHER_USER_REPLY_ID] } },
+        { album: { $in: [] } },
+        { user: USER_ID },
+      ],
+    });
   });
 
   test('deletes the notification inbox but leaves notifications where the user is only the actor', async () => {

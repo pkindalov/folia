@@ -66,8 +66,31 @@ function deleteUser(userId) {
       .then(() => Page.deleteMany({ album: { $in: albumIds } }))
       .then(() => Reaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
       .then(() => AlbumReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
-      .then(() => Comment.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
-      .then(() => CommentReaction.deleteMany({ $or: [{ album: { $in: albumIds } }, { user: userId }] }))
+      // Unlike Reaction/AlbumReaction (only ever created by an album's
+      // owner), a Comment can be authored by anyone with read access to
+      // someone else's album — so a top-level comment this user posted on
+      // another owner's album can have replies and reactions from other
+      // users. Deleting it by the {album, user} shortcut alone would orphan
+      // those, so first resolve the full set of comment ids being removed
+      // (mirroring deleteComment's own cascade in pages-controller.js),
+      // then delete both collections by that closed set.
+      .then(() =>
+        Comment.find({ $or: [{ album: { $in: albumIds } }, { user: userId }] }, '_id').then(
+          (directComments) => {
+            const directCommentIds = directComments.map((comment) => comment._id);
+            return Comment.find({ parentComment: { $in: directCommentIds } }, '_id').then(
+              (replies) => [...directCommentIds, ...replies.map((reply) => reply._id)]
+            );
+          }
+        )
+      )
+      .then((commentIds) =>
+        Comment.deleteMany({ _id: { $in: commentIds } }).then(() =>
+          CommentReaction.deleteMany({
+            $or: [{ comment: { $in: commentIds } }, { album: { $in: albumIds } }, { user: userId }],
+          })
+        )
+      )
       .then(() => Album.deleteMany({ owner: userId }))
       .then(() => Circle.deleteMany({ owner: userId }))
       .then(() => {

@@ -290,6 +290,7 @@ describe('profile routes (integration)', () => {
       jest.spyOn(Page, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Reaction, 'deleteMany').mockResolvedValue({});
       jest.spyOn(AlbumReaction, 'deleteMany').mockResolvedValue({});
+      jest.spyOn(Comment, 'find').mockResolvedValue([]);
       jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
       jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
       jest.spyOn(Album, 'deleteMany').mockResolvedValue({});

@@ -506,17 +506,25 @@ module.exports = {
       return res.status(404).json({ error: 'Photo not found' });
     }
 
-    // `before` is the createdAt of the oldest comment already loaded by the
-    // caller — paging backward through history one portion at a time,
-    // newest-first, same shape as ReactorsModal's server-side cap. Omitted
-    // on the first request, which returns the most recent portion.
-    const { before } = req.query;
+    // `before`/`beforeId` are the createdAt and _id of the oldest comment
+    // already loaded by the caller — paging backward through history one
+    // portion at a time, newest-first, same shape as ReactorsModal's
+    // server-side cap. Both omitted on the first request, which returns the
+    // most recent portion. `beforeId` tiebreaks comments that share the
+    // exact same createdAt millisecond: sorting by createdAt alone doesn't
+    // guarantee a stable order across separate queries, so a boundary could
+    // otherwise fall inside a tied group and silently skip comments that
+    // never made it into either page.
+    const { before, beforeId } = req.query;
     let beforeDate;
     if (before !== undefined) {
       beforeDate = new Date(before);
       if (Number.isNaN(beforeDate.getTime())) {
         return res.status(400).json({ error: 'before must be a valid date' });
       }
+    }
+    if (beforeId !== undefined && !mongoose.isValidObjectId(beforeId)) {
+      return res.status(400).json({ error: 'beforeId must be a valid id' });
     }
 
     Page.findOne({ _id: pageId, album: album._id })
@@ -526,13 +534,14 @@ module.exports = {
         // Top-level only — replies are fetched and attached separately
         // below, and never count toward this portion's page size (see
         // attachReplies).
-        const filter = {
-          page: page._id,
-          parentComment: null,
-          ...(beforeDate ? { createdAt: { $lt: beforeDate } } : {}),
-        };
+        const filter = { page: page._id, parentComment: null };
+        if (beforeDate && beforeId) {
+          filter.$or = [{ createdAt: { $lt: beforeDate } }, { createdAt: beforeDate, _id: { $lt: beforeId } }];
+        } else if (beforeDate) {
+          filter.createdAt = { $lt: beforeDate };
+        }
         return Comment.find(filter)
-          .sort('-createdAt')
+          .sort({ createdAt: -1, _id: -1 })
           .limit(Comment.COMMENTS_PAGE_SIZE + 1)
           .then((newestFirst) => {
             // The extra document beyond the page size reveals whether

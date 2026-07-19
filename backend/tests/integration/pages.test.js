@@ -676,6 +676,42 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(400);
     });
+
+    test('400 when `beforeId` is not a valid id', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const before = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .query({ before, beforeId: 'not-an-id' })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+    });
+
+    test('passing `before` with `beforeId` tiebreaks comments sharing the exact same createdAt', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      const findSpy = jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue([]) }),
+      });
+
+      const before = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const beforeId = COMMENT_ID;
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .query({ before, beforeId })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(findSpy).toHaveBeenCalledWith({
+        page: PAGE_ID,
+        parentComment: null,
+        $or: [{ createdAt: { $lt: new Date(before) } }, { createdAt: new Date(before), _id: { $lt: beforeId } }],
+      });
+    });
   });
 
   describe('POST /api/albums/:id/pages/:pageId/comments', () => {

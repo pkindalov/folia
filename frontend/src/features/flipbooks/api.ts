@@ -138,9 +138,13 @@ export async function setAlbumReaction(albumId: string): Promise<AlbumReactionSu
 export async function listComments(
   albumId: string,
   pageId: string,
-  before?: string
+  before?: string,
+  beforeId?: string
 ): Promise<{ comments: TopLevelComment[]; hasMore: boolean }> {
-  const query = before ? `?before=${encodeURIComponent(before)}` : '';
+  const params = new URLSearchParams();
+  if (before !== undefined) params.set('before', before);
+  if (beforeId !== undefined) params.set('beforeId', beforeId);
+  const query = params.toString() ? `?${params.toString()}` : '';
   const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments${query}`);
   return commentsResponseSchema.parse(data);
 }

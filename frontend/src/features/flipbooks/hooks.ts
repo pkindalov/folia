@@ -186,7 +186,11 @@ export function useSetAlbumReaction(albumId: string) {
 }
 
 type CommentsPage = { comments: TopLevelComment[]; hasMore: boolean };
-type CommentsQueryData = InfiniteData<CommentsPage, string | undefined>;
+// createdAt + id of the oldest comment in the last-fetched portion — id
+// tiebreaks comments that share the exact same createdAt millisecond, so a
+// page boundary can't fall inside a tied group and silently skip comments.
+type CommentsCursor = { createdAt: string; id: string };
+type CommentsQueryData = InfiniteData<CommentsPage, CommentsCursor | undefined>;
 
 function commentsQueryKey(albumId: string | undefined, pageId: string | undefined) {
   return ['albums', albumId, 'pages', pageId, 'comments'] as const;
@@ -205,12 +209,15 @@ function commentsQueryKey(albumId: string | undefined, pageId: string | undefine
 export function useComments(albumId: string | undefined, pageId: string | undefined, enabled: boolean) {
   const query = useInfiniteQuery({
     queryKey: commentsQueryKey(albumId, pageId),
-    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      albumsApi.listComments(albumId!, pageId!, pageParam),
-    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }: { pageParam: CommentsCursor | undefined }) =>
+      albumsApi.listComments(albumId!, pageId!, pageParam?.createdAt, pageParam?.id),
+    initialPageParam: undefined as CommentsCursor | undefined,
     // The oldest comment in the just-fetched portion becomes the cursor for
     // the next (older) one; undefined once the backend reports no more.
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.comments[0]?.createdAt : undefined),
+    getNextPageParam: (lastPage) => {
+      const oldest = lastPage.comments[0];
+      return lastPage.hasMore && oldest ? { createdAt: oldest.createdAt, id: oldest._id } : undefined;
+    },
     enabled: enabled && albumId !== undefined && pageId !== undefined,
   });
 

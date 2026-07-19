@@ -133,6 +133,43 @@ describe('useComments', () => {
     expect(result.current.comments).toEqual([EXISTING_COMMENT]);
     expect(result.current.hasMoreComments).toBe(true);
   });
+
+  // beforeId tiebreaks comments sharing the exact same createdAt millisecond
+  // — omitting it would let a page boundary fall inside a tied group and
+  // silently skip comments (see listComments on the backend).
+  test('"load more" sends both the oldest comment\'s createdAt and its id as the cursor', async () => {
+    const EXISTING_COMMENT = {
+      _id: 'c1',
+      page: 'p1',
+      user: 'u1',
+      username: 'maria',
+      avatarUrl: null,
+      text: 'Lovely!',
+      parentComment: null,
+      reactions: ZERO_REACTIONS,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      replies: [],
+    };
+    const requestedUrls: string[] = [];
+    vi.mocked(fetch).mockImplementation((url) => {
+      requestedUrls.push(String(url));
+      return respond({ comments: [EXISTING_COMMENT], hasMore: true });
+    });
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useComments('a1', 'p1', true), { wrapper });
+    await waitFor(() => expect(result.current.comments).toEqual([EXISTING_COMMENT]));
+
+    result.current.fetchMoreComments();
+    await waitFor(() => expect(requestedUrls.length).toBe(2));
+
+    const secondRequestUrl = requestedUrls[1];
+    expect(secondRequestUrl).toContain(`before=${encodeURIComponent(EXISTING_COMMENT.createdAt)}`);
+    expect(secondRequestUrl).toContain(`beforeId=${EXISTING_COMMENT._id}`);
+  });
 });
 
 // Shared shape for a comments infinite query's cache — matches what
