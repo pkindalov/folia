@@ -48,7 +48,7 @@ type PhotoLightboxProps = {
   onLoadMoreReplies?: (pageId: string, commentId: string) => void;
   pendingRepliesCommentId?: string | null;
   erroredRepliesCommentId?: string | null;
-  /** Drives comment ownership (delete button, "your comment" label) — a stable id, unlike viewerUsername below (kept separate for the reactor list, which has no ids to compare against). */
+  /** Drives comment ownership (delete button, "your comment" label), and also feeds ReactionControl/CommentReactionControl's reactor lists ("is this reactor me") — see viewerUsername below, kept only as its fallback for reactor lists without an id (album love reactors, resolved as bare usernames). */
   viewerId?: string;
   viewerUsername?: string;
   // When the album viewer's slideshow keeps running behind the zoomed-in
@@ -245,6 +245,7 @@ export default function PhotoLightbox({
                   // fire a real reaction mutation as a side effect of typing
                   // a comment).
                   isKeyboardShortcutsDisabled={isCommentsPanelOpen}
+                  viewerId={viewerId}
                   viewerUsername={viewerUsername}
                 />
               )}

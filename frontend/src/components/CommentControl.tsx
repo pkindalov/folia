@@ -38,7 +38,7 @@ type CommentControlProps = {
   onReactToComment?: (commentId: string, type: ReactionType) => void;
   /** _id of the comment whose reaction mutation is in flight, or null. */
   pendingReactionCommentId?: string | null;
-  /** Drives isOwnComment/canDelete — a stable id, unlike username (see viewerUsername below, which stays username-based only because the reactor list it feeds has no ids to compare against). */
+  /** Drives isOwnComment/canDelete, and also feeds CommentReactionControl's reactor list ("is this reactor me") — see viewerUsername below, kept only as its fallback for reactor lists without an id (there are none for comments, but ReactorsModal is shared with the album love list, which has no ids). */
   viewerId?: string;
   viewerUsername?: string;
   isAlbumOwner: boolean;
@@ -68,6 +68,7 @@ function CommentRow({
   variant,
   onReact,
   isReactionPending,
+  viewerId,
   viewerUsername,
   // "li" for a reply — each is a direct sibling inside its own replies
   // <ul>. "div" for a top-level comment — TopLevelCommentItem already
@@ -84,6 +85,7 @@ function CommentRow({
   variant: "light" | "dark";
   onReact?: (type: ReactionType) => void;
   isReactionPending: boolean;
+  viewerId?: string;
   viewerUsername?: string;
   as?: "li" | "div";
 }) {
@@ -122,6 +124,7 @@ function CommentRow({
               onReact={onReact}
               isPending={isReactionPending}
               variant={variant}
+              viewerId={viewerId}
               viewerUsername={viewerUsername}
             />
           </div>
@@ -204,6 +207,7 @@ function TopLevelCommentItem({
         onDelete={() => onDeleteComment(comment._id)}
         onReact={onReactToComment ? (type) => onReactToComment(comment._id, type) : undefined}
         isReactionPending={pendingReactionCommentId === comment._id}
+        viewerId={viewerId}
         viewerUsername={viewerUsername}
         isLight={isLight}
         variant={variant}
@@ -250,6 +254,7 @@ function TopLevelCommentItem({
                 onDelete={() => onDeleteComment(reply._id)}
                 onReact={onReactToComment ? (type) => onReactToComment(reply._id, type) : undefined}
                 isReactionPending={pendingReactionCommentId === reply._id}
+                viewerId={viewerId}
                 viewerUsername={viewerUsername}
                 isLight={isLight}
                 variant={variant}

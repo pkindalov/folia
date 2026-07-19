@@ -72,6 +72,10 @@ export const REACTION_TYPES = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
 export const reactorSchema = z.object({
+  // Absent for an album's reactors (albumReactionSummarySchema resolves those
+  // as bare usernames, with no stable id available) — ReactorsModal falls
+  // back to comparing by username in that case.
+  user: z.string().optional(),
   username: z.string(),
   type: z.enum(REACTION_TYPES),
 });

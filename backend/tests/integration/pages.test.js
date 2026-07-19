@@ -79,16 +79,20 @@ describe('album pages routes (integration)', () => {
   // to "no reactions" by default so tests that don't care about reactions
   // can't accidentally hit the real Mongoose model. Same reasoning for
   // Comment.find (deleteComment now looks up a deleted comment's replies
-  // before cascading their reactions) and every CommentReaction query
+  // before cascading their reactions), Comment.exists (setCommentReaction's
+  // post-write check that the comment wasn't concurrently deleted — see its
+  // own tests below), and every CommentReaction query
   // (listComments/addComment/setCommentReaction/deleteComment all resolve or
-  // cascade comment reaction summaries) — each defaults to "nothing there",
-  // and any test that cares overrides it explicitly.
+  // cascade comment reaction summaries) — each defaults to "nothing there"
+  // (or, for Comment.exists, "still there"), and any test that cares
+  // overrides it explicitly.
   beforeEach(() => {
     jest.spyOn(Reaction, 'aggregate').mockResolvedValue([]);
     jest.spyOn(Reaction, 'find').mockResolvedValue([]);
     jest.spyOn(Comment, 'aggregate').mockResolvedValue([]);
     jest.spyOn(Comment, 'deleteMany').mockResolvedValue({});
     jest.spyOn(Comment, 'find').mockResolvedValue([]);
+    jest.spyOn(Comment, 'exists').mockResolvedValue(true);
     jest.spyOn(CommentReaction, 'aggregate').mockResolvedValue([]);
     jest.spyOn(CommentReaction, 'find').mockResolvedValue([]);
     jest.spyOn(CommentReaction, 'deleteMany').mockResolvedValue({});
@@ -1448,6 +1452,34 @@ describe('album pages routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(deleteOne).toHaveBeenCalled();
+    });
+
+    // Regression test for a race where a concurrent deleteComment removes
+    // the comment (and cascades its CommentReaction rows) while this
+    // request is still writing its own reaction — without the post-write
+    // existence check, that write would survive as an orphaned row
+    // referencing a comment that no longer exists.
+    test('cleans up its own reaction and 404s when the comment was deleted concurrently', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, filename: 'a.jpg' });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({
+        _id: COMMENT_ID,
+        page: PAGE_ID,
+        text: 'Lovely!',
+        user: OTHER_ID,
+      });
+      jest.spyOn(CommentReaction, 'findOne').mockResolvedValue(null);
+      jest.spyOn(CommentReaction, 'create').mockResolvedValue({});
+      jest.spyOn(Comment, 'exists').mockResolvedValue(false);
+
+      const res = await request(app)
+        .put(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/reaction`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ type: 'like' });
+
+      expect(res.status).toBe(404);
+      expect(CommentReaction.deleteMany).toHaveBeenCalledWith({ comment: COMMENT_ID, user: OWNER_ID });
     });
   });
 

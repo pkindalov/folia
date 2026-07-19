@@ -283,7 +283,7 @@ describe('pages-controller', () => {
               counts: { ...ZERO_REACTION_COUNTS, love: 3, like: 1 },
               total: 4,
               viewerReaction: 'love',
-              reactors: [{ username: 'maria', type: 'love' }],
+              reactors: [{ user: OTHER_ID, username: 'maria', type: 'love' }],
             },
           }),
         ],
@@ -312,8 +312,8 @@ describe('pages-controller', () => {
           expect.objectContaining({
             reactions: expect.objectContaining({
               reactors: [
-                { username: 'maria', type: 'love' },
-                { username: 'Deleted user', type: 'like' },
+                { user: OTHER_ID, username: 'maria', type: 'love' },
+                { user: MEMBER_ID, username: 'Deleted user', type: 'like' },
               ],
             }),
           }),

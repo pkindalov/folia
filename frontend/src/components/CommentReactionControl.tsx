@@ -12,6 +12,7 @@ type CommentReactionControlProps = {
   isPending: boolean;
   /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
   variant: 'light' | 'dark';
+  viewerId?: string;
   viewerUsername?: string;
 };
 
@@ -33,6 +34,7 @@ export default function CommentReactionControl({
   onReact,
   isPending,
   variant,
+  viewerId,
   viewerUsername,
 }: CommentReactionControlProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -154,6 +156,7 @@ export default function CommentReactionControl({
         onClose={() => setIsReactorsModalOpen(false)}
         heading="People who reacted"
         reactors={reactors}
+        viewerId={viewerId}
         viewerUsername={viewerUsername}
         onRemoveMyReaction={viewerReaction && !isPending ? removeMyReaction : undefined}
       />

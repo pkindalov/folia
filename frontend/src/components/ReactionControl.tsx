@@ -20,6 +20,8 @@ type ReactionControlProps = {
   // the keyboard — this instance keeps rendering underneath it, so without
   // this it would also react to the same "r" / number-key presses.
   isKeyboardShortcutsDisabled?: boolean;
+  /** The signed-in viewer's own stable id, passed through to the "who reacted" list — see ReactorsModal's own viewerId doc for why this (not viewerUsername) is what decides "is this me". */
+  viewerId?: string;
   /** The signed-in viewer's own username, passed through to the "who reacted" list so it can offer a remove button on their own row. */
   viewerUsername?: string;
   // Lets a caller (e.g. AlbumSpread, PhotoLightbox) suspend its own arrow-key
@@ -47,6 +49,7 @@ export default function ReactionControl({
   isPending,
   variant,
   isKeyboardShortcutsDisabled = false,
+  viewerId,
   viewerUsername,
   onReactorsModalOpenChange,
 }: ReactionControlProps) {
@@ -216,6 +219,7 @@ export default function ReactionControl({
         onClose={() => setIsReactorsModalOpen(false)}
         heading="People who reacted"
         reactors={reactors}
+        viewerId={viewerId}
         viewerUsername={viewerUsername}
         onRemoveMyReaction={viewerReaction && !isPending ? removeMyReaction : undefined}
       />

@@ -119,4 +119,46 @@ describe('ReactorsModal', () => {
     renderModal({ onRemoveMyReaction: vi.fn() }); // viewerUsername left unset
     expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
   });
+
+  // A reactor's own `user` id is the load-bearing identity check where it's
+  // available (comment and photo reactions) — username is only a fallback
+  // for reactor lists that don't carry an id at all (album love reactors).
+  test('identifies the viewer\'s own row by id even if their username in the reactor list is stale', () => {
+    renderModal({
+      reactors: [
+        { user: 'user-1', username: 'old-name', type: 'love' },
+        { user: 'user-2', username: 'sam', type: 'like' },
+      ],
+      viewerId: 'user-1',
+      viewerUsername: 'new-name', // the viewer's own username has since changed
+      onRemoveMyReaction: vi.fn(),
+    });
+
+    const ownRow = screen.getByRole('link', { name: 'old-name' }).closest('li') as HTMLElement;
+    expect(within(ownRow).getByRole('button', { name: 'Remove your reaction' })).toBeInTheDocument();
+    const otherRow = screen.getByRole('link', { name: 'sam' }).closest('li') as HTMLElement;
+    expect(within(otherRow).queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+  });
+
+  test('does not misattribute another reactor as the viewer purely from a username collision, when ids disagree', () => {
+    renderModal({
+      reactors: [{ user: 'someone-elses-id', username: 'sam', type: 'like' }],
+      viewerId: 'user-1',
+      viewerUsername: 'sam', // coincidentally shares a username with a different account
+      onRemoveMyReaction: vi.fn(),
+    });
+
+    expect(screen.queryByRole('button', { name: 'Remove your reaction' })).not.toBeInTheDocument();
+  });
+
+  test('falls back to comparing by username when a reactor has no id (e.g. album love reactors)', () => {
+    renderModal({
+      reactors: [{ username: 'sam', type: 'love' }], // no `user` field
+      viewerId: 'user-1',
+      viewerUsername: 'sam',
+      onRemoveMyReaction: vi.fn(),
+    });
+
+    expect(screen.getByRole('button', { name: 'Remove your reaction' })).toBeInTheDocument();
+  });
 });

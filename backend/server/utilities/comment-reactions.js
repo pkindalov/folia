@@ -16,7 +16,9 @@ function zeroFilledCounts() {
 // instead of page. Takes each comment's _id as-is (a real ObjectId on a live
 // Comment document or the output of withCommentAuthors), same assumption
 // resolveReactionSummaries makes for pages. Returns a Map from comment id
-// (string) to { counts, total, viewerReaction, reactors }.
+// (string) to { counts, total, viewerReaction, reactors }, each reactor
+// being { user, username, type } — `user` is the reactor's stable id, same
+// reasoning as resolveReactionSummaries in pages-controller.js.
 function resolveCommentReactionSummaries(comments, viewerId) {
   const commentIds = comments.map((comment) => comment._id);
   if (commentIds.length === 0) return Promise.resolve(new Map());
@@ -71,6 +73,7 @@ function resolveCommentReactionSummaries(comments, viewerId) {
       for (const group of reactorGroups) {
         const summary = summaryByCommentId.get(group._id.toString());
         summary.reactors = group.reactors.map((reactor) => ({
+          user: reactor.user.toString(),
           username: usernames[cursor++],
           type: reactor.type,
         }));

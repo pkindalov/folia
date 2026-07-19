@@ -49,7 +49,7 @@ describe('resolveCommentReactionSummaries', () => {
     expect(summary.counts.love).toBe(2);
     expect(summary.total).toBe(2);
     expect(summary.viewerReaction).toBe('love');
-    expect(summary.reactors).toEqual([{ username: 'maria', type: 'love' }]);
+    expect(summary.reactors).toEqual([{ user: REACTOR_ID, username: 'maria', type: 'love' }]);
   });
 
   test('batches distinct comments into a single set of queries', async () => {

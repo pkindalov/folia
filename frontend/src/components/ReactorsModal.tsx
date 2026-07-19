@@ -17,7 +17,16 @@ type ReactorsModalProps = {
   heading: string;
   /** Capped server-side at 50 (per photo or per album), so there's no pagination here. */
   reactors: Reactor[];
-  /** The signed-in viewer's own username — lets their row offer a remove button. Omit where removal isn't wired up. */
+  /**
+   * The signed-in viewer's own stable id — lets their row offer a remove
+   * button, compared against each reactor's own `user` id rather than
+   * username so a stale cached username can never misattribute (or miss)
+   * "is this me". Falls back to viewerUsername below only for reactor lists
+   * that don't carry an id at all (album love reactors, resolved as bare
+   * usernames server-side).
+   */
+  viewerId?: string;
+  /** The signed-in viewer's own username — the fallback identity check where viewerId/reactor.user aren't available. Omit entirely where removal isn't wired up. */
   viewerUsername?: string;
   onRemoveMyReaction?: () => void;
 };
@@ -28,6 +37,7 @@ export default function ReactorsModal({
   onClose,
   heading,
   reactors,
+  viewerId,
   viewerUsername,
   onRemoveMyReaction,
 }: ReactorsModalProps) {
@@ -68,7 +78,11 @@ export default function ReactorsModal({
             </>
           );
 
-          const isMine = onRemoveMyReaction !== undefined && reactor.username === viewerUsername;
+          const isMine =
+            onRemoveMyReaction !== undefined &&
+            (reactor.user !== undefined && viewerId !== undefined
+              ? reactor.user === viewerId
+              : reactor.username === viewerUsername);
 
           return (
             <li key={`${reactor.username}-${index}`} className="flex items-center gap-1">

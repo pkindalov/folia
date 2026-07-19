@@ -73,7 +73,9 @@ const MAX_REACTORS_PER_PAGE = 50;
 // same N+1-avoidance shape as resolveCoverImages in albums-controller.js.
 // Returns a Map from page id (string) to
 // { counts, total, viewerReaction, reactors }, reactors being up to
-// MAX_REACTORS_PER_PAGE { username, type } entries, most recent first.
+// MAX_REACTORS_PER_PAGE { user, username, type } entries, most recent first —
+// `user` is the reactor's stable id, so the frontend can tell "is this me"
+// apart even if the viewer's own username were ever stale in a cached list.
 function resolveReactionSummaries(pages, viewerId) {
   const pageIds = pages.map((page) => page._id);
   if (pageIds.length === 0) return Promise.resolve(new Map());
@@ -130,6 +132,7 @@ function resolveReactionSummaries(pages, viewerId) {
       for (const group of reactorGroups) {
         const summary = summaryByPageId.get(group._id.toString());
         summary.reactors = group.reactors.map((reactor) => ({
+          user: reactor.user.toString(),
           username: usernames[cursor++],
           type: reactor.type,
         }));
@@ -845,9 +848,24 @@ module.exports = {
 
               return createReaction(true);
             })
-            .then(() => resolveCommentReactionSummaries([comment], req.user._id))
-            .then((summaryByCommentId) => {
-              res.json({ reactions: summaryByCommentId.get(comment._id.toString()) });
+            // A concurrent deleteComment can remove this exact comment (and
+            // cascade-delete its CommentReaction rows) at any point between
+            // the findOne above and here — including after its own cleanup
+            // query already ran, in which case the write just above would
+            // otherwise survive as an orphaned reaction row referencing a
+            // comment that no longer exists. Checked once here rather than
+            // per-branch since every branch above (create, switch, and the
+            // create-on-stale-save fallback) can be the one that raced.
+            .then(() => Comment.exists({ _id: comment._id }))
+            .then((stillExists) => {
+              if (!stillExists) {
+                return CommentReaction.deleteMany({ comment: comment._id, user: req.user._id }).then(() =>
+                  res.status(404).json({ error: 'Comment not found' })
+                );
+              }
+              return resolveCommentReactionSummaries([comment], req.user._id).then((summaryByCommentId) => {
+                res.json({ reactions: summaryByCommentId.get(comment._id.toString()) });
+              });
             });
         });
       })

@@ -18,7 +18,7 @@ type AlbumSpreadProps = {
   // has its own arrow-key navigation while it's open, and the album-level
   // reactors modal shouldn't be paged out from under the viewer either.
   isKeyboardNavDisabled?: boolean;
-  /** Drives comment ownership (delete button, "your comment" label) — a stable id, unlike viewerUsername below (kept separate for the reactor list, which has no ids to compare against). */
+  /** Drives comment ownership (delete button, "your comment" label), and also feeds ReactionControl/CommentReactionControl's reactor lists ("is this reactor me") — see viewerUsername below, kept only as its fallback for reactor lists without an id (album love reactors, resolved as bare usernames). */
   viewerId?: string;
   viewerUsername?: string;
   isAutoPlaying?: boolean;
@@ -361,6 +361,7 @@ export default function AlbumSpread({
                     // typing a comment).
                     isKeyboardShortcutsDisabled={isKeyboardNavDisabled || isShortcutsHintOpen || isCommentsPanelOpen}
                     onReactorsModalOpenChange={setIsReactorsModalOpen}
+                    viewerId={viewerId}
                     viewerUsername={viewerUsername}
                   />
                   {onAddComment && onDeleteComment && (
