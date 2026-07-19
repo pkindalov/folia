@@ -109,7 +109,11 @@ export function useUploadPages(albumId: string) {
   return useMutation({
     mutationFn: (files: File[]) => albumsApi.uploadPages(albumId, files),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['albums', albumId] });
       queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
@@ -121,7 +125,11 @@ export function useDeletePage(albumId: string) {
   return useMutation({
     mutationFn: (pageId: string) => albumsApi.deletePage(albumId, pageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
       queryClient.invalidateQueries({ queryKey: ['albums', albumId] });
       queryClient.invalidateQueries({ queryKey: ['albums'] });
     },
@@ -134,7 +142,11 @@ export function useUpdatePageCaption(albumId: string) {
     mutationFn: ({ pageId, caption }: { pageId: string; caption: string }) =>
       albumsApi.updatePageCaption(albumId, pageId, caption),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
     },
   });
 }
@@ -162,7 +174,11 @@ export function useSetPageReaction(albumId: string) {
     mutationFn: ({ pageId, type }: { pageId: string; type: ReactionType }) =>
       albumsApi.setPageReaction(albumId, pageId, type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
     },
   });
 }
@@ -293,7 +309,11 @@ export function useAddComment(albumId: string) {
       });
       // The page list's commentCount lives alongside reactions on each page
       // object — invalidated the same way useSetPageReaction invalidates it.
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
     },
   });
 }
@@ -326,7 +346,11 @@ export function useDeleteComment(albumId: string) {
           })),
         };
       });
-      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'] });
+      // exact: true — this key is also a prefix of the comments infinite
+      // query's key (['albums', albumId, 'pages', pageId, 'comments']), and
+      // invalidateQueries fuzzy-matches by default. Without it, this would
+      // also invalidate (and silently refetch) any open comment thread.
+      queryClient.invalidateQueries({ queryKey: ['albums', albumId, 'pages'], exact: true });
     },
   });
 }

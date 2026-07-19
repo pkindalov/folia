@@ -31,7 +31,7 @@ const DEFAULT_PROPS: ComponentProps<typeof CommentControl> = {
   comments: undefined,
   isLoading: false,
   isError: false,
-  onAddComment: vi.fn(),
+  onAddComment: vi.fn().mockResolvedValue(undefined),
   onDeleteComment: vi.fn(),
   pendingDeleteCommentId: null,
   isAlbumOwner: false,
@@ -176,7 +176,7 @@ describe('CommentControl', () => {
   });
 
   test('submitting the composer calls onAddComment with the typed text', async () => {
-    const onAddComment = vi.fn();
+    const onAddComment = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderControl({ comments: [], onAddComment });
 
@@ -260,7 +260,7 @@ describe('CommentControl', () => {
 
   describe('replies', () => {
     test('clicking Reply opens an inline composer, and submitting it calls onAddComment with the parent comment id', async () => {
-      const onAddComment = vi.fn();
+      const onAddComment = vi.fn().mockResolvedValue(undefined);
       const user = userEvent.setup();
       renderControl({ commentCount: 1, comments: [COMMENT], onAddComment });
 

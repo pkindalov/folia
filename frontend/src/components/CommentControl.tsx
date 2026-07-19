@@ -19,7 +19,7 @@ type CommentControlProps = {
   /** Fires whenever the panel opens/closes — the parent uses this to gate the lazy fetch and to suspend the lightbox's arrow-key navigation while the panel is open. */
   onOpenChange?: (isOpen: boolean) => void;
   /** parentCommentId is set when submitting a reply to a top-level comment — replies are exactly one level deep, so it's never itself a reply's id. */
-  onAddComment: (text: string, parentCommentId?: string) => void;
+  onAddComment: (text: string, parentCommentId?: string) => Promise<void>;
   /**
    * Which composer's submission is in flight — null for the top-level
    * composer, a comment id for that comment's own reply composer,
@@ -27,9 +27,7 @@ type CommentControlProps = {
    * the whole page (see ViewerPage), so without this every mounted
    * composer (the bottom one, plus whichever reply composer happens to be
    * open) would show the same pending/error state regardless of which one
-   * actually submitted — including CommentComposer silently clearing an
-   * unrelated, untouched draft the moment the *other* composer's
-   * submission settles.
+   * actually submitted.
    */
   pendingCommentTarget?: string | null;
   erroredCommentTarget?: string | null;
@@ -176,7 +174,7 @@ function TopLevelCommentItem({
   variant: "light" | "dark";
   isReplying: boolean;
   onToggleReply: () => void;
-  onAddReply: (text: string) => void;
+  onAddReply: (text: string) => Promise<void>;
   isAddPending: boolean;
   addError: boolean;
 }) {
@@ -210,7 +208,6 @@ function TopLevelCommentItem({
             <CommentComposer
               onSubmit={onAddReply}
               isPending={isAddPending}
-              hasError={addError}
               variant={variant}
               placeholder="Write a reply…"
               autoFocus
@@ -512,7 +509,6 @@ export default function CommentControl({
             <CommentComposer
               onSubmit={onAddComment}
               isPending={isTopLevelAddPending}
-              hasError={topLevelAddError}
               variant={variant}
             />
           </div>

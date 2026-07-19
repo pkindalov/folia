@@ -29,7 +29,7 @@ type PhotoLightboxProps = {
   isCommentsLoading?: boolean;
   isCommentsError?: boolean;
   onCommentsOpenChange?: (isOpen: boolean) => void;
-  onAddComment?: (pageId: string, text: string, parentCommentId?: string) => void;
+  onAddComment?: (pageId: string, text: string, parentCommentId?: string) => Promise<void>;
   // Which composer's submission is in flight/errored — null for the
   // top-level composer, a comment id for that comment's reply composer,
   // undefined for neither. See ViewerPage's pendingCommentTarget for why

@@ -1,13 +1,12 @@
 import type { ComponentProps } from 'react';
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CommentComposer from './CommentComposer';
 
 const DEFAULT_PROPS: ComponentProps<typeof CommentComposer> = {
-  onSubmit: vi.fn(),
+  onSubmit: vi.fn().mockResolvedValue(undefined),
   isPending: false,
-  hasError: false,
 };
 
 const renderComposer = (props: Partial<ComponentProps<typeof CommentComposer>> = {}) =>
@@ -38,7 +37,7 @@ describe('CommentComposer', () => {
   });
 
   test('clicking submit calls onSubmit with the trimmed text', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderComposer({ onSubmit });
 
@@ -50,7 +49,7 @@ describe('CommentComposer', () => {
   });
 
   test('Enter submits the comment without inserting a newline', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderComposer({ onSubmit });
 
@@ -62,7 +61,7 @@ describe('CommentComposer', () => {
   });
 
   test('Shift+Enter inserts a newline instead of submitting', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderComposer({ onSubmit });
 
@@ -102,33 +101,32 @@ describe('CommentComposer', () => {
     expect(screen.getByText('50 left')).toBeInTheDocument();
   });
 
+  // Clearing is driven directly by the promise onSubmit returns (see
+  // CommentComposer) rather than by the isPending prop — a fast-settling
+  // mutation's pending and success dispatches can land in the same render,
+  // so there's no reliable isPending=true frame to watch for here.
   test('does not clear the draft when a submit fails', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockRejectedValue(new Error('failed'));
     const user = userEvent.setup();
-    const { rerender } = renderComposer({ onSubmit, isPending: false });
+    renderComposer({ onSubmit });
 
     const textarea = screen.getByPlaceholderText('Add a comment…');
     await user.type(textarea, 'Nice!');
     await user.click(screen.getByRole('button', { name: 'Post comment' }));
 
-    rerender(<CommentComposer onSubmit={onSubmit} isPending hasError={false} />);
-    rerender(<CommentComposer onSubmit={onSubmit} isPending={false} hasError />);
-
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Post comment' })).toBeEnabled());
     expect(textarea).toHaveValue('Nice!');
   });
 
   test('clears the draft once a submit succeeds', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
-    const { rerender } = renderComposer({ onSubmit, isPending: false });
+    renderComposer({ onSubmit });
 
     const textarea = screen.getByPlaceholderText('Add a comment…');
     await user.type(textarea, 'Nice!');
     await user.click(screen.getByRole('button', { name: 'Post comment' }));
 
-    rerender(<CommentComposer onSubmit={onSubmit} isPending hasError={false} />);
-    rerender(<CommentComposer onSubmit={onSubmit} isPending={false} hasError={false} />);
-
-    expect(textarea).toHaveValue('');
+    await waitFor(() => expect(textarea).toHaveValue(''));
   });
 });

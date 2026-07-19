@@ -225,7 +225,40 @@ describe('useAddComment', () => {
       pageParams: [undefined],
     });
     expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
+    // exact: true is load-bearing here, not incidental: ['albums', 'a1',
+    // 'pages'] is a prefix of COMMENTS_QUERY_KEY, and invalidateQueries
+    // fuzzy-matches by default — without it this call would also invalidate
+    // (and silently refetch) the very thread just patched above.
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'], exact: true });
+  });
+
+  test('does not invalidate an open comments thread — the pages-list key is a prefix of the comments key', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: NEW_COMMENT, commentCount: 2 }));
+    const queryClient = createTestQueryClient();
+    const EXISTING = { _id: 'c1', text: 'Older one' };
+    seedCommentsCache(queryClient, [{ comments: [EXISTING], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    // An active observer on the comments query is what actually turns a
+    // fuzzy-matched invalidation into a background refetch — asserting only
+    // on the invalidateQueries call arguments (as the test above does)
+    // can't catch that, since a plain object-equality check doesn't know
+    // about react-query's own prefix-matching. useComments' `enabled` flag
+    // mirrors the real app: it's only ever mounted while the panel is open.
+    const { result: commentsResult } = renderHook(() => useComments('a1', 'p1', true), { wrapper });
+    await waitFor(() => expect(commentsResult.current.isLoading).toBe(false));
+    vi.mocked(fetch).mockClear();
+
+    const { result } = renderHook(() => useAddComment('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', text: 'Nice!' });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryState(COMMENTS_QUERY_KEY)?.isInvalidated).toBe(false);
+    // Exactly the one POST from the mutation itself — a redundant GET
+    // refetch of the comments thread would show up as a second call here.
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   // A second (older) already-loaded page must survive untouched — this is
@@ -307,7 +340,7 @@ describe('useDeleteComment', () => {
       pageParams: [undefined],
     });
     expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['albums', 'a1', 'pages'], exact: true });
   });
 
   // Same "an unrelated already-loaded page must survive" regression as

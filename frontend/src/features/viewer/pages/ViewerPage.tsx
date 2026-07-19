@@ -111,23 +111,26 @@ export default function ViewerPage() {
   const [autoPlayStartedAt, setAutoPlayStartedAt] = useState<number | undefined>(undefined);
 
   const addComment = useAddComment(id ?? '');
-  const handleAddComment = (pageId: string, text: string, parentCommentId?: string) => {
-    addComment.mutate(
-      { pageId, text, parentCommentId },
-      { onError: (mutationError) => toast.error(mutationError.message) }
-    );
-  };
+  // mutateAsync (not mutate) — CommentComposer awaits this promise directly
+  // to know precisely when its own submission settles, rather than relying
+  // on addComment.isPending's render timing (see CommentComposer). The
+  // rejection this throws is already handled by the onError below and by
+  // CommentComposer's own catch, so it's never left unhandled.
+  const handleAddComment = (pageId: string, text: string, parentCommentId?: string) =>
+    addComment
+      .mutateAsync(
+        { pageId, text, parentCommentId },
+        { onError: (mutationError) => toast.error(mutationError.message) }
+      )
+      .then(() => undefined);
   // Which composer's submission is in flight/errored — the top-level
   // bottom composer (null) or a specific reply's inline composer (its
   // parent comment's id) — since addComment is one shared mutation across
   // every composer on the page (see the comment below), same "read the
   // target back off the mutation's own variables" trick as
   // pendingDeleteCommentId. Without this, a reply submitting would also
-  // flash the top-level composer as pending/errored (and vice versa),
-  // including silently clearing an unrelated, untouched draft the moment
-  // the *other* composer's submission settles — CommentComposer clears its
-  // draft based on isPending/hasError transitioning, and every mounted
-  // composer instance was otherwise watching the same shared booleans.
+  // flash the top-level composer as pending (disabled, spinner) and show
+  // the "couldn't post" banner underneath it, and vice versa.
   const pendingCommentTarget = addComment.isPending ? (addComment.variables?.parentCommentId ?? null) : undefined;
   const erroredCommentTarget = addComment.isError ? (addComment.variables?.parentCommentId ?? null) : undefined;
   // CommentControl's own effect re-fires onOpenChange whenever this
