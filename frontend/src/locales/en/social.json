@@ -9,13 +9,15 @@
   },
   "chooseReaction": "Choose a reaction",
   "peopleWhoReacted": "People who reacted",
-  "seeWhoReacted": "See who reacted ({{count}})",
+  "seeWhoReacted_one": "See who reacted ({{count}})",
+  "seeWhoReacted_other": "See who reacted ({{count}})",
   "close": "Close",
   "removeYourReaction": "Remove your reaction",
   "albumLove": {
     "loved": "You loved this album — tap to remove",
     "love": "Love this album",
-    "seeWhoLoved": "See who loved this album ({{count}})"
+    "seeWhoLoved_one": "See who loved this album ({{count}})",
+    "seeWhoLoved_other": "See who loved this album ({{count}})"
   },
   "photoReaction": {
     "reactedTapToChange": "You reacted: {{label}}. Tap to change or remove.",

@@ -7,6 +7,7 @@ import {
   MIN_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
   MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
   type RegisterInput,
 } from '../schemas';
 import { useRegister } from '../hooks';
@@ -63,7 +64,12 @@ export default function RegisterPage() {
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          error={translateFieldError(t, errors.password?.message, { count: MIN_PASSWORD_LENGTH })}
+          error={translateFieldError(t, errors.password?.message, {
+            count:
+              errors.password?.message === 'passwordTooLong'
+                ? MAX_PASSWORD_LENGTH
+                : MIN_PASSWORD_LENGTH,
+          })}
           {...register('password')}
         />
         <FormField

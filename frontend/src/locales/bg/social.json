@@ -9,13 +9,15 @@
   },
   "chooseReaction": "Изберете реакция",
   "peopleWhoReacted": "Хора, които реагираха",
-  "seeWhoReacted": "Вижте кой реагира ({{count}})",
+  "seeWhoReacted_one": "Вижте кой реагира ({{count}})",
+  "seeWhoReacted_other": "Вижте кой реагира ({{count}})",
   "close": "Затваряне",
   "removeYourReaction": "Премахване на вашата реакция",
   "albumLove": {
     "loved": "Харесахте този албум — докоснете, за да премахнете",
     "love": "Харесване на този албум",
-    "seeWhoLoved": "Вижте кой хареса този албум ({{count}})"
+    "seeWhoLoved_one": "Вижте кой хареса този албум ({{count}})",
+    "seeWhoLoved_other": "Вижте кой хареса този албум ({{count}})"
   },
   "photoReaction": {
     "reactedTapToChange": "Реагирахте с: {{label}}. Докоснете, за да промените или премахнете.",
