@@ -120,6 +120,12 @@ module.exports = (app) => {
     controllers.pages.requireReadableAlbum,
     controllers.pages.listComments
   );
+  app.get(
+    '/api/albums/:id/pages/:pageId/comments/:commentId/replies',
+    auth.isAuthenticated,
+    controllers.pages.requireReadableAlbum,
+    controllers.pages.listReplies
+  );
   app.post(
     '/api/albums/:id/pages/:pageId/comments',
     auth.isAuthenticated,

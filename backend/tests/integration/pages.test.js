@@ -550,12 +550,14 @@ describe('album pages routes (integration)', () => {
     // Comment.find(...).sort(...).limit(...) — a chained mock builder shared
     // by the pagination tests below, so each only has to specify what
     // Comment.find eventually resolves to (newest-first, as the controller
-    // requests it). listComments also calls Comment.find a second time (via
-    // attachReplies, to fetch replies for the returned top-level comments)
-    // with a `parentComment: { $in }` filter and its own `.limit()` (see
-    // MAX_REPLIES_PER_LOAD) — distinguished here by that filter shape so
-    // both calls resolve correctly instead of the second one crashing
-    // against a mock shaped only for the first.
+    // requests it). listComments also fetches each returned comment's first
+    // page of replies via attachReplies, which groups by parent through
+    // Comment.aggregate rather than a flat find() — `replies` here is a flat
+    // list (each carrying its own parentComment) that this helper groups
+    // into the same shape a real aggregation would return. Comment.hydrate
+    // is mocked to a passthrough so these plain fixture objects (with their
+    // own lightweight toJSON, see fakeComment) flow straight through instead
+    // of attempting real Mongoose document construction.
     const fakeComment = (overrides) => ({
       page: PAGE_ID,
       user: OTHER_ID,
@@ -566,12 +568,20 @@ describe('album pages routes (integration)', () => {
       ...overrides,
     });
     const mockCommentFind = (newestFirstComments, replies = []) => {
-      jest.spyOn(Comment, 'find').mockImplementation((filter) => {
-        if (filter && filter.parentComment && filter.parentComment.$in) {
-          return { sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(replies) }) };
-        }
-        return { sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(newestFirstComments) }) };
+      jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(newestFirstComments) }),
       });
+      jest.spyOn(Comment, 'hydrate').mockImplementation((doc) => doc);
+      const repliesByParentId = new Map();
+      for (const reply of replies) {
+        const parentId = reply.parentComment.toString();
+        const existing = repliesByParentId.get(parentId) ?? [];
+        existing.push(reply);
+        repliesByParentId.set(parentId, existing);
+      }
+      jest.spyOn(Comment, 'aggregate').mockResolvedValue(
+        [...repliesByParentId.entries()].map(([parentId, parentReplies]) => ({ _id: parentId, replies: parentReplies }))
+      );
     };
 
     test('200 returns the comment thread with each author resolved', async () => {
@@ -616,34 +626,34 @@ describe('album pages routes (integration)', () => {
       expect(res.body.comments[0].replies).toEqual([
         expect.objectContaining({ _id: 'reply1', text: 'Totally agree!', username: 'pan' }),
       ]);
+      expect(res.body.comments[0].hasMoreReplies).toBe(false);
     });
 
-    // Replies are never separately paginated (see attachReplies) — this is
-    // the sanity backstop against an unbounded payload if a single comment
-    // ever ends up with an extreme number of replies.
-    test('caps the replies query at MAX_REPLIES_PER_LOAD', async () => {
+    // Replies are never separately paginated within listComments itself —
+    // attachReplies embeds only the first REPLIES_PAGE_SIZE per comment and
+    // flags the rest via hasMoreReplies, fetched on demand through
+    // listReplies (see the describe block below) instead of an unbounded
+    // payload.
+    test('sets hasMoreReplies when a comment has more than REPLIES_PAGE_SIZE replies', async () => {
       authAs(OWNER_ID);
       jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
       jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
-      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
-      const repliesLimitSpy = jest.fn().mockResolvedValue([]);
-      jest.spyOn(Comment, 'find').mockImplementation((filter) => {
-        if (filter && filter.parentComment && filter.parentComment.$in) {
-          return { sort: jest.fn().mockReturnValue({ limit: repliesLimitSpy }) };
-        }
-        return {
-          sort: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue([fakeComment({ _id: COMMENT_ID, text: 'Lovely!' })]),
-          }),
-        };
-      });
+      const replies = Array.from({ length: Comment.REPLIES_PAGE_SIZE + 1 }, (_, i) =>
+        fakeComment({ _id: `reply-${i}`, text: `Reply ${i}`, parentComment: COMMENT_ID, user: OWNER_ID })
+      );
+      mockCommentFind([fakeComment({ _id: COMMENT_ID, text: 'Lovely!' })], replies);
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OWNER_ID, username: 'pan', avatarFilename: null }]);
 
       const res = await request(app)
         .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect(repliesLimitSpy).toHaveBeenCalledWith(Comment.MAX_REPLIES_PER_LOAD);
+      expect(res.body.comments[0].hasMoreReplies).toBe(true);
+      expect(res.body.comments[0].replies).toHaveLength(Comment.REPLIES_PAGE_SIZE);
+      // Oldest-first, so the (N+1)th (extra) reply — the newest — is the one
+      // dropped from this first page, not an arbitrary one.
+      expect(res.body.comments[0].replies[0]).toMatchObject({ _id: 'reply-0' });
     });
 
     test('200 returns hasMore: true and only a page\'s worth of comments when there are more', async () => {
@@ -738,6 +748,191 @@ describe('album pages routes (integration)', () => {
         page: PAGE_ID,
         parentComment: null,
         $or: [{ createdAt: { $lt: new Date(before) } }, { createdAt: new Date(before), _id: { $lt: beforeId } }],
+      });
+    });
+  });
+
+  describe('GET /api/albums/:id/pages/:pageId/comments/:commentId/replies', () => {
+    const fakeComment = (overrides) => ({
+      page: PAGE_ID,
+      user: OTHER_ID,
+      toJSON() {
+        const { toJSON: _drop, ...rest } = this;
+        return rest;
+      },
+      ...overrides,
+    });
+
+    test('401 without a token', async () => {
+      const res = await request(app).get(
+        `/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`
+      );
+      expect(res.status).toBe(401);
+    });
+
+    test('403 when a stranger requests replies on a private album\'s photo', async () => {
+      authAs(OTHER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .set('Authorization', `Bearer ${strangerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('404 when the photo does not belong to the album', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    test('404 when the comment does not exist on this page', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+    });
+
+    // Replies are exactly one level deep — "load more replies" only makes
+    // sense for a genuine top-level comment. The controller's own
+    // Comment.findOne includes parentComment: null, so a real reply's id
+    // here simply never matches, surfacing as the same 404 as a
+    // nonexistent id rather than a separate error branch.
+    test('404 when the given id belongs to a reply, not a top-level comment', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      const findOneSpy = jest.spyOn(Comment, 'findOne').mockResolvedValue(null);
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${REPLIER_ID}/replies`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(404);
+      expect(findOneSpy).toHaveBeenCalledWith({ _id: REPLIER_ID, page: PAGE_ID, parentComment: null });
+    });
+
+    test('400 when `after` is not a valid date', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .query({ after: 'not-a-date' })
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(400);
+    });
+
+    test('400 when `afterId` is not a valid id', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      const after = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .query({ after, afterId: 'not-an-id' })
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(400);
+    });
+
+    test('200 returns the next portion of replies, oldest-first, with authors resolved', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({ _id: COMMENT_ID, page: PAGE_ID, parentComment: null });
+      jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue([
+            fakeComment({ _id: 'reply2', text: 'Next portion', parentComment: COMMENT_ID, user: OTHER_ID }),
+          ]),
+        }),
+      });
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.replies).toEqual([
+        expect.objectContaining({ _id: 'reply2', text: 'Next portion', username: 'maria' }),
+      ]);
+      expect(res.body.hasMore).toBe(false);
+    });
+
+    test('200 returns hasMore: true and only a page\'s worth of replies when there are more', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({ _id: COMMENT_ID, page: PAGE_ID, parentComment: null });
+      // One more than REPLIES_PAGE_SIZE, oldest-first (as the controller
+      // requests) — the extra document signals there's another portion.
+      const oldestFirst = Array.from({ length: Comment.REPLIES_PAGE_SIZE + 1 }, (_, i) =>
+        fakeComment({ _id: `reply-${i}`, text: `Reply ${i}`, parentComment: COMMENT_ID, user: OTHER_ID })
+      );
+      jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(oldestFirst) }),
+      });
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.hasMore).toBe(true);
+      expect(res.body.replies).toHaveLength(Comment.REPLIES_PAGE_SIZE);
+      // The (N+1)th (extra, newest) reply is dropped from this portion.
+      expect(res.body.replies[0]).toMatchObject({ _id: 'reply-0' });
+    });
+
+    test('passes a valid `after` cursor through as a createdAt filter', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({ _id: COMMENT_ID, page: PAGE_ID, parentComment: null });
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      const findSpy = jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue([]) }),
+      });
+
+      const after = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .query({ after })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(findSpy).toHaveBeenCalledWith({
+        parentComment: COMMENT_ID,
+        createdAt: { $gt: new Date(after) },
+      });
+    });
+
+    test('passing `after` with `afterId` tiebreaks replies sharing the exact same createdAt', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(Comment, 'findOne').mockResolvedValue({ _id: COMMENT_ID, page: PAGE_ID, parentComment: null });
+      jest.spyOn(User, 'find').mockResolvedValue([]);
+      const findSpy = jest.spyOn(Comment, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue([]) }),
+      });
+
+      const after = new Date('2025-01-01T00:00:00.000Z').toISOString();
+      const afterId = REPLIER_ID;
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments/${COMMENT_ID}/replies`)
+        .query({ after, afterId })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(findSpy).toHaveBeenCalledWith({
+        parentComment: COMMENT_ID,
+        $or: [{ createdAt: { $gt: new Date(after) } }, { createdAt: new Date(after), _id: { $gt: afterId } }],
       });
     });
   });

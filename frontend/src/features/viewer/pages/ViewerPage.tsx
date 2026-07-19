@@ -17,6 +17,7 @@ import {
   useAddComment,
   useDeleteComment,
   useSetCommentReaction,
+  useLoadMoreReplies,
   type ReactionType,
 } from '../../flipbooks';
 
@@ -182,6 +183,20 @@ export default function ViewerPage() {
     ? (setCommentReaction.variables?.commentId ?? null)
     : null;
 
+  const loadMoreReplies = useLoadMoreReplies(id ?? '');
+  const handleLoadMoreReplies = (pageId: string, commentId: string) => {
+    loadMoreReplies.mutate(
+      { pageId, commentId },
+      { onError: (mutationError) => toast.error(mutationError.message) }
+    );
+  };
+  const pendingRepliesCommentId = loadMoreReplies.isPending
+    ? (loadMoreReplies.variables?.commentId ?? null)
+    : null;
+  const erroredRepliesCommentId = loadMoreReplies.isError
+    ? (loadMoreReplies.variables?.commentId ?? null)
+    : null;
+
   const [isReactorsModalOpen, setIsReactorsModalOpen] = useState(false);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -329,6 +344,9 @@ export default function ViewerPage() {
               isFetchingMoreComments={isFetchingMoreComments}
               hasFetchMoreCommentsError={hasFetchMoreError}
               onFetchMoreComments={fetchMoreComments}
+              onLoadMoreReplies={handleLoadMoreReplies}
+              pendingRepliesCommentId={pendingRepliesCommentId}
+              erroredRepliesCommentId={erroredRepliesCommentId}
             />
           )}
         </div>
@@ -358,6 +376,9 @@ export default function ViewerPage() {
           isFetchingMoreComments={isFetchingMoreComments}
           hasFetchMoreCommentsError={hasFetchMoreError}
           onFetchMoreComments={fetchMoreComments}
+          onLoadMoreReplies={handleLoadMoreReplies}
+          pendingRepliesCommentId={pendingRepliesCommentId}
+          erroredRepliesCommentId={erroredRepliesCommentId}
           viewerId={me?._id}
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}

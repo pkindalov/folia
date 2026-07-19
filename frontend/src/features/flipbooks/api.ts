@@ -14,6 +14,7 @@ import {
   addCommentResponseSchema,
   deleteCommentResponseSchema,
   setCommentReactionResponseSchema,
+  repliesResponseSchema,
   type Album,
   type AlbumFormInput,
   type AlbumReactionSummary,
@@ -147,6 +148,21 @@ export async function listComments(
   const query = params.toString() ? `?${params.toString()}` : '';
   const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments${query}`);
   return commentsResponseSchema.parse(data);
+}
+
+export async function listReplies(
+  albumId: string,
+  pageId: string,
+  commentId: string,
+  after?: string,
+  afterId?: string
+): Promise<{ replies: Comment[]; hasMore: boolean }> {
+  const params = new URLSearchParams();
+  if (after !== undefined) params.set('after', after);
+  if (afterId !== undefined) params.set('afterId', afterId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const data = await api(`/api/albums/${albumId}/pages/${pageId}/comments/${commentId}/replies${query}`);
+  return repliesResponseSchema.parse(data);
 }
 
 export async function addComment(

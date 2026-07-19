@@ -23,6 +23,7 @@ const COMMENT: TopLevelComment = {
   reactions: ZERO_REACTIONS,
   createdAt: new Date().toISOString(),
   replies: [],
+  hasMoreReplies: false,
 };
 
 const DEFAULT_PROPS: ComponentProps<typeof CommentControl> = {
@@ -415,6 +416,69 @@ describe('CommentControl', () => {
       await user.click(screen.getByRole('button', { name: 'Reply' }));
       // Only the top-level error banner — the reply composer got no error of its own.
       expect(screen.getAllByRole('alert')).toHaveLength(1);
+    });
+
+    test('shows a "Load more replies" button when hasMoreReplies is true, and hides it otherwise', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [{ ...COMMENT, hasMoreReplies: true }] });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.getByRole('button', { name: 'Load more replies' })).toBeInTheDocument();
+    });
+
+    test('does not show a "Load more replies" button when hasMoreReplies is false', async () => {
+      const user = userEvent.setup();
+      renderControl({ commentCount: 1, comments: [{ ...COMMENT, hasMoreReplies: false }] });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+      expect(screen.queryByRole('button', { name: 'Load more replies' })).not.toBeInTheDocument();
+    });
+
+    test('clicking "Load more replies" calls onLoadMoreReplies with the comment id', async () => {
+      const onLoadMoreReplies = vi.fn();
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 1,
+        comments: [{ ...COMMENT, hasMoreReplies: true }],
+        onLoadMoreReplies,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+      await user.click(screen.getByRole('button', { name: 'Load more replies' }));
+
+      expect(onLoadMoreReplies).toHaveBeenCalledWith('c1');
+    });
+
+    test('shows a pending spinner in place of "Load more replies" only for the comment that is loading', async () => {
+      const OTHER_COMMENT = { ...COMMENT, _id: 'c2', hasMoreReplies: true };
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 2,
+        comments: [{ ...COMMENT, hasMoreReplies: true }, OTHER_COMMENT],
+        pendingRepliesCommentId: 'c1',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (2)' }));
+
+      expect(screen.getByRole('button', { name: 'Loading more replies' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load more replies' })).toBeEnabled();
+    });
+
+    test('shows an error message next to "Load more replies" only for the comment that failed', async () => {
+      const OTHER_COMMENT = { ...COMMENT, _id: 'c2', hasMoreReplies: true };
+      const user = userEvent.setup();
+      renderControl({
+        commentCount: 2,
+        comments: [{ ...COMMENT, hasMoreReplies: true }, OTHER_COMMENT],
+        erroredRepliesCommentId: 'c1',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'View comments (2)' }));
+
+      expect(screen.getByRole('button', { name: "Couldn't load more replies. Try again." })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Load more replies' })).toBeInTheDocument();
     });
   });
 

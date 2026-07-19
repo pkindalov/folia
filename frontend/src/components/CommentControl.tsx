@@ -50,6 +50,12 @@ type CommentControlProps = {
   /** A "See earlier comments" fetch failed — surfaced inline next to the button rather than replacing the (still-valid) already-loaded thread. */
   hasFetchMoreCommentsError?: boolean;
   onFetchMoreComments?: () => void;
+  /** Fires a further portion of one comment's replies — see hasMoreReplies on TopLevelComment. */
+  onLoadMoreReplies?: (commentId: string) => void;
+  /** _id of the comment whose "load more replies" is in flight, or null. One shared mutation for the whole page (see ViewerPage's useLoadMoreReplies), same reasoning as pendingCommentTarget above. */
+  pendingRepliesCommentId?: string | null;
+  /** _id of the comment whose "load more replies" most recently failed, or null. */
+  erroredRepliesCommentId?: string | null;
 };
 
 function CommentRow({
@@ -165,6 +171,9 @@ function TopLevelCommentItem({
   onAddReply,
   isAddPending,
   addError,
+  onLoadMoreReplies,
+  isLoadingMoreReplies,
+  loadMoreRepliesError,
 }: {
   comment: TopLevelComment;
   viewerId?: string;
@@ -181,6 +190,9 @@ function TopLevelCommentItem({
   onAddReply: (text: string) => Promise<void>;
   isAddPending: boolean;
   addError: boolean;
+  onLoadMoreReplies?: () => void;
+  isLoadingMoreReplies: boolean;
+  loadMoreRepliesError: boolean;
 }) {
   return (
     <li className="flex flex-col gap-1.5">
@@ -245,6 +257,29 @@ function TopLevelCommentItem({
             ))}
           </ul>
         )}
+        {comment.hasMoreReplies && (
+          <button
+            type="button"
+            onClick={onLoadMoreReplies}
+            disabled={isLoadingMoreReplies}
+            aria-label={isLoadingMoreReplies ? "Loading more replies" : undefined}
+            className={`self-start flex items-center gap-1.5 font-ui text-xs uppercase tracking-wide transition-colors disabled:pointer-events-none ${
+              loadMoreRepliesError
+                ? "text-error hover:text-error"
+                : isLight
+                  ? "text-on-surface-variant hover:text-secondary disabled:text-on-surface-variant/60"
+                  : "text-white/50 hover:text-white disabled:text-white/40"
+            }`}
+          >
+            {isLoadingMoreReplies ? (
+              <Icon name="progress_activity" className="text-sm animate-spin" />
+            ) : loadMoreRepliesError ? (
+              "Couldn't load more replies. Try again."
+            ) : (
+              "Load more replies"
+            )}
+          </button>
+        )}
       </div>
     </li>
   );
@@ -273,6 +308,9 @@ export default function CommentControl({
   isFetchingMoreComments = false,
   hasFetchMoreCommentsError = false,
   onFetchMoreComments,
+  onLoadMoreReplies,
+  pendingRepliesCommentId = null,
+  erroredRepliesCommentId = null,
 }: CommentControlProps) {
   const isLight = variant === 'light';
   // null represents the top-level (bottom) composer specifically — see the
@@ -433,6 +471,9 @@ export default function CommentControl({
               onAddReply={(text) => onAddComment(text, comment._id)}
               isAddPending={pendingCommentTarget === comment._id}
               addError={erroredCommentTarget === comment._id}
+              onLoadMoreReplies={onLoadMoreReplies ? () => onLoadMoreReplies(comment._id) : undefined}
+              isLoadingMoreReplies={pendingRepliesCommentId === comment._id}
+              loadMoreRepliesError={erroredRepliesCommentId === comment._id}
             />
           ))}
         </ul>

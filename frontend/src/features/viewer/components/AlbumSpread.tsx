@@ -56,6 +56,9 @@ type AlbumSpreadProps = {
   isFetchingMoreComments?: boolean;
   hasFetchMoreCommentsError?: boolean;
   onFetchMoreComments?: () => void;
+  onLoadMoreReplies?: (pageId: string, commentId: string) => void;
+  pendingRepliesCommentId?: string | null;
+  erroredRepliesCommentId?: string | null;
 };
 
 type FlipState = {
@@ -131,6 +134,9 @@ export default function AlbumSpread({
   isFetchingMoreComments = false,
   hasFetchMoreCommentsError = false,
   onFetchMoreComments,
+  onLoadMoreReplies,
+  pendingRepliesCommentId,
+  erroredRepliesCommentId,
 }: AlbumSpreadProps) {
   const hasPhotos = pages.length > 0;
   const currentPhoto = pages[currentIndex];
@@ -384,6 +390,11 @@ export default function AlbumSpread({
                       isFetchingMoreComments={isFetchingMoreComments}
                       hasFetchMoreCommentsError={hasFetchMoreCommentsError}
                       onFetchMoreComments={onFetchMoreComments}
+                      onLoadMoreReplies={
+                        onLoadMoreReplies ? (commentId) => onLoadMoreReplies(currentPhoto._id, commentId) : undefined
+                      }
+                      pendingRepliesCommentId={pendingRepliesCommentId}
+                      erroredRepliesCommentId={erroredRepliesCommentId}
                     />
                   )}
                 </div>

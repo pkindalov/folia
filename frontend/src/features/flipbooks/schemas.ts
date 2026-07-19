@@ -143,10 +143,13 @@ export const commentSchema = z
   .passthrough();
 export type Comment = z.infer<typeof commentSchema>;
 
-// A top-level comment as returned by listComments, with its replies
-// embedded (never separately paginated — see the backend's attachReplies).
+// A top-level comment as returned by listComments, with its first portion
+// of replies embedded (see the backend's attachReplies) — hasMoreReplies
+// drives the "Load more replies" button, which fetches further portions via
+// listReplies rather than these ever being unbounded.
 export const topLevelCommentSchema = commentSchema.extend({
   replies: z.array(commentSchema),
+  hasMoreReplies: z.boolean(),
 });
 export type TopLevelComment = z.infer<typeof topLevelCommentSchema>;
 
@@ -165,6 +168,13 @@ export const deleteCommentResponseSchema = z.object({
   commentCount: z.number(),
 });
 export const setCommentReactionResponseSchema = z.object({ reactions: reactionSummarySchema });
+export const repliesResponseSchema = z.object({
+  replies: z.array(commentSchema),
+  // Whether a further portion exists beyond this response — drives the
+  // "Load more replies" button, same shape as commentsResponseSchema's
+  // hasMore.
+  hasMore: z.boolean(),
+});
 
 export const MAX_COMMENT_LENGTH = 1000;
 

@@ -304,7 +304,7 @@ export function useAddComment(albumId: string) {
         // A top-level comment always belongs on the newest (first) page.
         const [firstPage, ...rest] = previous.pages;
         if (!firstPage) return previous;
-        const newTopLevelComment = { ...result.comment, replies: [] };
+        const newTopLevelComment = { ...result.comment, replies: [], hasMoreReplies: false };
         return { ...previous, pages: [{ ...firstPage, comments: [...firstPage.comments, newTopLevelComment] }, ...rest] };
       });
       // The page list's commentCount lives alongside reactions on each page
@@ -381,6 +381,47 @@ export function useSetCommentReaction(albumId: string) {
                 ),
               };
             }),
+          })),
+        };
+      });
+    },
+  });
+}
+
+// Further portions of a single comment's replies, beyond the first page
+// already embedded by useComments/attachReplies — driven by CommentControl's
+// "Load more replies" button, same "load more" shape as
+// useComments/fetchMoreComments but scoped to one comment instead of the
+// whole thread.
+export function useLoadMoreReplies(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pageId, commentId }: { pageId: string; commentId: string }) => {
+      // The cursor is the newest reply currently loaded for this comment,
+      // read fresh from the cache rather than passed in by the caller —
+      // CommentControl only ever offers this action once a comment's first
+      // page of replies is already showing, so there's always a real
+      // cursor to page forward from.
+      const cached = queryClient.getQueryData<CommentsQueryData>(commentsQueryKey(albumId, pageId));
+      const comment = cached?.pages.flatMap((page) => page.comments).find((c) => c._id === commentId);
+      const lastLoadedReply = comment?.replies[comment.replies.length - 1];
+      return albumsApi.listReplies(albumId, pageId, commentId, lastLoadedReply?.createdAt, lastLoadedReply?._id);
+    },
+    onSuccess: (result, { pageId, commentId }) => {
+      // Patched directly into the cache rather than invalidated — same
+      // reasoning as useAddComment: nothing a refetch would add beyond what
+      // this response already carries.
+      queryClient.setQueryData<CommentsQueryData>(commentsQueryKey(albumId, pageId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            comments: page.comments.map((comment) =>
+              comment._id === commentId
+                ? { ...comment, replies: [...comment.replies, ...result.replies], hasMoreReplies: result.hasMore }
+                : comment
+            ),
           })),
         };
       });

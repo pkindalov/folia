@@ -574,6 +574,74 @@ module.exports = {
       .catch(() => res.status(500).json({ error: 'Failed to load comments' }));
   },
 
+  // Further portions of a single comment's replies, beyond the first page
+  // already embedded by listComments/attachReplies. Oldest-first (a reply
+  // thread reads as a conversation) and paged forward, unlike listComments'
+  // own newest-first/backward paging — `after`/`afterId` are the createdAt
+  // and _id of the newest reply already loaded by the caller. Both omitted
+  // on the very first "load more" request, which then returns the same
+  // first page attachReplies already sent; the frontend always has a real
+  // cursor by the time it calls this, since it only ever does so after
+  // rendering that first page. `afterId` tiebreaks replies that share the
+  // exact same createdAt millisecond, same reasoning as listComments'
+  // beforeId.
+  listReplies: (req, res) => {
+    const album = req.album;
+    const { pageId, commentId } = req.params;
+    if (!mongoose.isValidObjectId(pageId) || !mongoose.isValidObjectId(commentId)) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const { after, afterId } = req.query;
+    let afterDate;
+    if (after !== undefined) {
+      afterDate = new Date(after);
+      if (Number.isNaN(afterDate.getTime())) {
+        return res.status(400).json({ error: 'after must be a valid date' });
+      }
+    }
+    if (afterId !== undefined && !mongoose.isValidObjectId(afterId)) {
+      return res.status(400).json({ error: 'afterId must be a valid id' });
+    }
+
+    Page.findOne({ _id: pageId, album: album._id })
+      .then((page) => {
+        if (!page) return res.status(404).json({ error: 'Photo not found' });
+
+        // parentComment: null — replies are exactly one level deep, so
+        // loading "more replies" only ever makes sense for a genuine
+        // top-level comment, never for a reply itself.
+        return Comment.findOne({ _id: commentId, page: page._id, parentComment: null }).then((parent) => {
+          if (!parent) return res.status(404).json({ error: 'Comment not found' });
+
+          const filter = { parentComment: parent._id };
+          if (afterDate && afterId) {
+            filter.$or = [{ createdAt: { $gt: afterDate } }, { createdAt: afterDate, _id: { $gt: afterId } }];
+          } else if (afterDate) {
+            filter.createdAt = { $gt: afterDate };
+          }
+
+          return Comment.find(filter)
+            .sort({ createdAt: 1, _id: 1 })
+            .limit(Comment.REPLIES_PAGE_SIZE + 1)
+            .then((oldestFirst) => {
+              const hasMore = oldestFirst.length > Comment.REPLIES_PAGE_SIZE;
+              const replies = oldestFirst.slice(0, Comment.REPLIES_PAGE_SIZE);
+              return withCommentAuthors(replies).then((repliesWithAuthors) =>
+                resolveCommentReactionSummaries(repliesWithAuthors, req.user._id).then((summaryByCommentId) => {
+                  const repliesWithReactions = repliesWithAuthors.map((reply) => ({
+                    ...reply,
+                    reactions: summaryByCommentId.get(reply._id.toString()),
+                  }));
+                  res.json({ replies: repliesWithReactions, hasMore });
+                })
+              );
+            });
+        });
+      })
+      .catch(() => res.status(500).json({ error: 'Failed to load replies' }));
+  },
+
   addComment: (req, res) => {
     const album = req.album;
     const { pageId } = req.params;

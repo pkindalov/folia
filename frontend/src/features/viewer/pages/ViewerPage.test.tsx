@@ -799,6 +799,7 @@ describe('ViewerPage', () => {
       reactions: NO_REACTIONS,
       createdAt: new Date().toISOString(),
       replies: [],
+      hasMoreReplies: false,
     };
 
     test('opening the comment thread fetches and shows its comments', async () => {
@@ -831,6 +832,7 @@ describe('ViewerPage', () => {
         reactions: NO_REACTIONS,
         createdAt: '2025-06-02T00:00:00.000Z',
         replies: [],
+        hasMoreReplies: false,
       };
       const OLDER_COMMENT = {
         _id: 'c1',
@@ -843,6 +845,7 @@ describe('ViewerPage', () => {
         reactions: NO_REACTIONS,
         createdAt: '2025-06-01T00:00:00.000Z',
         replies: [],
+        hasMoreReplies: false,
       };
       vi.mocked(fetch).mockImplementation((url, options) => {
         const method = options?.method ?? 'GET';
@@ -930,6 +933,66 @@ describe('ViewerPage', () => {
         .mock.calls.find(([requestUrl, options]) => String(requestUrl).includes('/comments') && options?.method === 'POST');
       expect(postCall).toBeDefined();
       expect(JSON.parse(postCall![1]!.body as string)).toEqual({ text: 'Thanks!', parentComment: 'c1' });
+    });
+
+    test('clicking "Load more replies" fetches and appends the next portion of a comment\'s replies', async () => {
+      const FIRST_REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'id2',
+        username: 'maria',
+        avatarUrl: null,
+        text: 'First reply',
+        parentComment: 'c1',
+        reactions: NO_REACTIONS,
+        createdAt: '2025-01-01T00:00:00.000Z',
+      };
+      const SECOND_REPLY = {
+        _id: 'reply2',
+        page: 'p1',
+        user: 'id2',
+        username: 'maria',
+        avatarUrl: null,
+        text: 'Second reply',
+        parentComment: 'c1',
+        reactions: NO_REACTIONS,
+        createdAt: '2025-01-02T00:00:00.000Z',
+      };
+      vi.mocked(fetch).mockImplementation((url) => {
+        const urlStr = String(url);
+        const respond = (body: unknown, status = 200) =>
+          Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+        if (urlStr.includes('/api/users/me')) return respond(ME);
+        if (urlStr.includes('/replies')) return respond({ replies: [SECOND_REPLY], hasMore: false });
+        if (urlStr.includes('/comments')) {
+          return respond({
+            comments: [{ ...COMMENT, replies: [FIRST_REPLY], hasMoreReplies: true }],
+            hasMore: false,
+          });
+        }
+        if (urlStr.includes('/api/albums/a1/pages')) return respond({ pages: [{ ...PAGE_1, commentCount: 1 }] });
+        if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+        return respond({ error: 'Not found' }, 404);
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
+      await within(dialog).findByText('First reply');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Load more replies' }));
+
+      expect(await within(dialog).findByText('Second reply')).toBeInTheDocument();
+      expect(within(dialog).getByText('First reply')).toBeInTheDocument();
+      expect(within(dialog).queryByRole('button', { name: 'Load more replies' })).not.toBeInTheDocument();
+
+      const repliesCall = vi.mocked(fetch).mock.calls.find(([requestUrl]) => String(requestUrl).includes('/replies'));
+      expect(repliesCall).toBeDefined();
+      expect(String(repliesCall![0])).toContain(`after=${encodeURIComponent(FIRST_REPLY.createdAt)}`);
+      expect(String(repliesCall![0])).toContain(`afterId=${FIRST_REPLY._id}`);
     });
 
     test('does not show a delete button on someone else\'s comment for a regular viewer', async () => {

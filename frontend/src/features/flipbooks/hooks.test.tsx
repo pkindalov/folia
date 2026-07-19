@@ -8,6 +8,7 @@ import {
   useAddComment,
   useDeleteComment,
   useSetCommentReaction,
+  useLoadMoreReplies,
   useComments,
 } from './hooks';
 import type { Album } from './schemas';
@@ -110,6 +111,7 @@ describe('useComments', () => {
       reactions: ZERO_REACTIONS,
       createdAt: new Date().toISOString(),
       replies: [],
+      hasMoreReplies: false,
     };
     vi.mocked(fetch).mockImplementation((url) => {
       const urlStr = String(url);
@@ -149,6 +151,7 @@ describe('useComments', () => {
       reactions: ZERO_REACTIONS,
       createdAt: '2025-01-01T00:00:00.000Z',
       replies: [],
+      hasMoreReplies: false,
     };
     const requestedUrls: string[] = [];
     vi.mocked(fetch).mockImplementation((url) => {
@@ -221,7 +224,7 @@ describe('useAddComment', () => {
     // Merged in as a fresh top-level comment (its own replies array starts
     // empty) — everything already cached passes through unchanged.
     expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toEqual({
-      pages: [{ comments: [EXISTING, { ...NEW_COMMENT, replies: [] }], hasMore: false }],
+      pages: [{ comments: [EXISTING, { ...NEW_COMMENT, replies: [], hasMoreReplies: false }], hasMore: false }],
       pageParams: [undefined],
     });
     expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: COMMENTS_QUERY_KEY });
@@ -281,7 +284,7 @@ describe('useAddComment', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
-    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT, { ...NEW_COMMENT, replies: [] }]);
+    expect(cached?.pages[0].comments).toEqual([NEWEST_PAGE_COMMENT, { ...NEW_COMMENT, replies: [], hasMoreReplies: false }]);
     expect(cached?.pages[1].comments).toEqual([OLDER_PAGE_COMMENT]);
   });
 
@@ -449,6 +452,85 @@ describe('useSetCommentReaction', () => {
 
     const { result } = renderHook(() => useSetCommentReaction('a1'), { wrapper });
     result.current.mutate({ pageId: 'p1', commentId: 'c1', type: 'love' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toBeUndefined();
+  });
+});
+
+describe('useLoadMoreReplies', () => {
+  const NEW_REPLIES = [
+    {
+      _id: 'reply2',
+      page: 'p1',
+      user: 'u2',
+      username: 'sam',
+      avatarUrl: null,
+      text: 'Another reply',
+      parentComment: 'c1',
+      reactions: ZERO_REACTIONS,
+      createdAt: '2025-01-02T00:00:00.000Z',
+    },
+  ];
+
+  test('reads the cursor from the last loaded reply, appends the new portion, and updates hasMoreReplies', async () => {
+    const requestedUrls: string[] = [];
+    vi.mocked(fetch).mockImplementation((url) => {
+      requestedUrls.push(String(url));
+      return respond({ replies: NEW_REPLIES, hasMore: false });
+    });
+    const queryClient = createTestQueryClient();
+    const LAST_LOADED_REPLY = { _id: 'reply1', text: 'First reply', createdAt: '2025-01-01T00:00:00.000Z' };
+    const PARENT = { _id: 'c1', text: 'Original comment', replies: [LAST_LOADED_REPLY], hasMoreReplies: true };
+    seedCommentsCache(queryClient, [{ comments: [PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useLoadMoreReplies('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // The cursor is read fresh from the cache, not passed in by the caller
+    // — see useLoadMoreReplies.
+    expect(requestedUrls[0]).toContain(`after=${encodeURIComponent(LAST_LOADED_REPLY.createdAt)}`);
+    expect(requestedUrls[0]).toContain(`afterId=${LAST_LOADED_REPLY._id}`);
+
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments).toEqual([
+      { ...PARENT, replies: [LAST_LOADED_REPLY, ...NEW_REPLIES], hasMoreReplies: false },
+    ]);
+  });
+
+  test('leaves an unrelated comment\'s replies untouched', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ replies: NEW_REPLIES, hasMore: false }));
+    const queryClient = createTestQueryClient();
+    const TARGET_REPLY = { _id: 'reply1', text: 'First reply', createdAt: '2025-01-01T00:00:00.000Z' };
+    const TARGET = { _id: 'c1', text: 'Target comment', replies: [TARGET_REPLY], hasMoreReplies: true };
+    const UNRELATED_REPLY = { _id: 'reply-other', text: 'Someone else\'s reply', createdAt: '2025-01-01T00:00:00.000Z' };
+    const UNRELATED = { _id: 'c2', text: 'Unrelated comment', replies: [UNRELATED_REPLY], hasMoreReplies: true };
+    seedCommentsCache(queryClient, [{ comments: [TARGET, UNRELATED], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useLoadMoreReplies('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments[1]).toEqual(UNRELATED);
+  });
+
+  test('does not crash when the thread was never fetched (no cached data to patch)', async () => {
+    vi.mocked(fetch).mockImplementation(() => respond({ replies: NEW_REPLIES, hasMore: false }));
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useLoadMoreReplies('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(COMMENTS_QUERY_KEY)).toBeUndefined();

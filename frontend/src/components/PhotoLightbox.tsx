@@ -45,6 +45,9 @@ type PhotoLightboxProps = {
   isFetchingMoreComments?: boolean;
   hasFetchMoreCommentsError?: boolean;
   onFetchMoreComments?: () => void;
+  onLoadMoreReplies?: (pageId: string, commentId: string) => void;
+  pendingRepliesCommentId?: string | null;
+  erroredRepliesCommentId?: string | null;
   /** Drives comment ownership (delete button, "your comment" label) — a stable id, unlike viewerUsername below (kept separate for the reactor list, which has no ids to compare against). */
   viewerId?: string;
   viewerUsername?: string;
@@ -90,6 +93,9 @@ export default function PhotoLightbox({
   isFetchingMoreComments = false,
   hasFetchMoreCommentsError = false,
   onFetchMoreComments,
+  onLoadMoreReplies,
+  pendingRepliesCommentId,
+  erroredRepliesCommentId,
   viewerId,
   viewerUsername,
   isAutoPlaying = false,
@@ -269,6 +275,11 @@ export default function PhotoLightbox({
                   isFetchingMoreComments={isFetchingMoreComments}
                   hasFetchMoreCommentsError={hasFetchMoreCommentsError}
                   onFetchMoreComments={onFetchMoreComments}
+                  onLoadMoreReplies={
+                    onLoadMoreReplies ? (commentId) => onLoadMoreReplies(photo._id, commentId) : undefined
+                  }
+                  pendingRepliesCommentId={pendingRepliesCommentId}
+                  erroredRepliesCommentId={erroredRepliesCommentId}
                 />
               )}
             </div>
