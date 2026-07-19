@@ -935,6 +935,72 @@ describe('ViewerPage', () => {
       expect(JSON.parse(postCall![1]!.body as string)).toEqual({ text: 'Thanks!', parentComment: 'c1' });
     });
 
+    // Regression test for a bug where the bottom (top-level) composer and a
+    // reply composer shared one useAddComment mutation instance. If the
+    // bottom composer's request was dispatched first but the reply's
+    // resolved first, the shared mutation's public isPending/isError/variables
+    // ended up reflecting only the reply's outcome — so the bottom composer's
+    // own failure never surfaced as its error banner (see ViewerPage's
+    // addTopLevelComment/addReplyComment split).
+    test('a slow, failing top-level post and a fast, successful reply do not cross-contaminate each other\'s error state', async () => {
+      let resolveTopLevelPost: (response: Response) => void = () => {};
+      const topLevelPostPromise = new Promise<Response>((resolve) => {
+        resolveTopLevelPost = resolve;
+      });
+      const REPLY = {
+        _id: 'reply1',
+        page: 'p1',
+        user: 'id1',
+        username: 'pan',
+        avatarUrl: null,
+        text: 'Thanks!',
+        parentComment: 'c1',
+        reactions: NO_REACTIONS,
+        createdAt: new Date().toISOString(),
+      };
+      vi.mocked(fetch).mockImplementation((url, options) => {
+        const method = options?.method ?? 'GET';
+        const urlStr = String(url);
+        const respond = (body: unknown, status = 200) =>
+          Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as Response);
+
+        if (urlStr.includes('/api/users/me')) return respond(ME);
+        if (urlStr.includes('/comments') && method === 'POST') {
+          const isReply = JSON.parse(String(options?.body)).parentComment !== undefined;
+          return isReply ? respond({ comment: REPLY, commentCount: 2 }) : topLevelPostPromise;
+        }
+        if (urlStr.includes('/comments') && method === 'GET') return respond({ comments: [COMMENT], hasMore: false });
+        if (urlStr.includes('/api/albums/a1/pages')) return respond({ pages: [{ ...PAGE_1, commentCount: 1 }] });
+        if (urlStr.includes('/api/albums/a1')) return respond(ALBUM);
+        return respond({ error: 'Not found' }, 404);
+      });
+      const user = userEvent.setup();
+      renderViewer();
+
+      await user.click(await screen.findByRole('button', { name: /view photo1\.jpg full size/i }));
+      const dialog = await screen.findByRole('dialog', { name: /photo viewer/i });
+      await user.click(within(dialog).getByRole('button', { name: 'View comments (1)' }));
+      await within(dialog).findByText('Lovely!');
+
+      // Dispatched first, but its request stays pending — deliberately
+      // resolved (as an error) only after the reply below has already
+      // succeeded, to prove the two composers' outcomes stay independent.
+      await user.type(within(dialog).getByPlaceholderText('Add a comment…'), 'Bad one{Enter}');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Reply' }));
+      await user.type(within(dialog).getByPlaceholderText('Write a reply…'), 'Thanks!{Enter}');
+      expect(await within(dialog).findByText('Thanks!')).toBeInTheDocument();
+
+      // The reply succeeded cleanly — no error banner under it.
+      expect(within(dialog).queryByText("Couldn't post your reply. Try again.")).not.toBeInTheDocument();
+
+      act(() => resolveTopLevelPost({ ok: false, status: 500, json: () => Promise.resolve({ error: 'fail' }) } as Response));
+
+      expect(await within(dialog).findByText("Couldn't post your comment. Try again.")).toBeInTheDocument();
+      // Still no cross-contamination onto the reply composer's own banner.
+      expect(within(dialog).queryByText("Couldn't post your reply. Try again.")).not.toBeInTheDocument();
+    });
+
     test('clicking "Load more replies" fetches and appends the next portion of a comment\'s replies', async () => {
       const FIRST_REPLY = {
         _id: 'reply1',

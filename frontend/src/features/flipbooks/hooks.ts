@@ -9,7 +9,7 @@ import {
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as albumsApi from './api';
-import type { Album, AlbumFormInput, ReactionType, TopLevelComment } from './schemas';
+import type { Album, AlbumFormInput, Comment, ReactionType, TopLevelComment } from './schemas';
 
 export function useAlbums(page: number, visibility?: Album['visibility']) {
   return useQuery({
@@ -208,6 +208,16 @@ type CommentsPage = { comments: TopLevelComment[]; hasMore: boolean };
 type CommentsCursor = { createdAt: string; id: string };
 type CommentsQueryData = InfiniteData<CommentsPage, CommentsCursor | undefined>;
 
+// Marks a reply patched into the cache directly from useAddComment's
+// response, as opposed to one that arrived from a listComments/listReplies
+// fetch. A locally-added reply is always the newest reply for its parent, so
+// useLoadMoreReplies must never derive its pagination cursor from one — see
+// isLocallyAddedReply below.
+type LocallyAddedReply = Comment & { __locallyAdded: true };
+function isLocallyAddedReply(reply: Comment): boolean {
+  return (reply as Partial<LocallyAddedReply>).__locallyAdded === true;
+}
+
 function commentsQueryKey(albumId: string | undefined, pageId: string | undefined) {
   return ['albums', albumId, 'pages', pageId, 'comments'] as const;
 }
@@ -290,12 +300,18 @@ export function useAddComment(albumId: string) {
         // own replies array, wherever that parent happens to be loaded.
         if (result.comment.parentComment) {
           const parentId = result.comment.parentComment;
+          // Tagged __locallyAdded so useLoadMoreReplies' cursor calculation
+          // (last loaded reply) skips it — it's always the newest reply,
+          // chronologically after any not-yet-loaded replies in between, so
+          // using it as a cursor would ask the backend for replies after
+          // itself and silently strand the real next portion.
+          const newReply: LocallyAddedReply = { ...result.comment, __locallyAdded: true };
           return {
             ...previous,
             pages: previous.pages.map((page) => ({
               ...page,
               comments: page.comments.map((comment) =>
-                comment._id === parentId ? { ...comment, replies: [...comment.replies, result.comment] } : comment
+                comment._id === parentId ? { ...comment, replies: [...comment.replies, newReply] } : comment
               ),
             })),
           };
@@ -404,7 +420,11 @@ export function useLoadMoreReplies(albumId: string) {
       // cursor to page forward from.
       const cached = queryClient.getQueryData<CommentsQueryData>(commentsQueryKey(albumId, pageId));
       const comment = cached?.pages.flatMap((page) => page.comments).find((c) => c._id === commentId);
-      const lastLoadedReply = comment?.replies[comment.replies.length - 1];
+      // Excludes replies added locally by useAddComment — see
+      // isLocallyAddedReply — so the cursor always reflects the last reply
+      // actually fetched from the server, not the newest reply overall.
+      const loadedReplies = comment?.replies.filter((reply) => !isLocallyAddedReply(reply));
+      const lastLoadedReply = loadedReplies?.[loadedReplies.length - 1];
       return albumsApi.listReplies(albumId, pageId, commentId, lastLoadedReply?.createdAt, lastLoadedReply?._id);
     },
     onSuccess: (result, { pageId, commentId }) => {
@@ -417,11 +437,20 @@ export function useLoadMoreReplies(albumId: string) {
           ...previous,
           pages: previous.pages.map((page) => ({
             ...page,
-            comments: page.comments.map((comment) =>
-              comment._id === commentId
-                ? { ...comment, replies: [...comment.replies, ...result.replies], hasMoreReplies: result.hasMore }
-                : comment
-            ),
+            comments: page.comments.map((comment) => {
+              if (comment._id !== commentId) return comment;
+              // The fetched portion can include a reply already appended
+              // locally by useAddComment (it's chronologically the newest,
+              // so it legitimately falls inside this "after" page) — deduped
+              // by _id so it doesn't render twice.
+              const alreadyLoadedIds = new Set(comment.replies.map((reply) => reply._id));
+              const newlyFetchedReplies = result.replies.filter((reply) => !alreadyLoadedIds.has(reply._id));
+              return {
+                ...comment,
+                replies: [...comment.replies, ...newlyFetchedReplies],
+                hasMoreReplies: result.hasMore,
+              };
+            }),
           })),
         };
       });

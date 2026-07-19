@@ -111,43 +111,59 @@ export default function ViewerPage() {
   // 0% instead of showing how much of the interval has really elapsed.
   const [autoPlayStartedAt, setAutoPlayStartedAt] = useState<number | undefined>(undefined);
 
-  const addComment = useAddComment(id ?? '');
+  // Two separate mutation instances rather than one shared between the
+  // bottom (top-level) composer and the inline reply composer: at most one
+  // of each can be open at a time (see replyingToCommentId in
+  // CommentControl), but both can be submitted concurrently. A single shared
+  // mutation's isPending/isError/variables reflect whichever mutate() call
+  // was dispatched most recently, so if the bottom composer's request
+  // settled first, its own pending/error state would already have been
+  // overwritten by the still-in-flight reply's — silently misattributing (or
+  // dropping) the "couldn't post" banner between the two composers.
+  const addTopLevelComment = useAddComment(id ?? '');
+  const addReplyComment = useAddComment(id ?? '');
   // mutateAsync (not mutate) — CommentComposer awaits this promise directly
   // to know precisely when its own submission settles, rather than relying
-  // on addComment.isPending's render timing (see CommentComposer). The
-  // rejection this throws is already handled by the onError below and by
-  // CommentComposer's own catch, so it's never left unhandled.
+  // on isPending's render timing (see CommentComposer). The rejection this
+  // throws is already handled by the onError below and by CommentComposer's
+  // own catch, so it's never left unhandled.
   const handleAddComment = (pageId: string, text: string, parentCommentId?: string) =>
-    addComment
+    (parentCommentId ? addReplyComment : addTopLevelComment)
       .mutateAsync(
         { pageId, text, parentCommentId },
         { onError: (mutationError) => toast.error(mutationError.message) }
       )
       .then(() => undefined);
-  // Which composer's submission is in flight/errored — the top-level
-  // bottom composer (null) or a specific reply's inline composer (its
-  // parent comment's id) — since addComment is one shared mutation across
-  // every composer on the page (see the comment below), same "read the
-  // target back off the mutation's own variables" trick as
-  // pendingDeleteCommentId. Without this, a reply submitting would also
-  // flash the top-level composer as pending (disabled, spinner) and show
-  // the "couldn't post" banner underneath it, and vice versa.
-  const pendingCommentTarget = addComment.isPending ? (addComment.variables?.parentCommentId ?? null) : undefined;
-  const erroredCommentTarget = addComment.isError ? (addComment.variables?.parentCommentId ?? null) : undefined;
+  // Which composer's submission is in flight/errored — the top-level bottom
+  // composer (null) or a specific reply's inline composer (its parent
+  // comment's id), same "read the target back off the mutation's own
+  // variables" trick as pendingDeleteCommentId. addTopLevelComment is
+  // checked first since only one reply composer can ever be open at once,
+  // but the bottom composer is always present alongside it.
+  const pendingCommentTarget = addTopLevelComment.isPending
+    ? null
+    : addReplyComment.isPending
+      ? (addReplyComment.variables?.parentCommentId ?? null)
+      : undefined;
+  const erroredCommentTarget = addTopLevelComment.isError
+    ? null
+    : addReplyComment.isError
+      ? (addReplyComment.variables?.parentCommentId ?? null)
+      : undefined;
   // CommentControl's own effect re-fires onOpenChange whenever this
   // function's identity changes (same reset-tracking shape as its pageId
   // effect), so this must stay referentially stable across renders — a
   // fresh closure every render would loop: open state changes -> ViewerPage
   // re-renders -> new closure -> effect fires again -> ... A ref sidesteps
-  // that without needing addComment (a fresh object every render) in a
+  // that without needing either mutation (a fresh object every render) in a
   // dependency array.
-  const addCommentRef = useRef(addComment);
-  addCommentRef.current = addComment;
-  // addComment is one shared mutation for the whole page, not scoped per
-  // photo — its isError otherwise stays true (react-query only clears it on
-  // the next mutate()) until the viewer submits again, so a failed post on
-  // one photo would otherwise leak its error banner onto the next photo's
-  // freshly opened, untouched comment panel.
+  const addCommentMutationsRef = useRef({ addTopLevelComment, addReplyComment });
+  addCommentMutationsRef.current = { addTopLevelComment, addReplyComment };
+  // Neither mutation is scoped per photo — their isError otherwise stays
+  // true (react-query only clears it on the next mutate()) until the viewer
+  // submits again, so a failed post on one photo would otherwise leak its
+  // error banner onto the next photo's freshly opened, untouched comment
+  // panel.
   const handleCommentsOpenChange = useCallback((isOpen: boolean) => {
     setIsCommentsOpen(isOpen);
     if (isOpen) {
@@ -157,7 +173,8 @@ export default function ViewerPage() {
       // photo out from under an in-progress draft a few seconds later.
       setIsAutoPlaying(false);
     } else {
-      addCommentRef.current.reset();
+      addCommentMutationsRef.current.addTopLevelComment.reset();
+      addCommentMutationsRef.current.addReplyComment.reset();
     }
   }, []);
 
@@ -222,7 +239,8 @@ export default function ViewerPage() {
     if (isLightboxOpen && selectedIndex === -1) {
       setIsLightboxOpen(false);
       setIsCommentsOpen(false);
-      addCommentRef.current.reset();
+      addCommentMutationsRef.current.addTopLevelComment.reset();
+      addCommentMutationsRef.current.addReplyComment.reset();
     }
   }, [isLightboxOpen, selectedIndex]);
 

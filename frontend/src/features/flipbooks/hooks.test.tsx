@@ -318,7 +318,69 @@ describe('useAddComment', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
-    expect(cached?.pages[0].comments).toEqual([UNRELATED, { ...PARENT, replies: [REPLY] }]);
+    // Tagged __locallyAdded — see useLoadMoreReplies below, which relies on
+    // this marker to avoid deriving its pagination cursor from a reply that
+    // was patched into the cache locally instead of fetched from the server.
+    expect(cached?.pages[0].comments).toEqual([UNRELATED, { ...PARENT, replies: [{ ...REPLY, __locallyAdded: true }] }]);
+  });
+
+  // Regression test for a bug where a reply posted while earlier replies were
+  // still unfetched (hasMoreReplies: true) got used as useLoadMoreReplies'
+  // pagination cursor — since it's always the newest reply, "load more" then
+  // asked the backend for replies after itself, got none back, and the real
+  // unfetched portion was permanently stranded (see isLocallyAddedReply).
+  test('a reply posted while more replies remain unloaded does not corrupt the load-more cursor', async () => {
+    const REPLY = { ...NEW_COMMENT, _id: 'reply-new', text: 'Me too!', parentComment: 'c1' };
+    vi.mocked(fetch).mockImplementation(() => respond({ comment: REPLY, commentCount: 2 }));
+    const queryClient = createTestQueryClient();
+    const LAST_LOADED_REPLY = { _id: 'reply-old', text: 'An older reply', replies: [], createdAt: '2025-01-01T00:00:00.000Z' };
+    const PARENT = { _id: 'c1', text: 'Original comment', replies: [LAST_LOADED_REPLY], hasMoreReplies: true };
+    seedCommentsCache(queryClient, [{ comments: [PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result: addResult } = renderHook(() => useAddComment('a1'), { wrapper });
+    addResult.current.mutate({ pageId: 'p1', text: 'Me too!', parentCommentId: 'c1' });
+    await waitFor(() => expect(addResult.current.isSuccess).toBe(true));
+
+    // The new reply is visible immediately, and hasMoreReplies is untouched.
+    const afterAdd = queryClient.getQueryData<{ pages: Array<{ comments: Array<{ replies: unknown[]; hasMoreReplies: boolean }> }> }>(
+      COMMENTS_QUERY_KEY
+    );
+    expect(afterAdd?.pages[0].comments[0].replies).toEqual([LAST_LOADED_REPLY, { ...REPLY, __locallyAdded: true }]);
+    expect(afterAdd?.pages[0].comments[0].hasMoreReplies).toBe(true);
+
+    const requestedUrls: string[] = [];
+    const OLDER_UNFETCHED_REPLIES = [
+      {
+        ...NEW_COMMENT,
+        _id: 'reply-mid',
+        text: 'A previously unfetched reply',
+        parentComment: 'c1',
+        createdAt: '2025-01-01T12:00:00.000Z',
+      },
+    ];
+    vi.mocked(fetch).mockImplementation((url) => {
+      requestedUrls.push(String(url));
+      return respond({ replies: OLDER_UNFETCHED_REPLIES, hasMore: false });
+    });
+    const { result: loadMoreResult } = renderHook(() => useLoadMoreReplies('a1'), { wrapper });
+    loadMoreResult.current.mutate({ pageId: 'p1', commentId: 'c1' });
+    await waitFor(() => expect(loadMoreResult.current.isSuccess).toBe(true));
+
+    // Cursor is the last reply actually fetched from the server (reply-old),
+    // never the locally-added reply-new — otherwise the backend would be
+    // asked for replies after the newest reply that exists and find none.
+    expect(requestedUrls[0]).toContain(`afterId=${LAST_LOADED_REPLY._id}`);
+    expect(requestedUrls[0]).not.toContain('afterId=reply-new');
+
+    const afterLoadMore = queryClient.getQueryData<{ pages: Array<{ comments: Array<{ replies: unknown[] }> }> }>(COMMENTS_QUERY_KEY);
+    expect(afterLoadMore?.pages[0].comments[0].replies).toEqual([
+      LAST_LOADED_REPLY,
+      { ...REPLY, __locallyAdded: true },
+      ...OLDER_UNFETCHED_REPLIES,
+    ]);
   });
 });
 
@@ -520,6 +582,39 @@ describe('useLoadMoreReplies', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const cached = queryClient.getQueryData<{ pages: Array<{ comments: unknown[] }> }>(COMMENTS_QUERY_KEY);
     expect(cached?.pages[0].comments[1]).toEqual(UNRELATED);
+  });
+
+  // A reply patched in locally by useAddComment can legitimately reappear in
+  // a "load more" response (it's newest, so it falls inside the fetched
+  // "after" page too) — must not render twice.
+  test('dedupes a fetched reply that was already appended locally', async () => {
+    const LOCALLY_ADDED_REPLY = {
+      ...NEW_REPLIES[0],
+      _id: 'reply-new',
+      text: 'Me too!',
+      createdAt: '2025-01-02T00:00:00.000Z',
+      __locallyAdded: true,
+    };
+    vi.mocked(fetch).mockImplementation(() => respond({ replies: [LOCALLY_ADDED_REPLY, ...NEW_REPLIES], hasMore: false }));
+    const queryClient = createTestQueryClient();
+    const LAST_LOADED_REPLY = { _id: 'reply1', text: 'First reply', createdAt: '2025-01-01T00:00:00.000Z' };
+    const PARENT = {
+      _id: 'c1',
+      text: 'Original comment',
+      replies: [LAST_LOADED_REPLY, LOCALLY_ADDED_REPLY],
+      hasMoreReplies: true,
+    };
+    seedCommentsCache(queryClient, [{ comments: [PARENT], hasMore: false }]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useLoadMoreReplies('a1'), { wrapper });
+    result.current.mutate({ pageId: 'p1', commentId: 'c1' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const cached = queryClient.getQueryData<{ pages: Array<{ comments: Array<{ replies: unknown[] }> }> }>(COMMENTS_QUERY_KEY);
+    expect(cached?.pages[0].comments[0].replies).toEqual([LAST_LOADED_REPLY, LOCALLY_ADDED_REPLY, ...NEW_REPLIES]);
   });
 
   test('does not crash when the thread was never fetched (no cached data to patch)', async () => {
