@@ -18,6 +18,8 @@ type AlbumSpreadProps = {
   // has its own arrow-key navigation while it's open, and the album-level
   // reactors modal shouldn't be paged out from under the viewer either.
   isKeyboardNavDisabled?: boolean;
+  /** Drives comment ownership (delete button, "your comment" label) — a stable id, unlike viewerUsername below (kept separate for the reactor list, which has no ids to compare against). */
+  viewerId?: string;
   viewerUsername?: string;
   isAutoPlaying?: boolean;
   onAutoPlayingChange?: (isAutoPlaying: boolean) => void;
@@ -107,6 +109,7 @@ export default function AlbumSpread({
   onReact,
   isReactionPending,
   isKeyboardNavDisabled = false,
+  viewerId,
   viewerUsername,
   isAutoPlaying = false,
   onAutoPlayingChange,
@@ -374,6 +377,7 @@ export default function AlbumSpread({
                       }
                       pendingReactionCommentId={pendingReactionCommentId}
                       variant="light"
+                      viewerId={viewerId}
                       viewerUsername={viewerUsername}
                       isAlbumOwner={isAlbumOwner}
                       hasMoreComments={hasMoreComments}

@@ -52,13 +52,16 @@ function withCommentAuthors(comments) {
 // as resolveCommentCounts above. Replies are never separately paginated
 // (see pages-controller.js's listComments): a heavily-replied comment is
 // expected to be rare at this app's scale, so embedding them all here is
-// simpler than a second cursor system just for replies.
+// simpler than a second cursor system just for replies — capped at
+// MAX_REPLIES_PER_LOAD as a payload-size backstop in case that assumption
+// ever breaks, rather than left fully unbounded.
 function attachReplies(topLevelComments) {
   const parentIds = topLevelComments.map((comment) => comment._id);
   if (parentIds.length === 0) return Promise.resolve([]);
 
   return Comment.find({ parentComment: { $in: parentIds } })
     .sort('createdAt')
+    .limit(Comment.MAX_REPLIES_PER_LOAD)
     .then((replies) =>
       withCommentAuthors(replies).then((repliesWithAuthors) => {
         const repliesByParentId = new Map();

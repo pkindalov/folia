@@ -4,6 +4,12 @@ const MAX_COMMENT_LENGTH = 1000;
 // Portion size for listComments' newest-first pagination — mirrors
 // ReactorsModal's server-side cap of 50, just paged instead of hard-capped.
 const COMMENTS_PAGE_SIZE = 20;
+// Sanity backstop for attachReplies (see album-comments.js): replies are
+// never separately paginated, so without this a single heavily-replied
+// comment could return an unbounded payload on every listComments call.
+// Generous enough to never bite normal use, and not evenly distributed
+// per top-level comment — it's a payload-size backstop, not a feature.
+const MAX_REPLIES_PER_LOAD = 500;
 
 const commentSchema = new mongoose.Schema(
   {
@@ -62,3 +68,4 @@ const Comment = mongoose.model('Comment', commentSchema);
 module.exports = Comment;
 module.exports.MAX_COMMENT_LENGTH = MAX_COMMENT_LENGTH;
 module.exports.COMMENTS_PAGE_SIZE = COMMENTS_PAGE_SIZE;
+module.exports.MAX_REPLIES_PER_LOAD = MAX_REPLIES_PER_LOAD;

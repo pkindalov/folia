@@ -45,6 +45,8 @@ type PhotoLightboxProps = {
   isFetchingMoreComments?: boolean;
   hasFetchMoreCommentsError?: boolean;
   onFetchMoreComments?: () => void;
+  /** Drives comment ownership (delete button, "your comment" label) — a stable id, unlike viewerUsername below (kept separate for the reactor list, which has no ids to compare against). */
+  viewerId?: string;
   viewerUsername?: string;
   // When the album viewer's slideshow keeps running behind the zoomed-in
   // photo, these mirror AlbumSpread's own progress bar so the countdown to
@@ -88,6 +90,7 @@ export default function PhotoLightbox({
   isFetchingMoreComments = false,
   hasFetchMoreCommentsError = false,
   onFetchMoreComments,
+  viewerId,
   viewerUsername,
   isAutoPlaying = false,
   autoPlayIntervalMs,
@@ -259,6 +262,7 @@ export default function PhotoLightbox({
                   }
                   pendingReactionCommentId={pendingReactionCommentId}
                   variant="dark"
+                  viewerId={viewerId}
                   viewerUsername={viewerUsername}
                   isAlbumOwner={isAlbumOwner}
                   hasMoreComments={hasMoreComments}

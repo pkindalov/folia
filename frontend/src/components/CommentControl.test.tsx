@@ -101,11 +101,44 @@ describe('CommentControl', () => {
 
   test('shows a delete button on the viewer\'s own comment', async () => {
     const user = userEvent.setup();
-    renderControl({ commentCount: 1, comments: [COMMENT], viewerUsername: 'maria' });
+    renderControl({ commentCount: 1, comments: [COMMENT], viewerId: 'u1' });
 
     await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
 
     expect(screen.getByRole('button', { name: 'Delete your comment' })).toBeInTheDocument();
+  });
+
+  // Ownership is decided by id, not the display username — a stale cached
+  // username (e.g. the viewer renamed their account in another tab) must
+  // not hide the delete button on the viewer's own, freshly-resolved
+  // comment, nor show it on a comment that only happens to share a
+  // display name.
+  test('shows a delete button on the viewer\'s own comment even when the cached viewer username is stale', async () => {
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerId: 'u1',
+      viewerUsername: 'maria-old-handle',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.getByRole('button', { name: 'Delete your comment' })).toBeInTheDocument();
+  });
+
+  test('hides the delete button when only the username matches, not the id', async () => {
+    const user = userEvent.setup();
+    renderControl({
+      commentCount: 1,
+      comments: [COMMENT],
+      viewerId: 'someone-else-id',
+      viewerUsername: 'maria',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
+
+    expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
   });
 
   test('shows a delete button on someone else\'s comment when the viewer is the album owner', async () => {
@@ -113,7 +146,7 @@ describe('CommentControl', () => {
     renderControl({
       commentCount: 1,
       comments: [COMMENT],
-      viewerUsername: 'someone-else',
+      viewerId: 'someone-else-id',
       isAlbumOwner: true,
     });
 
@@ -127,7 +160,7 @@ describe('CommentControl', () => {
     renderControl({
       commentCount: 1,
       comments: [COMMENT],
-      viewerUsername: 'someone-else',
+      viewerId: 'someone-else-id',
       isAlbumOwner: false,
     });
 
@@ -142,7 +175,7 @@ describe('CommentControl', () => {
     renderControl({
       commentCount: 1,
       comments: [COMMENT],
-      viewerUsername: 'maria',
+      viewerId: 'u1',
       onDeleteComment,
     });
 
@@ -157,7 +190,7 @@ describe('CommentControl', () => {
     renderControl({
       commentCount: 1,
       comments: [COMMENT],
-      viewerUsername: 'maria',
+      viewerId: 'u1',
       pendingDeleteCommentId: 'c1',
     });
 
@@ -299,7 +332,7 @@ describe('CommentControl', () => {
       renderControl({
         commentCount: 1,
         comments: [{ ...COMMENT, replies: [REPLY] }],
-        viewerUsername: 'sam',
+        viewerId: 'u2',
       });
 
       await user.click(screen.getByRole('button', { name: 'View comments (1)' }));
@@ -328,7 +361,7 @@ describe('CommentControl', () => {
       renderControl({
         commentCount: 1,
         comments: [{ ...COMMENT, replies: [REPLY] }],
-        viewerUsername: 'sam',
+        viewerId: 'u2',
         onDeleteComment,
       });
 

@@ -307,6 +307,7 @@ export default function ViewerPage() {
               onReact={handleReact}
               isReactionPending={setReaction.isPending}
               isKeyboardNavDisabled={isLightboxOpen || isReactorsModalOpen}
+              viewerId={me?._id}
               viewerUsername={me?.username}
               isAutoPlaying={isAutoPlaying}
               onAutoPlayingChange={setIsAutoPlaying}
@@ -357,6 +358,7 @@ export default function ViewerPage() {
           isFetchingMoreComments={isFetchingMoreComments}
           hasFetchMoreCommentsError={hasFetchMoreError}
           onFetchMoreComments={fetchMoreComments}
+          viewerId={me?._id}
           viewerUsername={me?.username}
           isAutoPlaying={isAutoPlaying}
           autoPlayIntervalMs={AUTOPLAY_INTERVAL_MS}

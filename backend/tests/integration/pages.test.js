@@ -550,12 +550,12 @@ describe('album pages routes (integration)', () => {
     // Comment.find(...).sort(...).limit(...) — a chained mock builder shared
     // by the pagination tests below, so each only has to specify what
     // Comment.find eventually resolves to (newest-first, as the controller
-    // requests it). listComments also calls Comment.find a second time
-    // (via attachReplies, to fetch replies for the returned top-level
-    // comments) with a `parentComment: { $in }` filter and no `.limit()` —
-    // distinguished here by that filter shape so both calls resolve
-    // correctly instead of the second one crashing against a mock shaped
-    // only for the first.
+    // requests it). listComments also calls Comment.find a second time (via
+    // attachReplies, to fetch replies for the returned top-level comments)
+    // with a `parentComment: { $in }` filter and its own `.limit()` (see
+    // MAX_REPLIES_PER_LOAD) — distinguished here by that filter shape so
+    // both calls resolve correctly instead of the second one crashing
+    // against a mock shaped only for the first.
     const fakeComment = (overrides) => ({
       page: PAGE_ID,
       user: OTHER_ID,
@@ -568,7 +568,7 @@ describe('album pages routes (integration)', () => {
     const mockCommentFind = (newestFirstComments, replies = []) => {
       jest.spyOn(Comment, 'find').mockImplementation((filter) => {
         if (filter && filter.parentComment && filter.parentComment.$in) {
-          return { sort: jest.fn().mockResolvedValue(replies) };
+          return { sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(replies) }) };
         }
         return { sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(newestFirstComments) }) };
       });
@@ -616,6 +616,34 @@ describe('album pages routes (integration)', () => {
       expect(res.body.comments[0].replies).toEqual([
         expect.objectContaining({ _id: 'reply1', text: 'Totally agree!', username: 'pan' }),
       ]);
+    });
+
+    // Replies are never separately paginated (see attachReplies) — this is
+    // the sanity backstop against an unbounded payload if a single comment
+    // ever ends up with an extreme number of replies.
+    test('caps the replies query at MAX_REPLIES_PER_LOAD', async () => {
+      authAs(OWNER_ID);
+      jest.spyOn(Album, 'findById').mockResolvedValue(fakeAlbum());
+      jest.spyOn(Page, 'findOne').mockResolvedValue({ _id: PAGE_ID, album: ALBUM_ID });
+      jest.spyOn(User, 'find').mockResolvedValue([{ _id: OTHER_ID, username: 'maria', avatarFilename: null }]);
+      const repliesLimitSpy = jest.fn().mockResolvedValue([]);
+      jest.spyOn(Comment, 'find').mockImplementation((filter) => {
+        if (filter && filter.parentComment && filter.parentComment.$in) {
+          return { sort: jest.fn().mockReturnValue({ limit: repliesLimitSpy }) };
+        }
+        return {
+          sort: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([fakeComment({ _id: COMMENT_ID, text: 'Lovely!' })]),
+          }),
+        };
+      });
+
+      const res = await request(app)
+        .get(`/api/albums/${ALBUM_ID}/pages/${PAGE_ID}/comments`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(repliesLimitSpy).toHaveBeenCalledWith(Comment.MAX_REPLIES_PER_LOAD);
     });
 
     test('200 returns hasMore: true and only a page\'s worth of comments when there are more', async () => {

@@ -38,6 +38,8 @@ type CommentControlProps = {
   onReactToComment?: (commentId: string, type: ReactionType) => void;
   /** _id of the comment whose reaction mutation is in flight, or null. */
   pendingReactionCommentId?: string | null;
+  /** Drives isOwnComment/canDelete — a stable id, unlike username (see viewerUsername below, which stays username-based only because the reactor list it feeds has no ids to compare against). */
+  viewerId?: string;
   viewerUsername?: string;
   isAlbumOwner: boolean;
   /** light = paper surface (AlbumSpread), dark = photo overlay (PhotoLightbox). Mirrors ReactionControl's variant. */
@@ -149,6 +151,7 @@ function CommentRow({
 // gets a Reply trigger of its own.
 function TopLevelCommentItem({
   comment,
+  viewerId,
   viewerUsername,
   isAlbumOwner,
   pendingDeleteCommentId,
@@ -164,6 +167,7 @@ function TopLevelCommentItem({
   addError,
 }: {
   comment: TopLevelComment;
+  viewerId?: string;
   viewerUsername?: string;
   isAlbumOwner: boolean;
   pendingDeleteCommentId: string | null;
@@ -182,8 +186,8 @@ function TopLevelCommentItem({
     <li className="flex flex-col gap-1.5">
       <CommentRow
         comment={comment}
-        isOwnComment={comment.username === viewerUsername}
-        canDelete={comment.username === viewerUsername || isAlbumOwner}
+        isOwnComment={comment.user === viewerId}
+        canDelete={comment.user === viewerId || isAlbumOwner}
         isDeletePending={pendingDeleteCommentId === comment._id}
         onDelete={() => onDeleteComment(comment._id)}
         onReact={onReactToComment ? (type) => onReactToComment(comment._id, type) : undefined}
@@ -228,8 +232,8 @@ function TopLevelCommentItem({
               <CommentRow
                 key={reply._id}
                 comment={reply}
-                isOwnComment={reply.username === viewerUsername}
-                canDelete={reply.username === viewerUsername || isAlbumOwner}
+                isOwnComment={reply.user === viewerId}
+                canDelete={reply.user === viewerId || isAlbumOwner}
                 isDeletePending={pendingDeleteCommentId === reply._id}
                 onDelete={() => onDeleteComment(reply._id)}
                 onReact={onReactToComment ? (type) => onReactToComment(reply._id, type) : undefined}
@@ -261,6 +265,7 @@ export default function CommentControl({
   pendingDeleteCommentId,
   onReactToComment,
   pendingReactionCommentId = null,
+  viewerId,
   viewerUsername,
   isAlbumOwner,
   variant = 'dark',
@@ -414,6 +419,7 @@ export default function CommentControl({
             <TopLevelCommentItem
               key={comment._id}
               comment={comment}
+              viewerId={viewerId}
               viewerUsername={viewerUsername}
               isAlbumOwner={isAlbumOwner}
               pendingDeleteCommentId={pendingDeleteCommentId}
