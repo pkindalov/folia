@@ -79,6 +79,18 @@ module.exports = {
     res.json({ user: withAvatarUrl(req.user) });
   },
 
+  // Invalidates every token already issued to this user (this session's and
+  // any other device's) by bumping tokenVersion — auth.js's isAuthenticated
+  // rejects a token whose embedded tokenVersion no longer matches. Without
+  // this, "logging out" only forgets the token client-side; a copy of it
+  // (stolen, or left in browser history) would otherwise keep working until
+  // it naturally expires.
+  logout: (req, res) => {
+    User.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } })
+      .then(() => res.json({ loggedOut: true }))
+      .catch(() => res.status(500).json({ error: 'Logout failed' }));
+  },
+
   // Public-facing lookup by username — never include email, same reasoning
   // as search: this shouldn't become an enumeration surface.
   profile: (req, res) => {

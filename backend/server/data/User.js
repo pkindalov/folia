@@ -23,6 +23,14 @@ const userSchema = new mongoose.Schema(
     hashedPass: String,
     roles: [String],
     avatarFilename: String,
+    // Bumped on logout (see users-controller.js's logout) so an already-
+    // issued JWT stops being accepted immediately, instead of staying valid
+    // until it naturally expires — see signToken/isAuthenticated in
+    // config/auth.js, which embed/check this value.
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

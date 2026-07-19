@@ -34,6 +34,16 @@ export async function fetchMe(): Promise<User> {
   return meResponseSchema.parse(data).user;
 }
 
-export function logout(): void {
-  tokenStorage.clear();
+// Tells the server to invalidate every token already issued to this account
+// (see the backend's tokenVersion bump), then forgets the token locally
+// regardless of whether that call succeeds — a network failure here
+// shouldn't leave the user stuck looking logged in on this device.
+export async function logout(): Promise<void> {
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+  } catch {
+    // Best effort — the token is forgotten locally either way, below.
+  } finally {
+    tokenStorage.clear();
+  }
 }

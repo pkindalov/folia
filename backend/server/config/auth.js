@@ -24,6 +24,12 @@ module.exports = {
     User.findById(payload.sub)
       .then((user) => {
         if (!user) return res.status(401).json({ error: 'User no longer exists' });
+        // A logout bumps the user's tokenVersion (see users-controller.js's
+        // logout), so a token issued before that point must stop working
+        // immediately rather than staying valid until it naturally expires.
+        if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
+          return res.status(401).json({ error: 'Invalid or expired token' });
+        }
         req.user = user;
         next();
       })
@@ -36,7 +42,9 @@ module.exports = {
   },
 
   signToken: (user) =>
-    jwt.sign({ sub: user._id.toString(), username: user.username }, settings.jwtSecret, {
-      expiresIn: settings.jwtExpiresIn,
-    }),
+    jwt.sign(
+      { sub: user._id.toString(), username: user.username, tokenVersion: user.tokenVersion ?? 0 },
+      settings.jwtSecret,
+      { expiresIn: settings.jwtExpiresIn }
+    ),
 };

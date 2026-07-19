@@ -53,6 +53,11 @@ describe('User model', () => {
       const user = new User({ username: '  pan  ', email: 'a@b.com' });
       expect(user.username).toBe('pan');
     });
+
+    test('defaults tokenVersion to 0 for a new user', () => {
+      const user = new User({ username: 'pan', email: 'a@b.com' });
+      expect(user.tokenVersion).toBe(0);
+    });
   });
 
   describe('authenticate', () => {

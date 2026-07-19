@@ -291,6 +291,25 @@ describe('users-controller', () => {
     });
   });
 
+  describe('logout', () => {
+    test('bumps tokenVersion for the authenticated user and confirms', async () => {
+      const update = jest.spyOn(User, 'findByIdAndUpdate').mockResolvedValue({ _id: 'id1' });
+      const res = mockRes();
+      controller.logout({ user: { _id: 'id1' } }, res);
+      await flush();
+      expect(update).toHaveBeenCalledWith('id1', { $inc: { tokenVersion: 1 } });
+      expect(res.json).toHaveBeenCalledWith({ loggedOut: true });
+    });
+
+    test('returns 500 when the update fails', async () => {
+      jest.spyOn(User, 'findByIdAndUpdate').mockRejectedValue(new Error('db down'));
+      const res = mockRes();
+      controller.logout({ user: { _id: 'id1' } }, res);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
   describe('profile', () => {
     test('returns the requested user', async () => {
       const user = { _id: 'id2', username: 'maria' };

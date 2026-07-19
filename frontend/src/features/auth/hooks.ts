@@ -42,7 +42,9 @@ export function useLogout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   return () => {
-    authApi.logout();
+    // Fire-and-forget: the server-side invalidation happens in the
+    // background — signing out locally shouldn't wait on a network round trip.
+    void authApi.logout();
     queryClient.clear();
     navigate('/login');
   };

@@ -28,6 +28,17 @@ describe('auth', () => {
       expect(payload.exp).toBeGreaterThan(payload.iat);
     });
 
+    test('embeds tokenVersion, defaulting to 0 when the user has none set', () => {
+      const payload = jwt.verify(auth.signToken(user), settings.jwtSecret);
+      expect(payload.tokenVersion).toBe(0);
+
+      const payloadWithVersion = jwt.verify(
+        auth.signToken({ ...user, tokenVersion: 3 }),
+        settings.jwtSecret
+      );
+      expect(payloadWithVersion.tokenVersion).toBe(3);
+    });
+
     test('token is rejected when signed with a different secret', () => {
       const forged = jwt.sign({ sub: 'x' }, 'attacker-secret');
       expect(() => jwt.verify(forged, settings.jwtSecret)).toThrow();
@@ -102,6 +113,41 @@ describe('auth', () => {
       const fakeUser = { _id: 'abc123', username: 'pan', roles: ['User'] };
       jest.spyOn(User, 'findById').mockResolvedValue(fakeUser);
       const req = { headers: { authorization: `Bearer ${validToken()}` } };
+      const res = mockRes();
+      const next = jest.fn();
+      auth.isAuthenticated(req, res, next);
+      await flush();
+      expect(req.user).toBe(fakeUser);
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    // A logout bumps tokenVersion (see users-controller.js's logout) — a
+    // token signed before that point embeds the old value and must stop
+    // working immediately, not linger until it naturally expires.
+    test('rejects a token whose tokenVersion was revoked by a logout (401)', async () => {
+      const token = auth.signToken({ _id: 'abc123', username: 'pan', tokenVersion: 0 });
+      jest.spyOn(User, 'findById').mockResolvedValue({
+        _id: 'abc123',
+        username: 'pan',
+        roles: ['User'],
+        tokenVersion: 1,
+      });
+      const req = { headers: { authorization: `Bearer ${token}` } };
+      const res = mockRes();
+      const next = jest.fn();
+      auth.isAuthenticated(req, res, next);
+      await flush();
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    test('accepts a token whose tokenVersion still matches the user record', async () => {
+      const token = auth.signToken({ _id: 'abc123', username: 'pan', tokenVersion: 2 });
+      const fakeUser = { _id: 'abc123', username: 'pan', roles: ['User'], tokenVersion: 2 };
+      jest.spyOn(User, 'findById').mockResolvedValue(fakeUser);
+      const req = { headers: { authorization: `Bearer ${token}` } };
       const res = mockRes();
       const next = jest.fn();
       auth.isAuthenticated(req, res, next);

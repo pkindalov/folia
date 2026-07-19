@@ -42,6 +42,7 @@ module.exports = (app) => {
   // Auth
   app.post('/api/auth/register', authLimiter, controllers.users.register);
   app.post('/api/auth/login', authLimiter, controllers.users.login);
+  app.post('/api/auth/logout', auth.isAuthenticated, controllers.users.logout);
 
   // Users (protected)
   app.get('/api/users/me', auth.isAuthenticated, controllers.users.me);

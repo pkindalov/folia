@@ -77,9 +77,20 @@ describe('auth api service', () => {
     await expect(fetchMe()).rejects.toThrow();
   });
 
-  test('logout clears the stored token', () => {
+  test('logout posts to the right endpoint and clears the stored token', async () => {
     tokenStorage.set('jwt-3');
-    logout();
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ loggedOut: true }));
+    await logout();
+    const [url, options] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toMatch(/\/api\/auth\/logout$/);
+    expect(options!.method).toBe('POST');
+    expect(tokenStorage.get()).toBeNull();
+  });
+
+  test('logout still clears the stored token when the server call fails', async () => {
+    tokenStorage.set('jwt-3');
+    vi.mocked(fetch).mockRejectedValue(new Error('network down'));
+    await logout();
     expect(tokenStorage.get()).toBeNull();
   });
 });

@@ -133,6 +133,46 @@ describe('HTTP integration', () => {
         .send({ username: { $gt: '' }, email: 'a@b.com', password: 'secret123' });
       expect(res.status).toBe(400);
     });
+
+    test('logout invalidates the token immediately — it stops working before it would naturally expire', async () => {
+      const fakeUser = {
+        _id: '507f1f77bcf86cd799439011',
+        username: 'pan',
+        roles: ['User'],
+        tokenVersion: 0,
+        authenticate: () => true,
+      };
+      jest.spyOn(User, 'findOne').mockResolvedValue(fakeUser);
+      jest.spyOn(User, 'findById').mockResolvedValue(fakeUser);
+      // logout's $inc is simulated directly on the shared fakeUser object,
+      // the same way the real findByIdAndUpdate would persist it — every
+      // subsequent findById lookup (used by isAuthenticated) sees the bump.
+      jest.spyOn(User, 'findByIdAndUpdate').mockImplementation(() => {
+        fakeUser.tokenVersion += 1;
+        return Promise.resolve(fakeUser);
+      });
+
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ identifier: 'pan', password: 'secret123' });
+      const token = login.body.token;
+
+      const meBeforeLogout = await request(app)
+        .get('/api/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(meBeforeLogout.status).toBe(200);
+
+      const logout = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${token}`);
+      expect(logout.status).toBe(200);
+      expect(logout.body).toEqual({ loggedOut: true });
+
+      const meAfterLogout = await request(app)
+        .get('/api/users/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(meAfterLogout.status).toBe(401);
+    });
   });
 
   // Keep last: exhausts the shared rate limiter for auth routes
