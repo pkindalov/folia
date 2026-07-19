@@ -111,7 +111,9 @@ export default function CreateCircleModal({ isOpen, onClose }: CreateCircleModal
           <div className="flex justify-between items-start mt-1">
             {errors.description ? (
               <span id="circle-description-error" role="alert" className="text-sm text-error font-ui">
-                {translateFieldError(t, errors.description.message)}
+                {translateFieldError(t, errors.description.message, {
+                  count: MAX_CIRCLE_DESCRIPTION_LENGTH,
+                })}
               </span>
             ) : (
               <span />

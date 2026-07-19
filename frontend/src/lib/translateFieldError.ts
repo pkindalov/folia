@@ -9,8 +9,9 @@ import type { TFunction, Namespace } from 'i18next';
  */
 export function translateFieldError<Ns extends Namespace>(
   t: TFunction<Ns>,
-  message: string | undefined
-) {
+  message: string | undefined,
+  params?: Record<string, unknown>
+): string | undefined {
   if (message === undefined) return undefined;
-  return t(`errors.${message}` as never);
+  return t(`errors.${message}` as never, params as never) as unknown as string;
 }

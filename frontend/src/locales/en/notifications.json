@@ -1,7 +1,8 @@
 {
   "bell": {
     "notifications": "Notifications",
-    "notificationsUnread": "Notifications, {{count}} unread",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread",
     "bulkActionsLabel": "Bulk notification actions",
     "markAllRead": "Mark all notifications as read",
     "markAllUnread": "Mark all notifications as unread",

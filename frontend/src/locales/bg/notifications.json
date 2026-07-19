@@ -1,7 +1,8 @@
 {
   "bell": {
     "notifications": "Известия",
-    "notificationsUnread": "Известия, {{count}} непрочетени",
+    "notificationsUnread_one": "Известия, {{count}} непрочетено",
+    "notificationsUnread_other": "Известия, {{count}} непрочетени",
     "bulkActionsLabel": "Групови действия за известия",
     "markAllRead": "Маркиране на всички известия като прочетени",
     "markAllUnread": "Маркиране на всички известия като непрочетени",

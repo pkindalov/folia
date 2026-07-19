@@ -78,6 +78,24 @@ describe('CreateCircleModal', () => {
     });
   });
 
+  test('shows the character limit in the validation error for an over-long description', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CreateCircleModal isOpen onClose={() => {}} />, {
+      route: '/circles',
+      path: '/circles',
+    });
+
+    await user.type(screen.getByLabelText('Circle name'), 'The Sterling Family');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'x'.repeat(301) },
+    });
+    await user.click(screen.getByRole('button', { name: 'Create Circle' }));
+
+    expect(
+      await screen.findByText('Description must be at most 300 characters')
+    ).toBeInTheDocument();
+  });
+
   test('accepts a description that only exceeds the limit before trimming', async () => {
     mockApi({ '/api/circles': { body: { circle: CREATED_CIRCLE }, status: 201 } });
     const onClose = vi.fn();

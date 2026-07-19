@@ -64,6 +64,6 @@
   "errors": {
     "nameRequired": "Give this circle a name",
     "nameTooLong": "Name must be at most 80 characters",
-    "descriptionTooLong": "Description must be at most 300 characters"
+    "descriptionTooLong": "Description must be at most {{count}} characters"
   }
 }

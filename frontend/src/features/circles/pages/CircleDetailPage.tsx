@@ -170,7 +170,9 @@ export default function CircleDetailPage() {
                       <div className="flex justify-between items-start mt-1">
                         {editErrors.description ? (
                           <span role="alert" className="text-sm text-error font-ui">
-                            {translateFieldError(t, editErrors.description.message)}
+                            {translateFieldError(t, editErrors.description.message, {
+                              count: MAX_CIRCLE_DESCRIPTION_LENGTH,
+                            })}
                           </span>
                         ) : (
                           <span />
